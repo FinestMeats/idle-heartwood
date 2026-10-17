@@ -1,0 +1,22 @@
+name: Feedback to issues
+# Files new in-game bug reports and ideas from Firestore as GitHub issues.
+on:
+  schedule:
+    - cron: '30 2,8,14,20 * * *'   # every 6 hours (20:30 UTC = 7:30am Sydney)
+  workflow_dispatch:
+permissions:
+  issues: write
+  contents: read
+jobs:
+  file:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-package-lock firebase-admin@12
+      - run: node scripts/feedback-to-issues.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

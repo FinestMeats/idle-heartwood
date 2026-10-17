@@ -15,6 +15,26 @@ service cloud.firestore {
         && request.resource.data.best is int && request.resource.data.best <= 4000
         && request.resource.data.name is string && request.resource.data.name.size() <= 16;
     }
+    // Bug reports and ideas: players can send, nobody can read back from the game.
+    match /feedback/{id} {
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['type','text','ctx','t','uid','status'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.type in ['bug','idea']
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1500
+        && request.resource.data.ctx is map
+        && request.resource.data.status == 'new';
+      allow read, update, delete: if false;
+    }
+    // Community polls: one vote per signed-in player, final once cast; votes are countable by everyone.
+    match /polls/{poll}/votes/{uid} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['o','t'])
+        && request.resource.data.o is int && request.resource.data.o >= 0 && request.resource.data.o < 10;
+      allow update, delete: if false;
+    }
     match /{other=**} {
       allow read, write: if false;
     }
