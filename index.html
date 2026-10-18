@@ -221,6 +221,17 @@ nav .tab .pi{width:20px;height:20px}
 .dlog .dg{font-family:var(--ui);font-size:13px;background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;height:20px;cursor:pointer;white-space:nowrap}
 .dspd{width:auto;padding:0 5px}
 .logl{text-align:left;font-size:16px;line-height:1.35;max-height:52vh;overflow-y:auto;margin:6px 0}.logl .me{color:var(--sap)}.logl .rnd{color:var(--gold);text-align:center;margin:3px 0}
+.cd.big:not(.fa) img{width:72px;height:101px;top:8px;box-shadow:0 0 0 1px #000}
+.cd.big.zoom{width:160px;height:224px;border-width:3px;border-radius:9px}.cd.big.zoom:not(.fa) img{width:140px;height:196px;top:7px}
+.cd.big.zoom .pw{min-width:32px;height:32px;font-size:26px;line-height:30px;border-radius:16px;left:3px;top:3px}.cd.big.zoom .cm{font-size:22px;bottom:2px}.cd.big.zoom .cm .pi{width:22px;height:22px}
+.cd.fa{background:#000;border-width:2px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),0 0 6px color-mix(in srgb,var(--rc) 55%,transparent)}
+.cd.fa img{left:0;top:0;transform:none;width:100%;height:100%;object-fit:cover}
+.cd.fa::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.32) 47%,transparent 58%);background-size:300% 100%;animation:holo 5s linear infinite}
+.cd.fa.r5::before{background-image:linear-gradient(115deg,transparent 35%,rgba(255,150,130,.4) 47%,transparent 58%)}
+.cd.fa.r6::before{background-image:linear-gradient(115deg,transparent 25%,rgba(255,90,90,.3) 36%,rgba(255,230,90,.3) 42%,rgba(90,255,160,.3) 48%,rgba(90,180,255,.3) 54%,rgba(200,110,255,.3) 60%,transparent 70%)}
+.cd.fa .pw,.cd.fa .cm,.cd.fa .cn,.cd.fa .bd{z-index:2}.cd.fa .cm{left:0;right:0;bottom:0;padding:1px 3px;background:linear-gradient(transparent,rgba(0,0,0,.75))}
+@keyframes holo{from{background-position:120% 0}to{background-position:-120% 0}}
+@media (prefers-reduced-motion:reduce){.cd.fa::before{animation:none;background-position:50% 0}}
 .cd .bd{position:absolute;left:0;right:0;bottom:15px;font-size:12px;line-height:13px;text-align:center;color:#0a0d08;background:var(--bc);opacity:.92;white-space:nowrap;overflow:hidden}.cd.sm .bd{display:none}
 .cd.nw::after{content:'New';position:absolute;right:-1px;bottom:-1px;background:var(--gold);color:#0a0d08;font-size:11px;line-height:12px;padding:0 3px;border-radius:4px 0 4px 0}
 .dsum{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:15px;color:var(--muted);margin:2px 0 6px}.dsum b{color:var(--fg);font-weight:400}
@@ -1812,10 +1823,427 @@ function cardArt(id){if(ART_CACHE[id])return ART_CACHE[id];const d=CARD[id],cv=d
   if(!d.unit){const icn={w0:'snow',w1:'cloud',w2:'bolt',clear:'sun',decoy:'scare',horn:'horn',scorch:'fire'}[d.sp],pat=ICONS[icn]||ICONS.star;pat.forEach((row,y)=>{[...row].forEach((ch,x)=>{if(ch!=='.'){g.fillStyle=PAL[ch]||'#fff';g.fillRect((x+2)*k,(y+2)*k,k,k)}})})}
   else{const pat=ART[artKind(d)];pat.forEach((row,y)=>{[...row].forEach((ch,x)=>{if(ch==='.')return;g.fillStyle=ch==='a'?a:ch==='b'?b:ARTC[ch]||'#fff';g.fillRect(x*k,y*k,k,k)})})}
   return ART_CACHE[id]=cv.toDataURL()}
+/* ---------- Detailed card art (40×56): used when a card is inspected, and as full art on Epic+ cards ----------
+   Each card is drawn from its name: who it is (person, treefolk, spirit, beast, machine), what it carries, what it
+   wears, plus a seeded roll for everything else, so no two cards look alike. Characters are drawn on their own layer,
+   then outlined, shaded and (for spirits and high rarities) given a glow before they go over the background scene. */
+const HDW=40,HDH=56,HD_CACHE={};
+const hdHsl=(h,s,l)=>{h=((h%360)+360)%360/360;s=Math.max(0,Math.min(100,s))/100;l=Math.max(0,Math.min(100,l))/100;
+  if(!s){const v=Math.round(l*255);return [v,v,v]}const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=t=>{t<0&&(t+=1);t>1&&(t-=1);return t<1/6?p+(q-p)*6*t:t<.5?q:t<2/3?p+(q-p)*(2/3-t)*6:p};
+  return [Math.round(f(h+1/3)*255),Math.round(f(h)*255),Math.round(f(h-1/3)*255)]};
+const hdTone=(h,s,l)=>({h:hdHsl(h,s,l+13),m:hdHsl(h,s,l),d:hdHsl(h,s,l-14),dd:hdHsl(h,s-6,l-26),hh:hdHsl(h,s-10,l+26)});
+const hdMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t|0,a[1]+(b[1]-a[1])*t|0,a[2]+(b[2]-a[2])*t|0];
+const HD_INK=[20,14,12];
+function hdLayer(){return new Array(HDW*HDH).fill(null)}
+function hdP(L,x,y,c){x=Math.round(x);y=Math.round(y);if(c&&x>=0&&y>=0&&x<HDW&&y<HDH)L[y*HDW+x]=c}
+function hdG(L,x,y){x=Math.round(x);y=Math.round(y);return x>=0&&y>=0&&x<HDW&&y<HDH?L[y*HDW+x]:null}
+function hdR(L,x,y,w,h,c){for(let j=0;j<h;j++)for(let i=0;i<w;i++)hdP(L,x+i,y+j,typeof c==='function'?c(i,j,w,h):c)}
+/* shaded box: light on the left, shadow on the right */
+function hdBox(L,x,y,w,h,t){hdR(L,x,y,w,h,(i,j)=>i===0&&w>2?t.h:i>=w-Math.max(1,w/4|0)?t.d:t.m)}
+/* shaded ellipse, lit from the top left */
+function hdE(L,cx,cy,rx,ry,t){for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+  const nx=(x-cx)/(rx||.5),ny=(y-cy)/(ry||.5);if(nx*nx+ny*ny>1.05)continue;if(Array.isArray(t)){hdP(L,x,y,t);continue}
+  const v=nx*.55+ny*.8;hdP(L,x,y,v<-.62?t.h:v>.5?t.d:t.m)}}
+function hdLn(L,x0,y0,x1,y1,c,w){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1);for(let i=0;i<=n;i++){const x=x0+(x1-x0)*i/n,y=y0+(y1-y0)*i/n;hdP(L,x,y,c);if(w>1){hdP(L,x+1,y,c)}if(w>2){hdP(L,x,y+1,c)}}}
+function hdTri(L,ax,ay,bx,by,cx,cy,c){const minx=Math.floor(Math.min(ax,bx,cx)),maxx=Math.ceil(Math.max(ax,bx,cx)),miny=Math.floor(Math.min(ay,by,cy)),maxy=Math.ceil(Math.max(ay,by,cy));
+  const s=(px,py,qx,qy,rx,ry)=>(px-rx)*(qy-ry)-(qx-rx)*(py-ry);for(let y=miny;y<=maxy;y++)for(let x=minx;x<=maxx;x++){const d1=s(x+.5,y+.5,ax,ay,bx,by),d2=s(x+.5,y+.5,bx,by,cx,cy),d3=s(x+.5,y+.5,cx,cy,ax,ay);
+  if(!((d1<0||d2<0||d3<0)&&(d1>0||d2>0||d3>0)))hdP(L,x,y,typeof c==='function'?c(x,y):c)}}
+/* outline every edge of a layer (dark ink), optionally only where it meets empty space */
+function hdOutline(L,col){const out=L.slice();for(let y=0;y<HDH;y++)for(let x=0;x<HDW;x++){if(L[y*HDW+x])continue;
+  if(hdG(L,x-1,y)||hdG(L,x+1,y)||hdG(L,x,y-1)||hdG(L,x,y+1))out[y*HDW+x]=col||HD_INK}return out}
+/* soft light around a layer, blended into the background */
+function hdGlow(BG,FG,col,rad,str){for(let y=0;y<HDH;y++)for(let x=0;x<HDW;x++){if(FG[y*HDW+x])continue;let best=99;
+  for(let j=-rad;j<=rad;j++)for(let i=-rad;i<=rad;i++)if(hdG(FG,x+i,y+j)){const d=Math.hypot(i,j);if(d<best)best=d}
+  if(best<=rad&&BG[y*HDW+x])BG[y*HDW+x]=hdMix(BG[y*HDW+x],col,str*(1-(best-1)/rad))}}
+function hdOver(A,B){for(let i=0;i<A.length;i++)if(B[i])A[i]=B[i];return A}
+const hdDither=(x,y)=>((x+y)&1)===0;
+
+/* ---------- scenes ---------- */
+function hdSky(L,top,bot,y0,y1){for(let y=y0;y<y1;y++){const t=(y-y0)/Math.max(1,y1-y0-1);for(let x=0;x<HDW;x++){const tt=t+(hdDither(x,y)?.04:-.04);hdP(L,x,y,hdMix(top,bot,Math.max(0,Math.min(1,tt))))}}}
+function hdPines(L,R,base,col,n,hmin,hmax){for(let k=0;k<n;k++){const cx=R()*HDW,h=hmin+R()*(hmax-hmin),w=h*.42;
+  hdTri(L,cx,base-h,cx-w,base,cx+w,base,col);hdR(L,cx,base,1,2,col)}}
+function hdHills(L,R,base,col,amp){const ph=R()*6,fr=.12+R()*.1;for(let x=0;x<HDW;x++){const top=base-amp*(.5+.5*Math.sin(x*fr+ph))-amp*.4*Math.sin(x*.31+ph*2);for(let y=Math.floor(top);y<HDH;y++)hdP(L,x,y,col)}}
+function hdGround(L,R,y0,t,tufts){for(let y=y0;y<HDH;y++)for(let x=0;x<HDW;x++)hdP(L,x,y,y===y0?t.h:(hdDither(x,y)&&R()<.25)?t.d:t.m);
+  if(tufts)for(let k=0;k<7;k++){const x=R()*HDW|0,y=y0+1+(R()*(HDH-y0-2)|0);hdP(L,x,y,tufts);hdP(L,x,y-1,tufts)}}
+function hdStars(L,R,n,y1,col){for(let k=0;k<n;k++){const x=R()*HDW|0,y=R()*y1|0;hdP(L,x,y,col);if(R()<.15){hdP(L,x-1,y,hdMix(col,[0,0,0],.5));hdP(L,x+1,y,hdMix(col,[0,0,0],.5))}}}
+function hdScene(L,R,d,sp){
+  const f=d.f,k=sp.scene||f;
+  if(k==='night'||f==='S'){const h=sp.skyHue!=null?sp.skyHue:230+R()*60;hdSky(L,hdHsl(h,45,8),hdHsl(h+20,40,24),0,HDH);hdStars(L,R,26,40,[230,240,255]);
+    if(sp.moon){hdE(L,29,9,5,5,hdHsl(50,30,86));hdE(L,31,8,4,4,hdHsl(h,45,10))}
+    if(sp.aurora)for(let b=0;b<3;b++){const ph=R()*6;for(let x=0;x<HDW;x++){const y=8+b*5+Math.sin(x*.25+ph)*3;for(let j=0;j<3;j++)hdP(L,x,y+j,hdMix(hdG(L,x,y+j)||[0,0,0],hdHsl(140+b*50,70,60),.45-j*.12))}}
+    hdHills(L,R,44,hdHsl(h,30,12),4);hdPines(L,R,46,hdHsl(h,30,9),6,8,16);hdGround(L,R,47,hdTone(h,25,12),hdHsl(h,30,20));return}
+  if(k==='river'){hdSky(L,hdHsl(200,50,70),hdHsl(190,45,82),0,30);hdPines(L,R,32,hdHsl(150,25,38),8,6,12);
+    for(let y=32;y<HDH;y++)for(let x=0;x<HDW;x++)hdP(L,x,y,(y+((x/5|0)%2))%4===0?hdHsl(200,55,62):hdHsl(205,50,44));return}
+  if(k==='storm'){hdSky(L,hdHsl(230,25,16),hdHsl(220,20,34),0,HDH);hdHills(L,R,44,hdHsl(140,15,16),3);hdGround(L,R,47,hdTone(120,15,18));return}
+  if(k==='camp'||f==='L'||f==='N'){const tod=R(),top=tod<.6?hdHsl(205,60,62):tod<.85?hdHsl(25,70,62):hdHsl(250,35,30),bot=tod<.6?hdHsl(195,55,84):tod<.85?hdHsl(45,80,78):hdHsl(20,50,55);
+    hdSky(L,top,bot,0,40);hdHills(L,R,30,hdHsl(160,18,48),4);hdPines(L,R,38,hdHsl(150,30,30),9,10,20);hdPines(L,R,42,hdHsl(140,35,22),6,8,14);
+    hdGround(L,R,44,hdTone(32,32,34),hdHsl(90,30,30));for(let k2=0;k2<2;k2++){const x=R()<.5?2+R()*6:30+R()*6;hdE(L,x,46,3,1.2,hdTone(30,35,40));hdP(L,x,46,hdHsl(40,40,60))}return}
+  if(f==='W'){hdSky(L,hdHsl(110,35,22),hdHsl(90,30,40),0,HDH);for(let k2=0;k2<4;k2++){const x=R()*HDW|0,w=3+R()*3|0;hdR(L,x,0,w,46,hdHsl(30,25,18+k2*3))}
+    for(let k2=0;k2<3;k2++){const x=4+R()*30|0;for(let y=0;y<46;y++)if((x+y)%2===0)hdP(L,x+(y/6|0),y,hdMix(hdG(L,x+(y/6|0),y)||[0,0,0],[255,250,200],.18))}
+    hdGround(L,R,46,hdTone(100,35,22),hdHsl(100,45,36));return}
+  /* beasts: open country, varied weather */
+  const h=R();const top=h<.5?hdHsl(200,45,66):h<.8?hdHsl(30,55,62):hdHsl(210,20,58);hdSky(L,top,hdMix(top,[255,255,240],.5),0,40);
+  hdHills(L,R,24,hdHsl(220,15,58),6);hdHills(L,R,34,hdHsl(150,22,42),4);hdPines(L,R,40,hdHsl(150,28,30),5,6,12);hdGround(L,R,43,hdTone(80,30,36),hdHsl(70,40,48))}
+
+/* ---------- people ---------- */
+const HD_SKIN=[[28,55,78],[26,50,68],[24,42,56],[22,40,44],[20,38,34],[30,35,82]];
+const HD_HAIR=[[30,40,18],[25,50,30],[35,60,45],[15,60,35],[45,70,62],[0,0,80],[0,0,55],[20,25,12]];
+function hdPerson(L,R,o){
+  const x=o.x,base=o.base,sc=o.sc||1,sk=hdTone(...o.skin),hr=hdTone(...o.hair),sh=hdTone(...o.shirt),pt=hdTone(...o.pants),bt=hdTone(30,30,16);
+  const bw=Math.round((o.build==='slim'?9:o.build==='broad'?13:o.build==='round'?13:11)*sc),legH=Math.round(10*sc),torH=Math.round(11*sc),hd=Math.round(10*sc);
+  const legY=base-legH,torY=legY-torH,headY=torY-hd+1,tl=Math.round(x-bw/2);
+  /* back gear */
+  if(o.pack){hdBox(L,tl+bw-2,torY+1,6,9,hdTone(30,40,32));hdR(L,tl+bw-1,torY+2,4,1,hdHsl(30,40,20));if(o.pots){hdE(L,tl+bw+3,torY,2,2,hdTone(0,0,60));hdE(L,tl+bw+4,torY+10,2,1.5,hdTone(25,50,45))}}
+  if(o.cape)hdTri(L,tl-1,torY,tl+bw+1,torY,x,base,hdTone(...o.cape).d);
+  /* legs or robe */
+  if(o.robe){hdTri(L,tl-2,base,tl+bw+2,base,x,torY,c=>sh.m);hdBox(L,tl-1,torY+torH-2,bw+2,legH+2,sh);hdR(L,tl-2,base-1,bw+4,1,sh.d)}
+  else{const lw=Math.max(3,Math.round(4*sc));hdBox(L,x-lw-(o.build==='slim'?0:1),legY,lw,legH,pt);hdBox(L,x+(o.build==='slim'?0:1),legY,lw,legH,pt);
+    hdR(L,x-lw-2,base-2,lw+1,2,bt.m);hdR(L,x+1,base-2,lw+1,2,bt.m);hdR(L,x-lw-2,base-2,lw+1,1,bt.h)}
+  /* torso */
+  hdBox(L,tl,torY,bw,torH,sh);if(o.build==='round')hdE(L,x,torY+torH-4,bw/2+1,4,sh);
+  if(o.plaid)for(let j=0;j<torH;j++)for(let i=0;i<bw;i++)if(i%3===1||j%3===1){const c=hdG(L,tl+i,torY+j);if(c)hdP(L,tl+i,torY+j,hdMix(c,(i%3===1&&j%3===1)?sh.dd:sh.d,.6))}
+  if(o.overalls){hdBox(L,tl+2,torY+3,bw-4,torH-3,pt);hdR(L,tl+2,torY,1,3,pt.d);hdR(L,tl+bw-3,torY,1,3,pt.d)}
+  if(o.suspenders){hdR(L,tl+2,torY,1,torH,hdHsl(0,55,35));hdR(L,tl+bw-3,torY,1,torH,hdHsl(0,55,35))}
+  if(o.apron)hdBox(L,tl+2,torY+4,bw-4,torH+3,hdTone(40,15,88));
+  if(o.vest){hdR(L,tl,torY,3,torH,hdTone(...o.vest).m);hdR(L,tl+bw-3,torY,3,torH,hdTone(...o.vest).d)}
+  if(o.belt){hdR(L,tl,torY+torH-2,bw,1,hdHsl(30,40,18));hdP(L,x,torY+torH-2,hdHsl(45,80,60))}
+  if(o.cross){hdR(L,tl+2,torY+2,3,1,[220,40,40]);hdR(L,tl+3,torY+1,1,3,[220,40,40])}
+  if(o.medal){hdE(L,x,torY+4,1.5,1.5,hdTone(45,85,55))}
+  if(o.scarf){hdR(L,tl,torY,bw,2,hdTone(...o.scarf).m);hdR(L,tl+bw-3,torY+2,2,4,hdTone(...o.scarf).d)}
+  /* arms */
+  const aw=Math.max(2,Math.round(3*sc)),ay=torY+1,al=torH-1;
+  hdBox(L,tl-aw,ay,aw,al,sh);hdBox(L,tl+bw,ay,aw,al,sh);hdR(L,tl-aw,ay+al,aw,2,sk.m);hdR(L,tl+bw,ay+al,aw,2,sk.m);
+  o.lh=[tl-aw+1,ay+al+1];o.rh=[tl+bw+1,ay+al+1];
+  /* head */
+  const hw=Math.round((o.build==='round'?10:9)*sc),hx=Math.round(x-hw/2);
+  hdBox(L,x-1,headY+hd-2,3,2,sk);hdR(L,hx,headY,hw,hd-1,(i,j)=>i===0?sk.h:i>=hw-2?sk.d:sk.m);hdP(L,hx-1,headY+4,sk.d);hdP(L,hx+hw,headY+4,sk.d);
+  hdP(L,hx,headY,null);hdP(L,hx+hw-1,headY,null);
+  const ey=headY+Math.round(4*sc),e1=hx+2,e2=hx+hw-3,eye=o.eye||HD_INK;
+  hdP(L,e1,ey,eye);hdP(L,e2,ey,eye);if(sc>=1&&!o.squint){hdP(L,e1,ey-1,hdMix(sk.m,[255,255,255],.6));hdP(L,e2,ey-1,hdMix(sk.m,[255,255,255],.6))}
+  const brow=o.brow||'flat',bc=hdTone(...o.hair).d;if(brow==='angry'){hdP(L,e1-1,ey-2,bc);hdP(L,e1,ey-1,bc);hdP(L,e2+1,ey-2,bc);hdP(L,e2,ey-1,bc)}
+  else if(brow==='up'){hdP(L,e1,ey-2,bc);hdP(L,e2,ey-2,bc);hdP(L,e1-1,ey-1,bc);hdP(L,e2+1,ey-1,bc)}else{hdR(L,e1-1,ey-2,2,1,bc);hdR(L,e2,ey-2,2,1,bc)}
+  hdP(L,x,ey+2,sk.d);const my=ey+4;
+  if(o.mouth==='smile'){hdP(L,x-2,my-1,HD_INK);hdR(L,x-1,my,3,1,HD_INK);hdP(L,x+2,my-1,HD_INK)}else if(o.mouth==='open'){hdR(L,x-1,my,2,2,[90,20,20])}else if(o.mouth==='frown'){hdR(L,x-1,my,3,1,HD_INK);hdP(L,x-2,my+1,HD_INK);hdP(L,x+2,my+1,HD_INK)}else hdR(L,x-1,my,2,1,HD_INK);
+  if(o.blush){hdP(L,e1-1,ey+2,[230,120,110]);hdP(L,e2+1,ey+2,[230,120,110])}
+  if(o.glasses){hdR(L,e1-1,ey-1,3,3,[200,230,240]);hdR(L,e2-1,ey-1,3,3,[200,230,240]);hdP(L,e1,ey,HD_INK);hdP(L,e2,ey,HD_INK);hdR(L,e1+2,ey,e2-e1-3,1,HD_INK)}
+  if(o.patch){hdR(L,e2-1,ey-1,3,2,HD_INK);hdLn(L,hx,ey-3,hx+hw,ey-1,HD_INK)}
+  if(o.wrinkles){hdP(L,e1-1,ey+1,sk.d);hdP(L,e2+1,ey+1,sk.d);hdP(L,x-2,my-2,sk.d);hdP(L,x+2,my-2,sk.d)}
+  /* facial hair */
+  const bd=o.beard;if(bd==='stubble'){for(let j=my-1;j<headY+hd-1;j++)for(let i=hx+1;i<hx+hw-1;i++)if(hdDither(i,j)&&!(j===my&&Math.abs(i-x)<2))hdP(L,i,j,hdMix(sk.m,hr.d,.5))}
+  else if(bd==='mustache'){hdR(L,x-2,my-1,5,1,hr.m);hdP(L,x-3,my,hr.m);hdP(L,x+3,my,hr.m)}
+  else if(bd==='full'||bd==='long'||bd==='braid'){const len=bd==='full'?3:bd==='long'?9:7;for(let j=my-1;j<headY+hd+len;j++){const w=j<headY+hd?hw:Math.max(2,hw-(j-headY-hd)*(bd==='long'?.7:1.1));for(let i=0;i<w;i++){const px=Math.round(x-w/2+i);hdP(L,px,j,i===0?hr.h:i>w-2?hr.d:hr.m)}}
+    hdR(L,x-1,my,3,1,[90,30,25]);hdR(L,x-2,my-1,5,1,hr.h);if(bd==='braid'){hdP(L,x,headY+hd+len,hdHsl(0,60,45));hdP(L,x,headY+hd+len+1,hr.d)}}
+  /* hair */
+  const hs=o.hairStyle;const ht=headY-1;
+  if(hs!=='bald'&&!o.hood){hdR(L,hx,ht,hw,2,(i)=>i<2?hr.h:hr.m);hdP(L,hx-1,ht+1,hr.m);hdP(L,hx+hw,ht+1,hr.m);
+    if(hs==='long'||hs==='braids'){hdR(L,hx-1,ht+1,2,hd+2,hr.m);hdR(L,hx+hw-1,ht+1,2,hd+2,hr.d);if(hs==='braids'){hdR(L,hx-1,ht+hd+3,2,4,hr.d);hdR(L,hx+hw-1,ht+hd+3,2,4,hr.d);hdP(L,hx-1,ht+hd+7,hdHsl(0,60,50));hdP(L,hx+hw,ht+hd+7,hdHsl(0,60,50))}}
+    if(hs==='curly')for(let i=-1;i<=hw;i+=2)hdE(L,hx+i,ht,1.4,1.4,hr);
+    if(hs==='bun')hdE(L,x,ht-2,2.5,2,hr);if(hs==='pony'){hdR(L,hx+hw,ht+2,2,7,hr.d)}if(hs==='mohawk'){hdR(L,x-1,ht-3,3,3,hr.m)}
+    if(hs==='side')hdR(L,hx,ht+2,3,2,hr.m)}
+  else if(hs==='bald')hdP(L,hx+2,headY+1,hdMix(sk.m,[255,255,255],.5));
+  /* headwear */
+  const hat=o.hat,hc=o.hatCol?hdTone(...o.hatCol):hdTone(0,60,40);
+  if(hat==='beanie'){hdE(L,x,ht+1,hw/2+1,3.5,hc);hdR(L,hx-1,ht+2,hw+2,2,hc.d);hdE(L,x,ht-3,1.5,1.5,hdTone(40,20,90))}
+  else if(hat==='cap'){hdR(L,hx,ht-1,hw,3,hc.m);hdR(L,hx-3,ht+1,4,1,hc.d)}
+  else if(hat==='brim'){hdR(L,hx-3,ht+1,hw+6,1,hc.d);hdBox(L,hx+1,ht-3,hw-2,4,hc);hdR(L,hx+1,ht,hw-2,1,hdHsl(0,50,30))}
+  else if(hat==='bandana'){hdR(L,hx,ht,hw,2,hc.m);hdP(L,hx+hw,ht+2,hc.d);hdP(L,hx+hw+1,ht+3,hc.d)}
+  else if(hat==='chef'){hdE(L,x,ht-4,hw/2+1,4,hdTone(0,0,92));hdR(L,hx,ht-1,hw,3,hdTone(0,0,86).m)}
+  else if(hat==='crown'){hdR(L,hx,ht-1,hw,2,hdTone(45,85,55).m);for(let i=0;i<hw;i+=3)hdP(L,hx+i,ht-2,hdHsl(45,85,65));hdP(L,x,ht-1,[220,40,60])}
+  else if(hat==='helm'){hdE(L,x,ht+1,hw/2+1,3.5,hdTone(210,10,62));hdR(L,hx-2,ht+3,hw+4,1,hdHsl(210,10,45))}
+  else if(hat==='witch'){hdR(L,hx-3,ht+1,hw+6,1,hc.d);hdTri(L,hx,ht+1,hx+hw,ht+1,x+4,ht-11,hc.m);hdR(L,hx+1,ht-1,hw-2,1,hdHsl(45,80,55))}
+  else if(hat==='feather'){hdR(L,hx-2,ht+1,hw+4,1,hc.d);hdBox(L,hx+1,ht-2,hw-2,3,hc);hdLn(L,hx+hw-2,ht-1,hx+hw+3,ht-6,hdHsl(0,70,55),2)}
+  if(o.hood){const c=hdTone(...o.hood);hdE(L,x,headY+3,hw/2+2,hd/2+2,c);hdR(L,hx-2,headY+5,2,hd,c.d);hdR(L,hx+hw,headY+5,2,hd,c.d);
+    hdR(L,hx,headY+1,hw,hd-1,(i)=>i===0?sk.d:sk.m);hdP(L,e1,ey,o.eye||HD_INK);hdP(L,e2,ey,o.eye||HD_INK);if(o.beard==='long'||o.beard==='full'){for(let j=my-1;j<headY+hd+5;j++)hdR(L,hx+1,j,hw-2,1,hr.m)}else hdR(L,x-1,my,2,1,HD_INK)}
+  return o}
+/* tools and props in the hands */
+function hdItem(L,o,it,R){const [lx,ly]=o.lh,[rx,ry]=o.rh,wood=hdTone(30,45,38),steel=hdTone(210,8,72);
+  if(it==='axe'||it==='bigaxe'||it==='dblaxe'){const top=ry-(it==='bigaxe'?20:16);hdLn(L,rx,ry+2,rx,top,wood.m);hdLn(L,rx+1,ry+2,rx+1,top,wood.d);
+    hdR(L,rx+2,top,it==='bigaxe'?5:4,it==='bigaxe'?6:5,(i)=>i===0?steel.h:steel.m);hdR(L,rx+(it==='bigaxe'?6:5),top,1,it==='bigaxe'?6:5,[240,245,250]);if(it==='dblaxe')hdR(L,rx-4,top,4,5,(i)=>i===0?[240,245,250]:steel.m)}
+  else if(it==='throw'){hdLn(L,rx,ry,rx+4,ry-14,wood.m);hdR(L,rx+3,ry-17,4,4,steel.m);hdLn(L,lx-2,ly-14,lx+3,ly-18,wood.m);hdR(L,lx-4,ly-17,3,3,steel.h);hdP(L,lx-6,ly-15,[255,255,255])}
+  else if(it==='saw'){hdR(L,lx-1,ly-1,rx-lx+8,3,(i,j)=>j===2&&i%2===0?steel.d:steel.m);hdR(L,rx+5,ly-3,2,6,wood.m)}
+  else if(it==='bucksaw'){hdLn(L,rx,ry,rx+6,ry-10,wood.m);hdLn(L,rx+6,ry-10,rx+10,ry-4,wood.m);hdLn(L,rx,ry,rx+10,ry-4,steel.m)}
+  else if(it==='pole'||it==='peavey'||it==='oar'){hdLn(L,rx+1,ry+6,rx-5,ry-26,wood.m);hdLn(L,rx+2,ry+6,rx-4,ry-26,wood.d);if(it==='peavey'){hdR(L,rx-6,ry-28,2,3,steel.m);hdLn(L,rx-4,ry-22,rx-1,ry-20,steel.d)}if(it==='pole')hdR(L,rx-6,ry-29,2,3,steel.h);if(it==='oar')hdE(L,rx+2,ry+8,2,3,wood)}
+  else if(it==='rope'){for(let a=0;a<6.3;a+=.3)hdP(L,lx-1+Math.cos(a)*3,ly+1+Math.sin(a)*3,hdHsl(40,45,60));hdE(L,lx-1,ly+1,1.5,1.5,hdTone(40,45,50))}
+  else if(it==='hook'){hdLn(L,rx,ry,rx+2,ry-12,hdHsl(40,45,60));hdR(L,rx+1,ry-15,3,3,steel.m);hdP(L,rx+3,ry-12,steel.d)}
+  else if(it==='spud'){hdLn(L,rx,ry+2,rx+3,ry-12,steel.m);hdR(L,rx+2,ry-14,3,2,steel.h)}
+  else if(it==='ladle'){hdLn(L,rx,ry+2,rx,ry-10,steel.m);hdE(L,rx,ry-11,2,1.5,steel)}
+  else if(it==='bag'){hdBox(L,lx-4,ly-2,6,5,hdTone(20,50,40));hdR(L,lx-2,ly-1,2,1,[240,240,240]);hdR(L,lx-1,ly-2,0+1,3,[240,240,240])}
+  else if(it==='lute'){hdE(L,x0(o)-1,o.rh[1]-6,4,3,hdTone(30,55,45));hdLn(L,x0(o)+2,o.rh[1]-8,x0(o)+8,o.rh[1]-14,wood.d);hdP(L,x0(o)-1,o.rh[1]-6,HD_INK)}
+  else if(it==='lantern'){hdLn(L,rx,ry,rx,ry+2,HD_INK);hdBox(L,rx-1,ry+2,4,5,hdTone(40,20,30));hdR(L,rx,ry+3,2,3,[255,220,90])}
+  else if(it==='staff'){hdLn(L,rx+1,ry+6,rx+1,ry-24,wood.m);hdE(L,rx+1,ry-25,2,2,hdTone(150,70,55));hdP(L,rx+1,ry-26,[220,255,230])}
+  else if(it==='file'){hdLn(L,rx,ry,rx+3,ry-8,steel.m);hdLn(L,rx+1,ry,rx+4,ry-8,steel.d)}
+  else if(it==='herbs'){hdBox(L,lx-4,ly-2,6,4,hdTone(35,45,45));for(let i=0;i<5;i++)hdLn(L,lx-3+i,ly-2,lx-4+i*1.2,ly-6,hdHsl(110,55,40))}
+  else if(it==='spyglass'){hdLn(L,rx,ry,rx+5,ry-6,hdHsl(40,70,45),2);hdP(L,rx+6,ry-7,[200,230,255])}
+  else if(it==='horn'){hdLn(L,lx,ly,lx-3,ly-6,hdHsl(40,60,70),2);hdE(L,lx-4,ly-8,2,2,hdTone(40,60,70))}
+  else if(it==='cane'){hdLn(L,rx+1,ry,rx+1,ry+8,HD_INK);hdP(L,rx,ry-1,hdHsl(45,80,60))}
+  else if(it==='spear'){hdLn(L,rx+1,ry+6,rx+1,ry-26,wood.m);hdTri(L,rx-1,ry-26,rx+3,ry-26,rx+1,ry-31,steel.m);for(let j=0;j<20;j+=4)hdP(L,rx+2,ry-j,hdHsl(110,50,40))}
+  else if(it==='boulder'){hdE(L,rx+2,ry-14,5,4,hdTone(30,8,52))}
+  function x0(o){return (o.lh[0]+o.rh[0])/2}}
+
+/* ---------- treefolk ---------- */
+function hdTreant(L,R,o){const x=o.x,base=o.base,sc=o.sc||1,bk=hdTone(...o.bark),lf=hdTone(...o.leaf);
+  const tw=Math.round((o.tw||12)*sc),th=Math.round(24*sc),top=base-th,tl=Math.round(x-tw/2);
+  /* roots / legs */
+  for(let k=-1;k<=1;k+=2){hdLn(L,x+k*2,base-5,x+k*6,base,bk.d,2);hdLn(L,x+k*3,base-3,x+k*9,base,bk.m)}
+  hdBox(L,x-4,base-7,3,7,bk);hdBox(L,x+1,base-7,3,7,bk);
+  /* trunk body */
+  for(let j=0;j<th-4;j++){const w=tw+(j>th-10?2:0);hdR(L,Math.round(x-w/2),top+j,w,1,i=>i===0?bk.h:i>=w-3?bk.d:bk.m)}
+  if(o.birch)for(let j=1;j<th-4;j+=3){const i=(R()*(tw-3))|0;hdR(L,tl+i,top+j,2+(R()*2|0),1,HD_INK)}
+  else for(let i=2;i<tw-1;i+=3)for(let j=1;j<th-5;j++)if(R()<.55)hdP(L,tl+i,top+j,bk.dd);
+  if(o.rings){for(let r=1;r<5;r+=1.3)for(let a=0;a<6.3;a+=.25)hdP(L,x+Math.cos(a)*r,top+th/2+Math.sin(a)*r*0.8,r%2.6<1.3?bk.h:bk.dd)}
+  if(o.stone)for(let k=0;k<4;k++)hdE(L,tl+2+R()*(tw-4),top+4+R()*(th-10),2.2,1.6,hdTone(210,8,55));
+  if(o.iron)for(let j=top+13;j<base-8;j+=6){hdR(L,tl-1,j,tw+2,2,(i,jj)=>jj?hdHsl(210,10,40):hdHsl(210,12,66));hdP(L,x,j,hdHsl(40,30,70))}
+  if(o.moss){for(let i=-1;i<tw+1;i++)for(let j=0;j<3+((i*7)%4);j++)hdP(L,tl+i,top+j,j>1&&hdDither(i,j)?lf.d:lf.m)}
+  /* arms: branches */
+  const ay=top+7;for(const s of [-1,1]){const ex=x+s*(tw/2+7),ey=ay+(o.armsUp?-8:4);hdLn(L,x+s*(tw/2-1),ay,ex,ey,bk.m,2);hdLn(L,ex,ey,ex+s*2,ey-3,bk.d);hdLn(L,ex,ey,ex+s*3,ey+1,bk.d);
+    if(o.armLeaves)hdE(L,ex+s,ey-2,2,1.5,lf);if(s===1)o.rh=[ex,ey];else o.lh=[ex,ey]}
+  /* crown */
+  const cy=top-2,ct=o.canopy;
+  if(ct==='pine'){for(let k=0;k<4;k++){const w=12-k*2.6,y=cy-k*5;hdTri(L,x-w,y+4,x+w,y+4,x,y-4,(px,py)=>((px-x)*.5+(py-y))<0?lf.h:(px>x+2?lf.d:lf.m))}}
+  else if(ct==='willow'){hdE(L,x,cy-3,11,6,lf);for(let i=-11;i<=11;i+=2)if(Math.abs(i)>=6)hdLn(L,x+i,cy,x+i*1.2,cy+12+((i*3)&3),i%4?lf.m:lf.d);else hdLn(L,x+i,cy,x+i,cy+3,lf.d)}
+  else if(ct==='bare'){for(let k=0;k<7;k++){const a=-Math.PI/2+(k-3)*.42,l=8+R()*5;const ex=x+Math.cos(a)*l,ey=cy+3+Math.sin(a)*l;hdLn(L,x,cy+3,ex,ey,bk.d);hdLn(L,ex,ey,ex+(R()-.5)*5,ey-3,bk.d)}}
+  else if(ct==='sapling'){hdLn(L,x,cy+3,x,cy-5,bk.m);hdE(L,x-3,cy-5,3,2,lf);hdE(L,x+3,cy-7,3,2,lf);hdE(L,x,cy-9,2.5,2,lf)}
+  else{const blobs=[[0,-5,9,6],[-7,-1,6,5],[7,-1,6,5],[-4,-9,5,4],[5,-9,5,4]];blobs.forEach(([dx,dy,rx,ry])=>hdE(L,x+dx,cy+dy,rx*sc,ry*sc,lf));
+    for(let k=0;k<14;k++){const px=x+(R()-.5)*22*sc,py=cy-5+(R()-.5)*12*sc;if(hdG(L,px,py))hdP(L,px,py,R()<.5?lf.h:lf.d)}}
+  if(o.blossom)for(let k=0;k<12;k++){const px=x+(R()-.5)*22,py=cy-6+(R()-.5)*12;if(hdG(L,px,py))hdP(L,px,py,o.blossom)}
+  if(o.antlers)for(const s of [-1,1]){const ac=hdHsl(40,30,72),y0=cy-9;hdLn(L,x+s*3,y0,x+s*8,y0-8,ac,2);hdLn(L,x+s*6,y0-5,x+s*11,y0-6,ac);hdLn(L,x+s*8,y0-8,x+s*12,y0-12,ac);hdLn(L,x+s*7,y0-7,x+s*7,y0-12,ac)}
+  /* face */
+  const fy=top+8;const eye=o.eye||[250,210,90];hdR(L,x-4,fy,3,2,HD_INK);hdR(L,x+1,fy,3,2,HD_INK);hdP(L,x-3,fy,eye);hdP(L,x+2,fy,eye);
+  if(o.brow){hdLn(L,x-5,fy-2,x-2,fy-1,bk.dd);hdLn(L,x+4,fy-2,x+1,fy-1,bk.dd)}
+  if(o.mouth==='grim'){hdR(L,x-3,fy+5,6,1,HD_INK);hdP(L,x-4,fy+6,HD_INK);hdP(L,x+3,fy+6,HD_INK)}else if(o.mouth==='o')hdE(L,x,fy+5,1.4,1.6,HD_INK);else{hdR(L,x-2,fy+5,4,1,HD_INK);hdP(L,x-3,fy+4,HD_INK);hdP(L,x+2,fy+4,HD_INK)}
+  hdP(L,x-1,fy+3,bk.dd);hdP(L,x,fy+3,bk.dd);
+
+  if(o.mush)for(let k=0;k<3;k++){const px=tl+(k===1?tw:0)+(k===2?4:0),py=base-9-k*5;hdE(L,px,py,2,1.2,hdTone(0,65,50));hdP(L,px,py-1,[255,255,255])}
+  return o}
+function hdTreeItem(L,o,it){const [rx,ry]=o.rh||[0,0],[lx,ly]=o.lh||[0,0],wood=hdTone(30,40,36);
+  if(it==='shield'){hdE(L,lx+1,ly+2,5,6,hdTone(30,45,34));hdE(L,lx+1,ly+2,2,2,hdTone(45,30,55));for(let a=0;a<6.3;a+=1.05)hdP(L,lx+1+Math.cos(a)*6,ly+2+Math.sin(a)*7,hdHsl(80,40,30))}
+  else if(it==='bow'){for(let a=-1.2;a<=1.2;a+=.12)hdP(L,rx+2+Math.cos(a)*5,ry-3+Math.sin(a)*8,wood.m);hdLn(L,rx+4,ry-11,rx+4,ry+5,[230,230,210]);hdLn(L,rx-4,ry-3,rx+6,ry-3,hdHsl(40,30,70))}
+  else if(it==='sling'){hdLn(L,rx,ry,rx+3,ry-9,hdHsl(30,30,55));hdE(L,rx+3,ry-10,2,2,hdTone(o.ammo||30,45,40))}
+  else if(it==='catapult'){hdBox(L,24,40,13,4,wood);hdE(L,26,45,2,2,wood);hdE(L,35,45,2,2,wood);hdLn(L,30,40,22,26,wood.d,2);hdE(L,21,25,3,2.5,hdTone(30,15,45))}
+  else if(it==='lightning'){hdLn(L,rx+2,ry-18,rx-1,ry-11,[255,250,170],2);hdLn(L,rx-1,ry-11,rx+3,ry-9,[255,250,170],2);hdLn(L,rx+3,ry-9,rx,ry-2,[255,250,170],2)}
+  else if(it==='heal'){for(let k=0;k<5;k++)hdP(L,rx+1+((k*3)%5)-2,ry-3-k*2,[180,255,170]);hdR(L,rx,ry-6,3,1,[255,255,255]);hdR(L,rx+1,ry-7,1,3,[255,255,255])}
+  else if(it==='acorns'){for(let k=0;k<3;k++){hdE(L,rx+k*2,ry-2-k*2,1.4,1.6,hdTone(30,55,40));hdR(L,rx+k*2-1,ry-4-k*2,3,1,hdHsl(30,30,25))}}
+  else if(it==='thorns'){for(let k=0;k<6;k++){const px=rx-6+k*2,py=ry-8-((k*5)%7);hdLn(L,px,py,px+2,py-3,hdHsl(100,40,30))}}}
+
+/* ---------- animals (side view, facing left) ---------- */
+function hdBeast(L,R,o){const x=o.x,base=o.base,sc=o.sc||1,fu=hdTone(...o.fur),be=o.belly?hdTone(...o.belly):fu,K=o.kind;
+  const bw=(o.bw||10)*sc,bh=(o.bh||6)*sc,legH=(o.legH||6)*sc,by=base-legH-bh+1;
+  /* tail (behind) */
+  if(o.tail==='bushy'){hdE(L,x+bw+2,by-2*sc,4*sc,7*sc,fu);hdE(L,x+bw+3,by-6*sc,3*sc,4*sc,fu)}
+  else if(o.tail==='long')hdLn(L,x+bw,by,x+bw+6*sc,by-4*sc,fu.m,2);else if(o.tail==='flat')hdE(L,x+bw+3,base-2,4,1.5,hdTone(30,30,25));else if(o.tail==='short')hdE(L,x+bw,by,1.5,1.5,be);
+  else if(o.tail==='fluff')hdE(L,x+bw+1,by,2.5*sc,2*sc,hdTone(0,0,92));
+  /* far legs */
+  const lw=Math.max(2,Math.round((o.legW||2)*sc));
+  hdR(L,x-bw*.55,base-legH,lw,legH,fu.d);hdR(L,x+bw*.55,base-legH,lw,legH,fu.d);
+  /* body */
+  hdE(L,x,by+bh/2,bw,bh,fu);if(o.hump)hdE(L,x-bw*.35,by,bw*.5,bh*.6,fu);if(o.belly)hdE(L,x,by+bh*.95,bw*.7,bh*.35,be);
+  if(o.stripes)for(let i=-bw+3;i<bw-2;i+=3)hdLn(L,x+i,by-bh*.3,x+i-1,by+bh*.6,fu.d);
+  if(o.spots)for(let k=0;k<6;k++)hdP(L,x+(R()-.5)*bw*1.6,by+R()*bh,fu.dd);
+  if(o.mane)hdE(L,x-bw*.7,by+bh*.2,bw*.38,bh*.95,hdTone(o.fur[0],o.fur[1],o.fur[2]-6));
+  /* near legs */
+  hdBox(L,x-bw*.7,base-legH,lw+1,legH,fu);hdBox(L,x+bw*.4,base-legH,lw+1,legH,fu);if(o.hooves){hdR(L,x-bw*.7,base-1,lw+1,1,HD_INK);hdR(L,x+bw*.4,base-1,lw+1,1,HD_INK)}
+  /* neck + head */
+  const hx=x-bw-(o.neck||2)*sc,hy=by-(o.headUp||2)*sc,hr=(o.head||4)*sc;
+  if(o.neck)hdLn(L,x-bw*.6,by+bh*.4,hx+1,hy+1,fu.m,Math.max(2,o.neckW||3));
+  hdE(L,hx,hy,hr*1.05,hr*.95,fu);
+  const sn=o.snout||0;if(sn)hdE(L,hx-hr*.9-sn*.4,hy+hr*.35,sn*.75*sc+1,hr*.48,o.snoutCol?hdTone(...o.snoutCol):fu);
+  if(o.face==='badger'){hdLn(L,hx-hr-sn*.8,hy+hr*.2,hx+hr,hy-hr*.7,[245,245,240],2);hdLn(L,hx-hr*.6,hy+hr*.5,hx+hr*.8,hy-hr*.1,[30,30,30])}
+  /* nose, eye, ear */
+  hdP(L,hx-hr*.9-sn*.9-1,hy+hr*.25,HD_INK);
+  const ex=hx-hr*.35,ey=hy-hr*.25;hdP(L,ex,ey,o.eye||HD_INK);if(o.bigEye)hdP(L,ex,ey-1,[255,255,255]);
+  const ear=o.ear||'point',ec=fu.d;
+  if(ear==='point'){hdTri(L,hx+hr*.2,hy-hr*.6,hx+hr*.9,hy-hr*.4,hx+hr*.5,hy-hr*1.9,ec);hdP(L,hx+hr*.5,hy-hr*.9,hdHsl(0,40,70))}
+  else if(ear==='round')hdE(L,hx+hr*.5,hy-hr*.9,1.6*sc,1.6*sc,fu);
+  else if(ear==='long'){hdE(L,hx+hr*.4,hy-hr*2,1.3*sc,hr*1.3,fu);hdE(L,hx+hr*1.1,hy-hr*1.8,1.2*sc,hr*1.2,fu)}
+  else if(ear==='tuft'){hdTri(L,hx+hr*.1,hy-hr*.5,hx+hr*.9,hy-hr*.3,hx+hr*.5,hy-hr*2,ec);hdLn(L,hx+hr*.5,hy-hr*2,hx+hr*.5,hy-hr*2.7,HD_INK)}
+  if(o.tusk){hdLn(L,hx-hr*1.1,hy+hr*.6,hx-hr*1.5,hy-hr*.1,[245,240,220],1)}
+  if(o.horns){hdLn(L,hx,hy-hr*.8,hx-3,hy-hr*1.6,[230,225,200]);hdLn(L,hx+2,hy-hr*.8,hx+5,hy-hr*1.6,[230,225,200])}
+  if(o.antlers){const ac=o.antlerCol||[225,210,175],n=o.antlers;for(const s of [0,3]){const ax=hx+s-1,ay=hy-hr*.8;
+    const c2=s?ac:hdMix(ac,[0,0,0],.25);
+    if(o.palmate){hdLn(L,ax,ay,ax+2,ay-2,c2,2);hdE(L,ax+4+s,ay-3,4.5,2,s?hdTone(40,25,70):hdTone(40,25,58));for(let i=0;i<5;i++)hdP(L,ax+1+i*2+s,ay-5.5,c2)}
+    else{const pts=[[ax,ay],[ax+2,ay-n*.3],[ax+4,ay-n*.6],[ax+3,ay-n]];for(let i=0;i<3;i++){hdLn(L,pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1],c2,i?1:2);hdLn(L,pts[i+1][0],pts[i+1][1],pts[i+1][0]-3,pts[i+1][1]-3,c2)}}}}
+  if(o.crown){hdR(L,hx-2,hy-hr-2,4,2,hdTone(45,85,55).m);hdP(L,hx-2,hy-hr-3,hdHsl(45,85,65));hdP(L,hx+1,hy-hr-3,hdHsl(45,85,65))}
+  return o}
+function hdBird(L,R,o){const x=o.x,y=o.y,sc=o.sc||1,fu=hdTone(...o.fur),be=o.belly?hdTone(...o.belly):fu;
+  if(o.front){/* owl, facing us */hdE(L,x,y,7*sc,9*sc,fu);hdE(L,x,y+3*sc,4.5*sc,5.5*sc,be);for(let j=0;j<4;j++)for(let i=-3;i<=3;i+=2)hdP(L,x+i,y+1+j*2*sc,fu.d);
+    const hy=y-9*sc;hdE(L,x,hy,6.5*sc,5.5*sc,fu);hdE(L,x-3*sc,hy,2.6*sc,2.6*sc,hdTone(40,20,85));hdE(L,x+3*sc,hy,2.6*sc,2.6*sc,hdTone(40,20,85));
+    hdE(L,x-3*sc,hy,1.4*sc,1.4*sc,o.eye||[250,190,40]);hdE(L,x+3*sc,hy,1.4*sc,1.4*sc,o.eye||[250,190,40]);hdP(L,x-3*sc,hy,HD_INK);hdP(L,x+3*sc,hy,HD_INK);
+    hdTri(L,x-1,hy+2,x+1,hy+2,x,hy+4,[230,180,60]);if(o.tufts){hdTri(L,x-6*sc,hy-3,x-3*sc,hy-4,x-6*sc,hy-9*sc,fu.d);hdTri(L,x+6*sc,hy-3,x+3*sc,hy-4,x+6*sc,hy-9*sc,fu.d)}
+    hdR(L,x-3,y+9*sc,2,2,[230,180,60]);hdR(L,x+2,y+9*sc,2,2,[230,180,60]);return o}
+  /* perched, side view facing left */
+  hdE(L,x,y,6*sc,4.5*sc,fu);hdE(L,x-1,y+1.5*sc,4*sc,3*sc,be);hdTri(L,x+4*sc,y-2,x+5*sc,y+3,x+13*sc,y+6*sc,fu.d);
+  hdE(L,x+1,y-1,5*sc,3*sc,hdTone(o.fur[0],o.fur[1],o.fur[2]-5));for(let i=0;i<4;i++)hdLn(L,x-2+i*2,y-2,x+3+i*2,y+1,fu.dd);
+  const hx=x-5*sc,hy=y-4*sc;hdE(L,hx,hy,3.4*sc,3.2*sc,fu);hdP(L,hx-1,hy-1,o.eye||[250,240,220]);hdP(L,hx-1,hy-1+0,o.eye||HD_INK);hdP(L,hx-1,hy-2,[255,255,255]);
+  const bc=o.beak||[60,55,50];if(o.hook){hdTri(L,hx-3*sc,hy-1,hx-3*sc,hy+2,hx-7*sc,hy+1,bc);hdP(L,hx-7*sc,hy+2,bc)}else hdTri(L,hx-3*sc,hy-1,hx-3*sc,hy+1.5,hx-8*sc,hy+.5,bc);
+  if(o.crest)hdLn(L,hx+1,hy-3,hx+4,hy-6,fu.d,2);if(o.crown){hdR(L,hx-2,hy-5,5,2,hdTone(45,85,55).m);hdP(L,hx-2,hy-6,hdHsl(45,85,65));hdP(L,hx+2,hy-6,hdHsl(45,85,65))}
+  hdLn(L,x-1,y+5*sc,x-2,y+8*sc,[60,50,40]);hdLn(L,x+2,y+5*sc,x+1,y+8*sc,[60,50,40]);
+  if(o.spread){hdTri(L,x-2,y-2,x+6,y-2,x+16,y-14,fu.m);hdTri(L,x-2,y-2,x+3,y-2,x-12,y-14,fu.d)}
+  return o}
+function hdBee(L,x,y,crown){hdE(L,x+3,y+2,5,4,hdTone(45,85,55));for(let i=0;i<3;i++)hdR(L,x+i*3,y-1,1,7,HD_INK);hdE(L,x-4,y,3,3,hdTone(30,30,20));
+  hdE(L,x+2,y-5,4,2.5,hdTone(200,40,90));hdE(L,x+6,y-5,3,2,hdTone(200,40,88));hdP(L,x-5,y-1,[255,255,255]);if(crown){hdR(L,x-6,y-5,4,1,hdTone(45,85,55).m);hdP(L,x-6,y-6,hdHsl(45,85,65));hdP(L,x-3,y-6,hdHsl(45,85,65))}}
+/* spirit shapes */
+function hdWisp(L,x,y,r,t,tail){if(tail){hdTri(L,x-r*.95,y-r*.1,x+r*.95,y-r*.1,x+r*.5,y-r*2.7,t.m);hdTri(L,x-r*.5,y-r*.2,x+r*.4,y-r*.2,x+r*.2,y-r*1.8,t.h)}hdE(L,x,y,r,r*1.05,t);hdE(L,x-r*.25,y-r*.15,r*.5,r*.5,t.hh);
+  hdP(L,x-r*.3,y-r*.1,HD_INK);hdP(L,x+r*.3,y-r*.1,HD_INK)}
+function hdFae(L,R,o){const x=o.x,base=o.base,sk=hdTone(...o.skin),dr=hdTone(...o.dress),hr=hdTone(...o.hair),wc=o.wing?hdTone(...o.wing):null;
+  if(wc){hdE(L,x-6,base-24,5,7,wc);hdE(L,x+6,base-24,5,7,wc);hdE(L,x-5,base-16,3,4,wc);hdE(L,x+5,base-16,3,4,wc);for(const s of [-1,1])hdLn(L,x+s*2,base-22,x+s*9,base-29,wc.hh)}
+  hdTri(L,x-7,base,x+7,base,x,base-20,dr.m);hdTri(L,x-7,base,x,base,x-1,base-16,dr.h);hdBox(L,x-3,base-21,6,8,dr);
+  if(o.leafy)for(let k=0;k<8;k++){const px=x-6+k*1.7;hdTri(L,px-1,base,px+1.5,base,px,base-4,hdHsl(110,50,40))}
+  if(o.thorny)for(let k=0;k<6;k++)hdP(L,x-5+k*2,base-3-(k%3)*5,hdHsl(100,40,25));
+  hdLn(L,x-3,base-19,x-8,base-(o.armsUp?28:12),sk.m,2);hdLn(L,x+3,base-19,x+8,base-(o.armsUp?28:12),sk.m,2);o.lh=[x-8,base-(o.armsUp?28:12)];o.rh=[x+8,base-(o.armsUp?28:12)];
+  const hy=base-27;hdE(L,x,hy,4.2,4.5,sk);hdR(L,x-5,hy-4,10,3,hr.m);hdR(L,x-5,hy-2,2,9,hr.m);hdR(L,x+4,hy-2,2,9,hr.d);if(o.longHair){hdR(L,x-6,hy+4,2,6,hr.d);hdR(L,x+5,hy+4,2,6,hr.d)}
+  const ec=o.eye||[40,60,90];hdP(L,x-2,hy,ec);hdP(L,x+2,hy,ec);hdP(L,x,hy+3,[200,90,100]);
+  if(o.crown==='flowers')for(let i=-4;i<=4;i+=2)hdP(L,x+i,hy-5,[[255,180,200],[255,240,140],[200,220,255]][(i+4)/2%3]);
+  if(o.crown==='gold'){hdR(L,x-4,hy-6,8,2,hdTone(45,85,55).m);hdP(L,x-4,hy-7,hdHsl(45,85,65));hdP(L,x,hy-8,hdHsl(45,85,65));hdP(L,x+3,hy-7,hdHsl(45,85,65))}
+  if(o.horns){hdLn(L,x-3,hy-4,x-5,hy-8,hdHsl(100,30,30));hdLn(L,x+3,hy-4,x+5,hy-8,hdHsl(100,30,30))}
+  return o}
+function hdWraith(L,o){const x=o.x,base=o.base,c=hdTone(...o.col);hdTri(L,x-9,base-2,x+9,base-2,x,base-32,c.m);hdE(L,x,base-26,6,7,c);
+  for(let i=-9;i<9;i+=3)hdTri(L,x+i,base-2,x+i+3,base-2,x+i+1.5,base+2,c.d);hdE(L,x,base-25,3.5,4.5,[12,10,20]);hdP(L,x-1,base-25,o.eye||[180,240,255]);hdP(L,x+2,base-25,o.eye||[180,240,255]);
+  hdLn(L,x-6,base-18,x-11,base-12,c.d,2);hdLn(L,x+6,base-18,x+11,base-12,c.d,2);o.lh=[x-11,base-12];o.rh=[x+11,base-12];return o}
+function hdLanternSprite(L,x,y,s){const m=hdTone(40,25,28);hdR(L,x-1,y-8*s,3,2,m.d);hdBox(L,x-4*s,y-6*s,8*s,10*s,m);hdR(L,x-3*s+1,y-5*s+1,6*s-2,8*s-2,[255,214,90]);
+  hdE(L,x,y-1,2*s,2.5*s,[255,250,200]);hdP(L,x-1,y-2,HD_INK);hdP(L,x+1,y-2,HD_INK);hdR(L,x-1,y,3,1,[200,90,30]);hdR(L,x-4*s,y+4*s,8*s,1,m.d)}
+/* machines */
+function hdEngine(L,R,o){const x=o.x,base=o.base,ir=hdTone(210,10,38),br=hdTone(15,55,38);
+  if(o.treads){hdR(L,x-15,base-5,30,5,(i,j)=>j===0||j===4?HD_INK:(i+j)%3===0?hdHsl(0,0,20):hdHsl(0,0,32));for(let i=-12;i<=12;i+=6)hdE(L,x+i,base-2.5,2,2,hdTone(0,0,45))}
+  else{hdR(L,x-15,base-3,30,3,hdTone(30,40,30).m);hdLn(L,x-17,base-1,x+17,base-1,hdHsl(30,40,22))}
+  hdBox(L,x-14,base-(o.treads?8:6),28,3,hdTone(30,45,34));
+  for(let j=0;j<10;j++)hdR(L,x-12,base-17+j,15,1,i=>i<2?br.h:i>11?br.d:br.m);for(let i=0;i<15;i+=4)hdR(L,x-12+i,base-17,1,10,br.dd);
+  hdE(L,x-12,base-12,2,5,br);hdR(L,x-10,base-24,4,8,ir.m);hdR(L,x-11,base-25,6,2,ir.d);
+  hdBox(L,x+4,base-22,9,14,hdTone(30,40,30));hdR(L,x+6,base-20,5,4,[255,230,150]);hdR(L,x+4,base-23,10,2,hdTone(0,50,32).m);
+  hdE(L,x+10,base-6,4,4,ir);hdE(L,x+10,base-6,1.5,1.5,hdTone(45,70,55));hdLn(L,x+10,base-6,x-2,base-8,hdHsl(210,10,60),2);
+  if(o.drum){hdE(L,x+2,base-10,3,3,hdTone(30,30,30));for(let a=0;a<6.3;a+=.5)hdP(L,x+2+Math.cos(a)*3,base-10+Math.sin(a)*3,hdHsl(40,40,60))}
+  for(let k=0;k<4;k++){const r=2+k*1.3;hdE(L,x-8+k*2.5+R()*2,base-28-k*4,r,r*.8,hdTone(0,0,86-k*6))}}
+function hdWagon(L,R,o){const x=o.x,base=o.base,w=hdTone(30,45,36);hdBox(L,x-14,base-12,28,4,w);for(const dx of [-9,9]){hdE(L,x+dx,base-4,4,4,hdTone(30,30,28));hdE(L,x+dx,base-4,1.4,1.4,hdTone(40,30,55));for(let a=0;a<6.3;a+=.8)hdLn(L,x+dx,base-4,x+dx+Math.cos(a)*3,base-4+Math.sin(a)*3,hdHsl(30,30,40))}
+  for(let r=0;r<3;r++)for(let k=0;k<4-r;k++){const lx=x-9+k*6+r*3,ly=base-15-r*5;hdR(L,lx-3,ly-2,6,5,hdTone(28,45,40).m);hdE(L,lx+3,ly,2,2.5,hdTone(40,50,62));hdP(L,lx+3,ly,hdHsl(30,45,40))}
+  hdLn(L,x-14,base-9,x-19,base-10,w.d,2)}
+/* specials */
+function hdSpecial(L,BG,R,d){const k=d.sp;
+  if(k==='w0'){hdSky(BG,hdHsl(205,40,60),hdHsl(195,40,88),0,HDH);hdHills(BG,R,34,hdHsl(200,25,82),5);hdGround(BG,R,42,hdTone(200,30,90),hdHsl(200,30,70));
+    for(let i=0;i<6;i++){const x=3+i*7+R()*2,h=10+R()*8;for(let k=0;k<3;k++)hdTri(BG,x-5+k*1.2,42-k*4,x+5-k*1.2,42-k*4,x,42-k*4-h/2.2,k%2?hdHsl(200,25,92):hdHsl(190,30,80));hdR(BG,x,42,1,2,hdHsl(30,20,40))}
+    for(let n=0;n<5;n++){const cx=5+R()*30,cy=4+R()*24,r=2+R()*2.5|0;for(let a=0;a<6;a++){const ang=a*Math.PI/3;hdLn(BG,cx,cy,cx+Math.cos(ang)*r,cy+Math.sin(ang)*r,[255,255,255])}hdP(BG,cx,cy,[200,235,255])}
+    hdE(L,20,30,6,7,hdTone(195,60,80));hdTri(L,14,30,26,30,20,18,hdTone(195,60,86).m);hdTri(L,14,30,26,30,20,42,hdTone(200,60,70).m);hdLn(L,20,19,20,41,[255,255,255]);hdLn(L,15,30,25,30,[230,250,255]);return null}
+  if(k==='w1'){hdSky(BG,hdHsl(180,10,50),hdHsl(160,10,70),0,HDH);hdPines(BG,R,40,hdHsl(160,10,58),8,10,20);hdGround(BG,R,44,hdTone(140,12,52));
+    for(let b=0;b<5;b++){const y=10+b*8,ph=R()*6;for(let x=0;x<HDW;x++){const yy=y+Math.sin(x*.2+ph)*2;for(let j=0;j<4;j++)if(BG[(yy+j|0)*HDW+x])BG[(yy+j|0)*HDW+x]=hdMix(BG[(yy+j|0)*HDW+x],[235,240,240],.5-j*.1)}}return null}
+  if(k==='w2'){hdSky(BG,hdHsl(240,25,10),hdHsl(230,20,28),0,HDH);hdHills(BG,R,42,hdHsl(140,10,14),3);hdGround(BG,R,46,hdTone(120,10,16));
+    for(let c=0;c<4;c++)hdE(L,6+c*9,8+(c%2)*3,8,5,hdTone(230,12,36));let x=20,y=12;for(let s=0;s<7;s++){const nx=x+(R()-.5)*8,ny=y+5;hdLn(L,x,y,nx,ny,[255,250,190],2);x=nx;y=ny}
+    for(let k2=0;k2<26;k2++){const rx=R()*HDW,ry=14+R()*36;hdLn(BG,rx,ry,rx-1,ry+3,hdHsl(210,40,60))}return 'bolt'}
+  if(k==='clear'){hdSky(BG,hdHsl(40,70,62),hdHsl(200,55,82),0,HDH);hdHills(BG,R,38,hdHsl(110,35,46),4);hdGround(BG,R,44,hdTone(100,40,42),hdHsl(90,45,58));
+    for(let a=0;a<12;a++){const ang=a*Math.PI/6;hdLn(BG,20,16,20+Math.cos(ang)*30,16+Math.sin(ang)*30,hdHsl(48,90,80))}hdE(L,20,16,7,7,hdTone(46,95,62));hdE(L,20,16,4,4,[255,250,210]);
+    hdE(L,6,22,6,3,hdTone(0,0,92));hdE(L,34,26,7,3,hdTone(0,0,92));return 'sun'}
+  if(k==='decoy'){hdSky(BG,hdHsl(30,60,62),hdHsl(45,70,80),0,40);hdGround(BG,R,40,hdTone(42,55,52),hdHsl(45,70,40));for(let x=0;x<HDW;x+=3)hdLn(BG,x,40,x+1,36,hdHsl(45,70,45));
+    hdLn(L,20,52,20,14,hdTone(30,40,30).m,2);hdLn(L,8,24,32,24,hdTone(30,40,30).m,2);
+    const o={x:20,base:47,skin:[40,35,72],hair:[45,70,60],shirt:[0,45,42],pants:[220,25,38],build:'slim',hairStyle:'bald',hat:'brim',hatCol:[40,50,55],mouth:'flat',plaid:true,squint:true};hdPerson(L,R,o);
+    for(let k2=0;k2<6;k2++)hdLn(L,o.lh[0]-1,o.lh[1]-2,o.lh[0]-3+k2%3,o.lh[1]+2,hdHsl(45,70,62));hdP(L,30,10,HD_INK);hdP(L,31,9,HD_INK);hdP(L,32,10,HD_INK);return null}
+  if(k==='horn'){hdSky(BG,hdHsl(10,45,30),hdHsl(30,60,55),0,HDH);for(let b=0;b<3;b++)hdR(BG,0,40+b*5,HDW,2,hdHsl(20,40,30+b*4));
+    for(let i=0;i<26;i++){const t=i/25,cx=6+t*24,cy=36-Math.sin(t*2.6)*18,r=1.5+t*6;hdE(L,cx,cy,r*.7,r,hdTone(40,50,72-i*.6))}hdE(L,31,25,3.5,7,hdTone(35,30,30));
+    for(let i=0;i<26;i+=5){const t=i/25;hdLn(L,6+t*24,30-Math.sin(t*2.6)*18,6+t*24,42-Math.sin(t*2.6)*18,hdHsl(45,80,55))}
+    for(let k2=0;k2<4;k2++){const nx=33+(k2%2)*3,ny=8+k2*5;hdR(L,nx,ny,1,4,[255,240,200]);hdE(L,nx-1,ny+4,1.4,1,[255,240,200])}return null}
+  if(k==='scorch'){hdSky(BG,hdHsl(10,60,14),hdHsl(25,75,38),0,HDH);hdPines(BG,R,46,hdHsl(10,40,8),9,10,24);hdGround(BG,R,46,hdTone(15,30,10));
+    for(let k2=0;k2<8;k2++){const x=3+k2*4.6+R()*2,h=12+R()*18;hdTri(L,x-4,48,x+4,48,x,48-h,hdHsl(20,95,52));hdTri(L,x-2.5,48,x+2.5,48,x,48-h*.66,hdHsl(40,100,60));hdTri(L,x-1,48,x+1,48,x,48-h*.35,[255,250,200])}
+    for(let k2=0;k2<14;k2++)hdP(BG,R()*HDW,R()*30,hdHsl(30,100,70));return null}
+  return null}
+
+/* ---------- what each card looks like ---------- */
+function hdSpec(d,R){const n=d.n.toLowerCase(),has=re=>re.test(n),pick=a=>a[R()*a.length|0];
+  const human=()=>{const fem=has(/mags|edda|grandmother|witch|herbalist|ada|mistress/),old=has(/old|grand|elder|hermit|master|bray/);
+    return {type:'person',fem,skin:pick(HD_SKIN),hair:old?pick([[0,0,82],[0,0,64],[30,10,70]]):pick(HD_HAIR),shirt:[pick([0,10,25,120,140,200,210,350]),45+R()*20,32+R()*14],pants:[pick([210,220,30,25]),25+R()*15,24+R()*10],
+      build:pick(['slim','normal','broad','normal']),hairStyle:fem?pick(['long','bun','braids','pony']):pick(['short','short','side','curly','bald','mohawk','long']),
+      beard:fem?null:old?pick(['full','long']):pick([null,null,'stubble','mustache','full']),hat:pick([null,'beanie','cap',null,'brim','bandana']),hatCol:[pick([0,25,45,120,210,280]),55,40],
+      mouth:pick(['flat','smile','frown','flat','open']),brow:pick(['flat','angry','up']),plaid:R()<.5,suspenders:R()<.35,blush:fem&&R()<.6,wrinkles:old,item:null}};
+  let s;
+  if(d.f==='L'||d.f==='N'){
+    if(has(/ox team/))s={type:'ox'};else if(has(/wagon/))s={type:'wagon'};else if(has(/steam/))s={type:'engine',treads:has(/skidder/),drum:has(/donkey/)};
+    else if(has(/heartwood/))s={type:'tree',huge:1};else if(has(/giant/))s=Object.assign(human(),{giant:1,item:'boulder',beard:'long',hat:null,hairStyle:'long',skin:[25,25,58],shirt:[30,30,36],build:'broad'});
+    else{s=human();
+      const T=[[/greenhand/,{item:'axe',beard:null,hat:'beanie',shirt:[120,40,35],plaid:true,mouth:'smile',hairStyle:'short'}],[/bucker/,{item:'bucksaw',build:'broad'}],[/tree faller|lost lumberjack/,{item:'axe',plaid:true,hat:'beanie'}],
+        [/log roller/,{item:'peavey',log:1}],[/bark peeler/,{item:'spud',apron:1}],[/hand sawyer/,{item:'saw'}],[/crosscut/,{item:'saw',pair:1}],[/camp cook/,{item:'ladle',hat:'chef',apron:1,build:'round',mouth:'smile'}],
+        [/choker/,{item:'rope',hat:'helm'}],[/axe thrower/,{item:'throw',brow:'angry'}],[/climbing|high climber|topper/,{item:'rope',belt:1,hat:'helm'}],[/rigging|rigger/,{item:'hook',hat:'cap'}],
+        [/medic/,{item:'bag',cross:1,hat:null}],[/foreman/,{item:'cane',hat:'brim',vest:[30,30,30],beard:'full',build:'broad'}],[/rival scout/,{item:'spyglass',hood:[280,30,24],eye:[200,60,60]}],
+        [/riverman|log driver/,{item:'pole',hat:'brim',scene:'river'}],[/bullcook/,{item:'horn',apron:1,hairStyle:'bun',build:'round'}],[/saw filer/,{item:'file',glasses:1,apron:1}],[/peavey/,{item:'peavey',pair:1}],
+        [/champion/,{item:'bigaxe',medal:1,build:'broad',belt:1}],[/iron topper/,{item:'axe',hat:'helm',vest:[210,8,50]}],[/guild master/,{item:'bag',hat:'crown',vest:[280,40,30],cape:[280,45,30],beard:'full'}],
+        [/old bjorn/,{item:'dblaxe',beard:'braid',hair:[0,0,90],build:'broad',hat:null,hairStyle:'long',plaid:true}],[/twins/,{item:'axe',pair:1,twin:1}],[/golden gus/,{item:'bigaxe',gold:1,beard:'full',hat:'beanie'}],
+        [/spectral/,{item:'axe',ghost:1,scene:'night',hat:'beanie',beard:'long'}],
+        [/tinker/,{pack:1,pots:1,glasses:1,item:null}],[/bard/,{item:'lute',hat:'feather',mouth:'open',scarf:[0,60,45]}],[/hermit/,{item:'lantern',robe:1,hood:[30,20,30],beard:'long'}],[/pedlar/,{pack:1,item:'cane',hat:'brim'}],
+        [/ferryman/,{item:'oar',hood:[220,20,22],scene:'river',eye:[150,220,255]}],[/herbalist/,{item:'herbs',robe:1,hat:null}],[/hedge witch/,{item:'staff',hat:'witch',hatCol:[270,30,22],robe:1,fem:1,hairStyle:'long'}],
+        [/edda/,{item:'spear',hairStyle:'braids',cape:[120,40,28],brow:'angry',fem:1,beard:null,hat:null}],[/grandmother/,{item:'staff',hairStyle:'bun',hair:[0,0,86],robe:1,scarf:[340,40,45],wrinkles:1,fem:1,beard:null,hat:null}]];
+      for(const [re,v] of T)if(re.test(n)){Object.assign(s,v);break}
+      if(!s.item&&!s.pack)s.item=pick(['axe','saw','pole']);if(s.fem)s.beard=null}}
+  else if(d.f==='W'){s={type:'treant',bark:pick([[28,35,30],[25,30,26],[20,40,28],[30,20,34]]),leaf:[pick([95,110,125,80]),45,34],canopy:pick(['oak','oak','pine','oak','willow']),mouth:pick(['flat','grim','o']),brow:R()<.5,eye:pick([[250,210,90],[150,255,170],[160,220,255]])};
+    const T=[[/sapling|rootling|saplimb/,{sc:.8,canopy:'sapling'}],[/thornshield|thornwall/,{item:'shield',brow:true}],[/barkskin/,{bark:[25,30,22],brow:true}],[/briar archer/,{item:'bow'}],[/sap slinger|acorn sling/,{item:'sling',ammo:/acorn/.test(n)?30:50}],
+      [/knot watcher/,{eye:[255,120,80],canopy:'pine',mouth:'o'}],[/stonewood/,{stone:1,bark:[30,10,40]}],[/catapult/,{item:'catapult'}],[/mossback|elder moss/,{moss:1,mush:1}],[/burl sentinel/,{brow:true,mouth:'grim',item:'shield'}],
+      [/spy|whispering/,{eye:[200,120,255],canopy:'willow'}],[/healer|medic/,{item:'heal',blossom:[255,190,210]}],[/ironbark/,{iron:1}],[/thorn volley/,{item:'thorns'}],[/antler ram/,{antlers:1,brow:true}],[/rootwalker/,{canopy:'pine'}],
+      [/ringkeeper/,{rings:1}],[/gnarlbark/,{canopy:'bare',mouth:'grim',brow:true}],[/sapwood/,{bark:[40,40,45],leaf:[60,60,45]}],[/storm oak/,{item:'lightning',scene:'storm',leaf:[140,20,30]}],
+      [/grimwood/,{bark:[0,10,16],eye:[255,60,40],canopy:'bare',mouth:'grim',brow:true}],[/ashen/,{bark:[0,0,40],leaf:[20,70,48],canopy:'bare',eye:[255,150,60]}],[/pale elder/,{birch:1,bark:[40,10,86],leaf:[50,50,60]}],
+      [/old grove|first warden/,{huge:1,moss:1,antlers:/first/.test(n),blossom:[255,240,150]}]];
+    for(const [re,v] of T)if(re.test(n)){Object.assign(s,v);break}if(/whispering|willow/.test(n))s.canopy='willow';s.tw=s.tw||10+(R()*5|0);if(s.armsUp==null)s.armsUp=R()<.3;if(/pollen/.test(n))s.blossom=[255,230,90]}
+  else if(d.f==='S'){const glow=[pick([170,190,200,260,140]),70,70];s={type:'spirit',glow,scene:'night'};
+    const T=[[/^wisp$|starlit|wandering/,{kind:'wisp'}],[/firefly/,{kind:'fireflies'}],[/fox/,{kind:'animal',animal:'fox'}],[/hare/,{kind:'animal',animal:'hare'}],[/stag|hart|calf/,{kind:'animal',animal:'stag'}],
+      [/owl/,{kind:'owl'}],[/wraith|rain/,{kind:'wraith'}],[/lantern/,{kind:'lantern'}],[/glimmer|breeze|echo/,{kind:'wisp'}],[/heart of/,{kind:'heart'}],[/aurora$/,{kind:'fae',aurora:1}],[/imp/,{kind:'imp'}],[/.*/,{kind:'fae'}]];
+    for(const [re,v] of T)if(re.test(n)){Object.assign(s,v);break}
+    if(/moon/.test(n))s.moon=1;if(/aurora/.test(n))s.aurora=1;if(/dawn/.test(n))s.skyHue=330;if(/silver|white|great white/.test(n))s.glow=[200,20,92];if(/twin/.test(n))s.pair=1;if(/calf|kit/.test(n))s.small=1;if(/rain/.test(n))s.rain=1}
+  else{s={type:'beast'};const T=[[/golden squirrel/,{a:'squirrel',gold:1}],[/squirrel/,{a:'squirrel'}],[/old badger|badger/,{a:'badger'}],[/bramble boar|boar sounder|boar/,{a:'boar'}],[/stormcrow|crow/,{a:'crow'}],[/raven/,{a:'raven'}],
+      [/great horned/,{a:'owl',tufts:1}],[/grey mother|night owl|owl/,{a:'owl'}],[/golden eagle|hawk|eagle/,{a:'hawk'}],[/dire wolf|packleader|wolf/,{a:'wolf'}],[/beaver/,{a:'beaver'}],[/thunderhoof|elder elk|elk/,{a:'elk'}],
+      [/thunder moose|moose/,{a:'moose'}],[/bear cub/,{a:'bear',cub:1}],[/ursa|cave bear|great bear|brown bear/,{a:'bear'}],[/lynx/,{a:'lynx'}],[/hive queen/,{a:'bee'}]];
+    for(const [re,v] of T)if(re.test(n)){Object.assign(s,v);break}if(/thunder|storm/.test(n))s.scene='storm';if(/night/.test(n))s.scene='night';if(/king/.test(n))s.crown=1;if(/old|grey|elder|ursa/.test(n))s.old=1;if(/dire|cave|great|ursa/.test(n))s.big=1}
+  return s}
+function hdArt(id){if(HD_CACHE[id])return HD_CACHE[id];const d=CARD[id],R=hwRng([...id+d.n].reduce((a,ch)=>Math.imul(a,31)+ch.charCodeAt(0)>>>0,9)),BG=hdLayer();let FG=hdLayer();
+  const sp=d.unit?hdSpec(d,R):{};let glow=null,gs=0;
+  if(!d.unit){hdSpecial(FG,BG,R,d)}
+  else{hdScene(BG,R,d,sp);const base=sp.scene==='river'?46:47;
+    if(sp.type==='person'){const one=(x,sc,extra)=>{const o=Object.assign({},sp,{x,base,sc},extra||{});if(o.ghost){o.skin=[200,30,80];o.shirt=[200,40,55];o.pants=[210,40,40];o.hair=[190,20,85]}
+        if(o.gold){o.shirt=[45,80,50];o.pants=[40,60,38];o.hatCol=[45,85,55]}if(o.giant){o.sc=1.35;o.base=HDH+6}hdPerson(FG,R,o);if(o.item)hdItem(FG,o,o.item,R);return o};
+      if(sp.log){hdE(FG,20,base-1,12,2.6,hdTone(28,45,40));hdE(FG,32,base-1,2,2.6,hdTone(40,50,62))}
+      if(sp.pair){const a=one(12,.85,{}),b=one(28,.85,sp.twin?{}:{hair:pick2(R,HD_HAIR),skin:pick2(R,HD_SKIN),hat:pick2(R,[null,'beanie','cap']),beard:pick2(R,[null,'full','mustache'])});
+        if(sp.item==='saw'){hdR(FG,a.rh[0],a.rh[1]-1,b.lh[0]-a.rh[0],2,(i,j)=>j&&i%2?hdHsl(210,8,50):hdHsl(210,8,72))}}
+      else one(20,1.15);if(sp.ghost){glow=[150,220,255];gs=.6}if(sp.gold){glow=[255,220,120];gs=.5}}
+    else if(sp.type==='ox'){hdBeast(FG,R,{x:20,base,kind:'ox',fur:[25,40,40],bw:11,bh:7,legH:7,head:4,snout:2,horns:1,ear:'round',tail:'long',hooves:1,neck:1});hdR(FG,6,base-17,6,2,hdTone(30,40,30).m);
+      hdPerson(FG,R,Object.assign(hdSpec({n:'Teamster',f:'L',unit:1},R),{x:33,base,sc:.7,item:null,hat:'brim'}))}
+    else if(sp.type==='wagon')hdWagon(FG,R,{x:20,base});else if(sp.type==='engine')hdEngine(FG,R,{x:20,base,treads:sp.treads,drum:sp.drum});
+    else if(sp.type==='tree'){hdTreant(FG,R,{x:20,base:HDH+2,sc:1.4,bark:[30,40,30],leaf:[100,55,40],canopy:'oak',blossom:[255,220,120],mouth:'o',eye:[255,240,170],moss:1,armsUp:1});glow=[255,230,150];gs=.55}
+    else if(sp.type==='treant'){const o=Object.assign({},sp,{x:20,base:sp.huge?HDH+3:base,sc:sp.huge?1.45:sp.sc||1});hdTreant(FG,R,o);if(sp.item)hdTreeItem(FG,o,sp.item);if(sp.huge){glow=[220,255,180];gs=.4}}
+    else if(sp.type==='spirit'){const t=hdTone(...sp.glow);glow=hdHsl(sp.glow[0],80,75);gs=.55;const sc=sp.small?.75:1;
+      if(sp.kind==='wisp'){const big=/wandering|starlit/.test(d.n.toLowerCase());hdWisp(FG,20,24,big?7:5,t,1);if(!big){hdWisp(FG,9,33,2.5,t,1);hdWisp(FG,31,14,2,t,1)}if(/echo/.test(d.n.toLowerCase()))for(let r=8;r<16;r+=3)for(let a=0;a<6.3;a+=.2)hdP(BG,20+Math.cos(a)*r,24+Math.sin(a)*r,hdMix(BG[0]||[0,0,0],t.h,.5))
+        if(/breeze/.test(d.n.toLowerCase()))for(let k=0;k<3;k++)for(let a=0;a<4.5;a+=.15)hdP(FG,20+Math.cos(a)*(4+a*2),24+Math.sin(a)*(4+a*2)+k,t.hh);if(/starlit/.test(d.n.toLowerCase()))hdStars(FG,R,10,40,[255,255,200])}
+      else if(sp.kind==='fireflies'){for(let k=0;k<7;k++){const x=6+R()*28,y=10+R()*30;hdE(FG,x,y,1.4,1,hdTone(80,20,30));hdP(FG,x+1,y+1,[230,255,120]);hdP(FG,x+2,y+1,[230,255,120]);hdP(FG,x,y-1,[220,240,255])}glow=[220,255,120]}
+      else if(sp.kind==='animal'){const A={fox:{fur:sp.glow,bw:7,bh:4,legH:5,head:3.5,snout:3,ear:'point',tail:'bushy'},hare:{fur:sp.glow,bw:6,bh:4.5,legH:4,head:3.2,snout:1,ear:'long',tail:'fluff'},
+          stag:{fur:sp.glow,bw:9,bh:5,legH:9,head:3.4,snout:2,ear:'point',tail:'short',antlers:sp.small?0:12,neck:3,neckW:3,headUp:5,hooves:1}}[sp.animal];
+        const o=Object.assign({},A,{x:sp.pair?14:22,base,sc,fur:sp.glow});hdBeast(FG,R,o);if(sp.pair)hdBeast(FG,R,Object.assign({},A,{x:30,base:base-3,sc:.8,fur:sp.glow}))}
+      else if(sp.kind==='owl')hdBird(FG,R,{x:20,y:28,front:1,fur:sp.glow,belly:[sp.glow[0],30,88],eye:[180,240,255]});
+      else if(sp.kind==='wraith'){const o=hdWraith(FG,{x:20,base:base-4,col:[sp.glow[0],25,60]});if(sp.rain)for(let k=0;k<22;k++){const x=R()*HDW,y=R()*40;hdLn(BG,x,y,x-1,y+3,hdHsl(200,60,70))}}
+      else if(sp.kind==='lantern'){if(/mother/.test(d.n.toLowerCase())){const o=hdFae(FG,R,{x:20,base,skin:[40,40,80],dress:[35,60,55],hair:[30,40,30],armsUp:1,longHair:1,crown:'gold'});hdLanternSprite(FG,o.lh[0],o.lh[1]+6,.6);hdLanternSprite(FG,o.rh[0],o.rh[1]+6,.6)}else hdLanternSprite(FG,20,30,1.4);glow=[255,210,100]}
+      else if(sp.kind==='heart'){hdTreant(FG,R,{x:20,base:HDH+2,sc:1.3,bark:[30,25,22],leaf:[150,40,45],canopy:'oak',mouth:'o',eye:[200,255,240]});hdE(FG,20,36,4,4,hdTone(340,80,62));hdE(FG,19,35,1.5,1.5,[255,230,240]);glow=[255,160,200];gs=.6}
+      else if(sp.kind==='imp'){hdFae(FG,R,{x:20,base:base,skin:[100,40,45],dress:[110,40,30],hair:[100,40,25],horns:1,leafy:1,eye:[255,240,120]})}
+      else{const nm=d.n.toLowerCase();const o=hdFae(FG,R,{x:20,base,skin:[sp.glow[0],30,85],dress:[sp.glow[0],50,55],hair:[sp.glow[0]+30,50,70],wing:/dancer|grove song|pondmother|healer|rain/.test(nm)?null:[sp.glow[0],50,82],
+          leafy:/fern|moss/.test(nm),thorny:/thorn|bramble/.test(nm),armsUp:/dancer|song|aurora|rain caller/.test(nm),crown:/mother|aurora/.test(nm)?'gold':'flowers',longHair:R()<.6,sc});
+        if(/song/.test(nm))for(let k=0;k<3;k++){hdR(FG,8+k*11,8+(k%2)*5,1,4,[255,255,220]);hdE(FG,7+k*11,12+(k%2)*5,1.3,1,[255,255,220])}
+        if(/pond/.test(nm))for(let k=0;k<3;k++)hdE(FG,8+k*12,base+2,3,1,hdTone(120,45,40));if(/rain caller/.test(nm))hdE(FG,20,6,8,3,hdTone(220,15,70))}}
+    else if(sp.type==='beast'){const a=sp.a,big=sp.big?1.15:1,brown=[25,40,30];let o=null;
+      if(a==='squirrel'){hdE(FG,22,base-1,9,2.5,hdTone(30,40,30));o={kind:a,x:20,base:base-3,fur:sp.gold?[45,85,52]:[20,60,42],belly:[35,40,80],bw:4,bh:4,legH:3,head:3.2,snout:1,ear:'tuft',tail:'bushy',bigEye:1,sc:1.3}}
+      else if(a==='badger')o={x:21,base,fur:[0,0,45],belly:[0,0,25],bw:9,bh:4.5,legH:3,head:3.4,snout:3,snoutCol:[0,0,90],ear:'round',tail:'short',face:'badger'};
+      else if(a==='boar')o={x:21,base,fur:[20,30,26],bw:10,bh:6,legH:4,head:4.3,snout:3,ear:'point',tail:'long',tusk:1,hump:1,hooves:1,spots:/bramble/.test(d.n.toLowerCase())};
+      else if(a==='wolf')o={x:20,base,fur:/dire/.test(d.n.toLowerCase())?[220,8,28]:[210,8,52],belly:[0,0,80],bw:9,bh:5,legH:7,head:3.6,snout:3,ear:'point',tail:'bushy',mane:1,neck:2,headUp:3,eye:[250,210,80]};
+      else if(a==='beaver'){hdE(FG,24,base-1,12,2,hdTone(205,50,50));o={x:20,base:base-2,fur:[25,45,28],belly:[25,35,40],bw:8,bh:5.5,legH:2,head:3.6,snout:1,ear:'round',tail:'flat',bigEye:1};hdR(FG,10,base-8,1,2,[250,250,240])}
+      else if(a==='elk')o={x:22,base,fur:/thunderhoof/.test(d.n.toLowerCase())?[20,30,20]:[28,45,40],belly:[35,30,70],bw:9,bh:5.5,legH:10,head:3.6,snout:2.5,ear:'point',tail:'short',antlers:14,neck:4,neckW:4,headUp:6,hooves:1,mane:1};
+      else if(a==='moose')o={x:22,base,fur:[22,35,22],bw:10,bh:6.5,legH:10,head:4,snout:3.5,ear:'point',tail:'short',antlers:10,palmate:1,neck:3,neckW:4,headUp:3,hooves:1,hump:1};
+      else if(a==='bear')o={x:20,base,fur:/cave|ursa/.test(d.n.toLowerCase())?[25,15,26]:/great/.test(d.n.toLowerCase())?[15,30,18]:brown,bw:sp.cub?7:11,bh:sp.cub?5:7.5,legH:sp.cub?4:6,legW:3,head:sp.cub?3.8:4.6,snout:2,snoutCol:[30,35,50],ear:'round',tail:'short',hump:!sp.cub,bigEye:sp.cub};
+      else if(a==='lynx')o={x:21,base,fur:[35,35,58],bw:8,bh:4.5,legH:6,head:3.6,snout:1,ear:'tuft',tail:'short',spots:1,eye:[150,220,90]};
+      if(o){o.sc=a==='squirrel'?1.5*big:Math.min(1.35*big,15/(o.bw||10));o.x=Math.max(o.x,21);if(sp.old&&o.fur)o.fur=[o.fur[0],o.fur[1]*.5,o.fur[2]+10];o.crown=sp.crown;hdBeast(FG,R,o)}
+      else if(a==='owl'){hdLn(FG,4,40,36,41,hdTone(30,40,30).m,2);hdBird(FG,R,{x:20,y:28,front:1,fur:/grey/.test(d.n.toLowerCase())?[0,0,62]:[30,35,42],belly:[35,30,78],tufts:sp.tufts||/grey|great/.test(d.n.toLowerCase())})}
+      else if(a==='crow'||a==='raven'||a==='hawk'){hdLn(FG,2,38,38,36,hdTone(30,40,30).m,2);hdLn(FG,30,37,35,32,hdTone(30,40,30).d);
+        hdBird(FG,R,a==='hawk'?{x:20,y:28,fur:/golden/.test(d.n.toLowerCase())?[38,60,38]:[25,40,40],belly:[35,40,82],beak:[230,190,60],hook:1,eye:[250,200,60],sc:1.2,spread:/eagle/.test(d.n.toLowerCase())}
+          :{x:20,y:28,fur:[240,15,16],belly:[240,15,22],beak:[30,30,40],eye:a==='raven'?[250,240,160]:null,sc:a==='raven'?1.3:1,crest:a==='raven',crown:sp.crown})}
+      else if(a==='bee'){for(let k=0;k<5;k++){const x=6+k*7,y=14+((k*13)%9);hdE(BG,x,y,1,1,[250,220,90])}hdR(FG,10,32,20,14,(i,j)=>(j%4===0)?hdHsl(40,60,40):hdHsl(42,80,58));hdBee(FG,22,22,1)}
+      if(sp.gold){glow=[255,225,120];gs=.55}}}
+  FG=hdOutline(FG);if(glow||d.r>=4)hdGlow(BG,FG,glow||RAR[d.r].c.match(/\w\w/g).map(h=>parseInt(h,16)),3,gs||.45);
+  if(d.r>=4&&d.unit)for(let k=0;k<8;k++){const x=R()*HDW|0,y=R()*40|0;if(!FG[y*HDW+x]){hdP(BG,x,y,[255,255,230]);hdP(BG,x-1,y,[255,240,180]);hdP(BG,x+1,y,[255,240,180]);hdP(BG,x,y-1,[255,240,180]);hdP(BG,x,y+1,[255,240,180])}}
+  const img=hdOver(BG,FG),cv=document.createElement('canvas');cv.width=HDW;cv.height=HDH;const g=cv.getContext('2d'),id2=g.createImageData(HDW,HDH);
+  for(let i=0;i<img.length;i++){const c=img[i]||[16,26,22];id2.data[i*4]=c[0];id2.data[i*4+1]=c[1];id2.data[i*4+2]=c[2];id2.data[i*4+3]=255}g.putImageData(id2,0,0);return HD_CACHE[id]=cv.toDataURL()}
+function pick2(R,a){return a[R()*a.length|0]}
+
 const RICON=['axe','blade','paw'],ABG={bond:'∞',morale:'↑',medic:'✚',spy:'◉',agile:'⇅',horn:'♪',hero:'★'};
 const abGlyph=d=>d.mus?'≡':d.ab.startsWith('scorch')?'✸':ABG[d.ab]||'';
-function cardHtml(id,o){o=o||{};const d=CARD[id],F=FACTIONS.find(f=>f.id===d.f);const pw=o.pw!=null?o.pw:d.p;
-  return `<div class="cd${o.sm?' sm':''}${d.hero?' hero':''}${o.cls?' '+o.cls:''}" style="--fc:${F.col};--rc:${RAR[d.r].c}" data-cid="${id}"${o.attr||''}><img src="${cardArt(id)}" alt="">${d.unit?`<span class="pw${o.pw!=null&&o.pw>d.p?' up':o.pw!=null&&o.pw<d.p?' dn':''}">${pw}</span>`:''}<span class="cm">${d.unit?ico(d.ab==='agile'?'axe':RICON[d.row]):''}<i>${abGlyph(d)}</i></span>${o.n!=null?`<span class="cn">×${o.n}</span>`:''}${o.band?`<span class="bd" style="--bc:${o.band[1]}">${o.band[0]}</span>`:''}</div>`}
+/* Epic and rarer cards are full art: the detailed artwork covers the whole card, with a foil sheen. Any card shown big uses the detailed art. */
+function cardHtml(id,o){o=o||{};const d=CARD[id],F=FACTIONS.find(f=>f.id===d.f);const pw=o.pw!=null?o.pw:d.p,fa=d.r>=3,big=/\bbig\b/.test(o.cls||'');
+  return `<div class="cd${o.sm?' sm':''}${d.hero?' hero':''}${fa?' fa r'+d.r:''}${o.cls?' '+o.cls:''}" style="--fc:${F.col};--rc:${RAR[d.r].c}" data-cid="${id}"${o.attr||''}><img src="${fa||big?hdArt(id):cardArt(id)}" alt="">${d.unit?`<span class="pw${o.pw!=null&&o.pw>d.p?' up':o.pw!=null&&o.pw<d.p?' dn':''}">${pw}</span>`:''}<span class="cm">${d.unit?ico(d.ab==='agile'?'axe':RICON[d.row]):''}<i>${abGlyph(d)}</i></span>${o.n!=null?`<span class="cn">×${o.n}</span>`:''}${o.band?`<span class="bd" style="--bc:${o.band[1]}">${o.band[0]}</span>`:''}</div>`}
 function cardInfo(id){const d=CARD[id],F=FACTIONS.find(f=>f.id===d.f);return `<b style="color:${RAR[d.r].c}">${d.n}</b> · ${F.n} · ${RAR[d.r].n}${d.unit?` · ${d.ab==='agile'?'Axe or Saw':HROWS[d.row]} row · ${d.p} power`:''}${abText(d)?`<br>${abText(d)}`:''}`}
 /* ---------- opponents ---------- */
 const OPPS=[
@@ -1961,12 +2389,12 @@ function cardsHtml(){if(!S.decks||!Object.keys(S.decks).length)grantStarter('L')
      if(!v.ok)h+=`<div class="row"><div class="t"><div class="d">${v.over?'Some cards in this deck aren\'t in your collection. ':''}Fill deck tops it up to 22 units with your strongest cards.</div></div><button class="buy" type="button" data-fill="1">Fill deck</button></div>`}
     h+=`<div class="cgrid">`;
     const cnt={};D.list.forEach(id=>{cnt[id]=(cnt[id]||0)+1});
-    h+=Object.keys(cnt).sort((a,b)=>CARD[b].unit-CARD[a].unit||CARD[b].p-CARD[a].p).map(id=>cardHtml(id,{n:cnt[id],attr:` data-rm="${id}"`,cls:cnt[id]>ownedN(id)?'bad':'',band:cnt[id]>ownedN(id)?['need '+(cnt[id]-ownedN(id)),'#ff9a9a']:ownedN(id)>cnt[id]?[(ownedN(id)-cnt[id])+' left','#f2c94c']:null})).join('')+`</div><p class="sec">Add from collection</p>`;
+    h+=Object.keys(cnt).sort((a,b)=>CARD[b].unit-CARD[a].unit||CARD[b].p-CARD[a].p).map(id=>cardHtml(id,{n:cnt[id],attr:` data-rm="${id}"`,cls:cnt[id]>ownedN(id)?'bad':'',band:cnt[id]>ownedN(id)?['need '+(cnt[id]-ownedN(id)),'#ff9a9a']:cnt[id]>=(CARD[id].hero?1:3)?['Max','#ff9f43']:ownedN(id)>cnt[id]?[(ownedN(id)-cnt[id])+' left','#f2c94c']:null})).join('')+`</div><p class="sec">Add from collection</p>`;
     {const NC=S.newCards||{},fl={all:()=>1,unit:c=>c.unit,sp:c=>!c.unit,N:c=>c.f==='N',nw:c=>NC[c.id]}[dAddF]||(()=>1),ri=c=>c.ab==='agile'?0:c.row,
       so={power:(a,b)=>b.unit-a.unit||b.p-a.p,row:(a,b)=>b.unit-a.unit||(ri(a)-ri(b))||b.p-a.p,rarity:(a,b)=>b.r-a.r||b.unit-a.unit||b.p-a.p}[dSort]||((a,b)=>b.p-a.p);
      h+=`<div class="sel" role="group" aria-label="Show">${[['all','All'],['unit','Units'],['sp','Specials'],['N','Neutral']].concat(Object.keys(NC).length?[['nw','New']]:[]).map(([k,n])=>`<button type="button" data-af="${k}" aria-pressed="${dAddF===k}">${n}</button>`).join('')}</div>`+
        `<div class="sel" role="group" aria-label="Sort by">${[['power','Power'],['row','Row'],['rarity','Rarity']].map(([k,n])=>`<button type="button" data-asort="${k}" aria-pressed="${dSort===k}">${n}</button>`).join('')}</div><div class="cgrid">`;
-     h+=CARDS.filter(c=>(c.f===S.deckF||c.f==='N')&&ownedN(c.id)>(cnt[c.id]||0)&&fl(c)).sort(so).map(c=>cardHtml(c.id,{n:ownedN(c.id)-(cnt[c.id]||0),attr:` data-add="${c.id}"`,cls:NC[c.id]?'nw':'',band:cnt[c.id]?['Deck: '+cnt[c.id],'#7ff0d0']:null})).join('')}+`</div><p class="note">Tap a card to move it in or out of your deck. Hold a card to see what it does. ×N is how many are in that list. <b style="color:#f2c94c">N left</b>: spare copies still in your collection. <b style="color:#7ff0d0">Deck: N</b>: copies already in this deck.</p>`}
+     h+=CARDS.filter(c=>(c.f===S.deckF||c.f==='N')&&ownedN(c.id)>(cnt[c.id]||0)&&fl(c)).sort(so).map(c=>cardHtml(c.id,{n:ownedN(c.id)-(cnt[c.id]||0),attr:` data-add="${c.id}"`,cls:NC[c.id]?'nw':'',band:(cnt[c.id]||0)>=(c.hero?1:3)?['Max','#ff9f43']:cnt[c.id]?['Deck: '+cnt[c.id],'#7ff0d0']:null})).join('')}+`</div><p class="note">Tap a card to move it in or out of your deck. Hold a card to see what it does. ×N is how many are in that list. <b style="color:#f2c94c">N left</b>: spare copies still in your collection. <b style="color:#7ff0d0">Deck: N</b>: copies already in this deck. <b style="color:#ff9f43">Max</b>: this deck already has the most copies allowed (3, or 1 for heroes).</p>`}
   else if(cView==='coll'){const tot=CARDS.length,have=CARDS.filter(c=>ownedN(c.id)>0).length;
     h+=`<p class="note">Collected <b>${have}/${tot}</b> different cards</p><div class="sel">${FACTIONS.map(F=>`<button type="button" data-cf="${F.id}" aria-pressed="${cFilt===F.id}"><span class="dot" style="background:${F.col}"></span>${F.n.split(' ').pop()}</button>`).join('')}</div><div class="cgrid">`+
       CARDS.filter(c=>c.f===cFilt).map(c=>ownedN(c.id)?cardHtml(c.id,{n:ownedN(c.id),attr:` data-ci="${c.id}"`,cls:(S.newCards||{})[c.id]?'nw':''}):`<div class="cd unk" style="--rc:${RAR[c.r].c}" data-cu="${c.id}">?</div>`).join('')+`</div><p class="note">Tap a card for details.</p>`}
@@ -1983,7 +2411,7 @@ function unseal(k){if(k==='deck'){if(!(S.sealedDecks>0))return;S.sealedDecks--;c
   const r=+k;if(!(S.sealed[r]>0))return;const {c,isNew}=openSealed(r);
   showModal(`<h2 style="color:${RAR[r].c}">${RAR[r].n} card</h2><div style="display:flex;justify-content:center;margin:8px 0" class="reveal">${cardHtml(c.id,{cls:'big'})}</div><div class="note">${cardInfo(c.id)}${isNew?'<br><b>New!</b>':''}</div><button class="buy" type="button" id="toastOk">Keep</button>`);sfx(r>=4?'level':'catch')}
 function openSealed(r){S.sealed[r]--;const pool=CARDS.filter(c=>c.r===r),c=pool[Math.floor(Math.random()*pool.length)],isNew=!ownedN(c.id);addCard(c.id,1);if(isNew)(S.newCards=S.newCards||{})[c.id]=1;return {c,id:c.id,r,isNew}}
-function cardPopup(id){if(S.newCards&&S.newCards[id]){delete S.newCards[id];if(tab==='cards')setTimeout(()=>buildList(true),0)}const d=CARD[id],F=FACTIONS.find(f=>f.id===d.f);{const z=$('cardZoom');z.innerHTML=`<div class="czp"><h2 style="color:${RAR[d.r].c}">${d.n}</h2><div class="note">${F.n} · ${RAR[d.r].n}${d.hero?' · Hero':''}</div><div style="display:flex;justify-content:center;margin:10px 0" class="reveal">${cardHtml(id,{cls:'big'})}</div><div style="font-size:18px;line-height:1.3">${d.unit?`<b>${d.p}</b> power · ${d.ab==='agile'?'Axe or Saw':HROWS[d.row]} row`:'Special card'}${abText(d)?`<br>${abText(d)}`:''}</div><div class="note" style="margin-top:6px">You own ${ownedN(id)}</div><button class="buy" type="button">Close</button></div>`;z.hidden=false}}
+function cardPopup(id){if(S.newCards&&S.newCards[id]){delete S.newCards[id];if(tab==='cards')setTimeout(()=>buildList(true),0)}const d=CARD[id],F=FACTIONS.find(f=>f.id===d.f);{const z=$('cardZoom');z.innerHTML=`<div class="czp"><h2 style="color:${RAR[d.r].c}">${d.n}</h2><div class="note">${F.n} · ${RAR[d.r].n}${d.hero?' · Hero':''}</div><div style="display:flex;justify-content:center;margin:10px 0" class="reveal">${cardHtml(id,{cls:'big zoom'})}</div><div style="font-size:18px;line-height:1.3">${d.unit?`<b>${d.p}</b> power · ${d.ab==='agile'?'Axe or Saw':HROWS[d.row]} row`:'Special card'}${abText(d)?`<br>${abText(d)}`:''}</div><div class="note" style="margin-top:6px">You own ${ownedN(id)}</div><button class="buy" type="button">Close</button></div>`;z.hidden=false}}
 function cardsClick(e){
   const cv=e.target.closest('[data-cv]');if(cv){cView=cv.dataset.cv;buildList(true);return true}
   const df=e.target.closest('[data-df]');if(df){S.deckF=df.dataset.df;buildList(true);return true}
@@ -2162,8 +2590,8 @@ document.addEventListener('visibilitychange',async()=>{if(document.hidden){save(
 window.addEventListener('pagehide',()=>{save();cloudSave()});
 
 /* ---------- What's new: shown once per update ---------- */
-const GAME_VER=78;
-const CHANGELOG=[[78,'Deck labels',['Deck building: cards in your deck show how many spare copies are left in your collection, and cards in your collection show how many are already in your deck']],[77,'Card details',['Hold any card anywhere to see it up close with what it does: in packs, discard piles, the medic pick, your deck and collection. Closing it takes you right back where you were']],[76,'Chests and cards',['Better chests turn up far more often: Iron-bound, Gilded, Mythic and Secret chests are 2 to 6 times as common','New: Restless Chests. After a run of plain chests, one may start rattling. Tap it and stop the marker in the middle to turn it into a Chest, Iron-bound or Gilded chest, key included','Duel: warning before you pass while behind, a Fast/Normal opponent speed button, a match log (tap the strip in the middle) and both discard piles','Duel: Rematch and Next opponent buttons after a match','Deck: Fill deck button, filters (units, specials, neutral, new) and sorting (power, row, rarity), plus a row and power summary','Packs: Open all, and New tags on cards you just found','Fixed: forfeiting a duel after the redraw now counts as a ladder loss, and draws show as draws in your record']],[75,'Wishing Knots',['Wishing Knots no longer have a 25 minute wait. Instead they get rarer the faster you chop, so fast and slow players find them at a similar pace']],[74,'Wishing Knots',['Wishing Knots are rarer for fast cutters: after you find one, the next can only appear after about 25 minutes of play. Wishes you already made are kept']],[73,'Typing fix',['Fixed: the bug report box vanished or ignored taps on iPhone. It now opens on its own screen, a normal tap starts typing, and anything you type is kept if it closes','Typing your ladder name works with a normal tap too','Fixed: xp in the Woods list showed long decimals like 4.590000000000001']],[72,'Fix',['Fixed: the bug report box vanished when you tapped it to type on iPhone. The game thought the keyboard meant your phone was turned sideways. The box also now sits at the top of the screen, above the keyboard']],[71,'Community',['Report a bug or suggest an idea from the new Community section on the Map tab','Community polls will appear there too, so players can vote on future updates']],[70,'Clearer levels',['Furniture you are not high enough level to craft is now greyed out with a lock','Levels now read "Lvl" everywhere']],[69,'Tidier start',['The "Played before?" sign-in prompt can now be closed with ✕. Sign-in is still on the Map tab']],[68,'Phone fixes',['The game now fits your phone screen properly when played from the website','Fixed the new-player tip sometimes showing twice']],[67,'Ready for playtesters',['The game can now run on its own website with cloud saves and the card ladder, for friends without Claude','Pick your ladder name on the Ladder screen when playing on the web']],[66,'Late game and Replant',['New Shrine Offering on the Home tab from Woodcutting 75: spend gold for more damage and logs, up to Lvl 99','Your crew now swings the average of your axe and theirs, so a better axe helps them too','Replant is a true new forest: charms, Home, Shrine and Offering reset as well. You keep acorns, Guild lumberjacks, Amber upgrades, woods found and cards','Acorns now boost damage only, with diminishing returns, so every replant is quicker but still a climb','Fixed: deep Shrine sets showed "undefined" in their names']],[65,'Settling in',['If the tougher trees caught you deep in the forest, you have been moved back to a grove where trees fall in a few seconds','Time away now counts your Shrine bonus properly','The Cards tab opens after 300 trees']],[64,'Daily goals, ladder and a guide',['New Today section on the Map tab: a daily chest that grows with your streak, three daily goals worth Amber, and a Wood of the week with double logs and xp','New card Ladder on the Cards tab: every duel against the computer moves your rating, ranked against other players','New players get a step-by-step guide, and tabs now unlock a little more gradually','Big upgrades you can afford, like a new axe, now glow','The welcome-back screen shows how full your camp stores got']],[63,'A longer journey',['Rebalanced: trees in later groves are much tougher, xp is slower and upgrades cost more per level, so reaching Lvl 99 takes weeks, not days','If a grove feels slow, use the Map to farm an earlier one while you build up','Replant now starts a new forest: your level resets, acorns are fewer but last, and a full run pays 25 Amber','Time away can no longer farm an easy grove faster than you could by hand','Your save is now backed up, so a damaged save can be restored']],[62,'Looks',['Crew outfits now show on Loggers\' Guild lumberjacks too','Finding a look you already own in a chest sells it for its Amber price instead']],[61,'Foldable menus',['Tap any section heading in a menu to fold it away, and tap again to open it','Your choices are remembered when you leave the menu and next time you play']],[60,'Milestones',['Every upgrade, charm and Merchant\'s Scales now has milestones at Lvl 10, 25, 50 and 99','Each milestone gives a big jump; levels in between give a little less','The total bonus at Lvl 99 is unchanged','Your levels were moved up where needed so no bonus went down']],[59,'Time away rebalanced',['Time away now earns about a quarter of active play (20%, up to 25% with Night Cloaks)','Camp Stores now max out at 12 hours','New Amber upgrade: Bedrolls double time away to 24 hours','Night Owl Nell now adds +5% to that instead of +50%','Time Skips still give the full hour of crew, mill and crafting']],[58,'Update notes',['The What\'s new list now shows every update you missed, in one scrolling list']],[57,'Every upgrade to Lvl 99',['All upgrades now go to Lvl 99 (except how many lumberjacks you can hire)','Levels cost less and each gives a little less, so the total at max is the same','Your levels were converted, so your bonuses stay the same']],[56,'Card details in the Deck builder',['Hold any card in the Deck builder to see what it does','Scarecrows on the board can be held too']],[55,'Card details in matches',['Hold any card during a match to see what it does','Works on your hand and on both sides of the board (right-click on a laptop)']],[54,'Charms rebalanced',['Every charm now goes to Lvl 99','Charms cost less per level and give a bit less per level','Your charm levels were converted, so your bonuses stay the same']],[53,'Wish tracker',['The Wishing Knot shows how many of each wish you have made','Your wishes are listed on the Axe tab, under Level bonus']],[52,'Sync fix',['Amber purchases are now kept when your phone and laptop saves meet','Your Fifth Crew Slot is back']],
+const GAME_VER=79;
+const CHANGELOG=[[79,'Card art',['New detailed artwork for every card when you hold it: each character has its own look, tools, outfit and scene','Epic, Legendary, Mythic and Secret cards are now full art, with the picture covering the whole card and a foil shine','Deck building: an orange Max label shows when a deck already has the most copies of a card it can hold']],[78,'Deck labels',['Deck building: cards in your deck show how many spare copies are left in your collection, and cards in your collection show how many are already in your deck']],[77,'Card details',['Hold any card anywhere to see it up close with what it does: in packs, discard piles, the medic pick, your deck and collection. Closing it takes you right back where you were']],[76,'Chests and cards',['Better chests turn up far more often: Iron-bound, Gilded, Mythic and Secret chests are 2 to 6 times as common','New: Restless Chests. After a run of plain chests, one may start rattling. Tap it and stop the marker in the middle to turn it into a Chest, Iron-bound or Gilded chest, key included','Duel: warning before you pass while behind, a Fast/Normal opponent speed button, a match log (tap the strip in the middle) and both discard piles','Duel: Rematch and Next opponent buttons after a match','Deck: Fill deck button, filters (units, specials, neutral, new) and sorting (power, row, rarity), plus a row and power summary','Packs: Open all, and New tags on cards you just found','Fixed: forfeiting a duel after the redraw now counts as a ladder loss, and draws show as draws in your record']],[75,'Wishing Knots',['Wishing Knots no longer have a 25 minute wait. Instead they get rarer the faster you chop, so fast and slow players find them at a similar pace']],[74,'Wishing Knots',['Wishing Knots are rarer for fast cutters: after you find one, the next can only appear after about 25 minutes of play. Wishes you already made are kept']],[73,'Typing fix',['Fixed: the bug report box vanished or ignored taps on iPhone. It now opens on its own screen, a normal tap starts typing, and anything you type is kept if it closes','Typing your ladder name works with a normal tap too','Fixed: xp in the Woods list showed long decimals like 4.590000000000001']],[72,'Fix',['Fixed: the bug report box vanished when you tapped it to type on iPhone. The game thought the keyboard meant your phone was turned sideways. The box also now sits at the top of the screen, above the keyboard']],[71,'Community',['Report a bug or suggest an idea from the new Community section on the Map tab','Community polls will appear there too, so players can vote on future updates']],[70,'Clearer levels',['Furniture you are not high enough level to craft is now greyed out with a lock','Levels now read "Lvl" everywhere']],[69,'Tidier start',['The "Played before?" sign-in prompt can now be closed with ✕. Sign-in is still on the Map tab']],[68,'Phone fixes',['The game now fits your phone screen properly when played from the website','Fixed the new-player tip sometimes showing twice']],[67,'Ready for playtesters',['The game can now run on its own website with cloud saves and the card ladder, for friends without Claude','Pick your ladder name on the Ladder screen when playing on the web']],[66,'Late game and Replant',['New Shrine Offering on the Home tab from Woodcutting 75: spend gold for more damage and logs, up to Lvl 99','Your crew now swings the average of your axe and theirs, so a better axe helps them too','Replant is a true new forest: charms, Home, Shrine and Offering reset as well. You keep acorns, Guild lumberjacks, Amber upgrades, woods found and cards','Acorns now boost damage only, with diminishing returns, so every replant is quicker but still a climb','Fixed: deep Shrine sets showed "undefined" in their names']],[65,'Settling in',['If the tougher trees caught you deep in the forest, you have been moved back to a grove where trees fall in a few seconds','Time away now counts your Shrine bonus properly','The Cards tab opens after 300 trees']],[64,'Daily goals, ladder and a guide',['New Today section on the Map tab: a daily chest that grows with your streak, three daily goals worth Amber, and a Wood of the week with double logs and xp','New card Ladder on the Cards tab: every duel against the computer moves your rating, ranked against other players','New players get a step-by-step guide, and tabs now unlock a little more gradually','Big upgrades you can afford, like a new axe, now glow','The welcome-back screen shows how full your camp stores got']],[63,'A longer journey',['Rebalanced: trees in later groves are much tougher, xp is slower and upgrades cost more per level, so reaching Lvl 99 takes weeks, not days','If a grove feels slow, use the Map to farm an earlier one while you build up','Replant now starts a new forest: your level resets, acorns are fewer but last, and a full run pays 25 Amber','Time away can no longer farm an easy grove faster than you could by hand','Your save is now backed up, so a damaged save can be restored']],[62,'Looks',['Crew outfits now show on Loggers\' Guild lumberjacks too','Finding a look you already own in a chest sells it for its Amber price instead']],[61,'Foldable menus',['Tap any section heading in a menu to fold it away, and tap again to open it','Your choices are remembered when you leave the menu and next time you play']],[60,'Milestones',['Every upgrade, charm and Merchant\'s Scales now has milestones at Lvl 10, 25, 50 and 99','Each milestone gives a big jump; levels in between give a little less','The total bonus at Lvl 99 is unchanged','Your levels were moved up where needed so no bonus went down']],[59,'Time away rebalanced',['Time away now earns about a quarter of active play (20%, up to 25% with Night Cloaks)','Camp Stores now max out at 12 hours','New Amber upgrade: Bedrolls double time away to 24 hours','Night Owl Nell now adds +5% to that instead of +50%','Time Skips still give the full hour of crew, mill and crafting']],[58,'Update notes',['The What\'s new list now shows every update you missed, in one scrolling list']],[57,'Every upgrade to Lvl 99',['All upgrades now go to Lvl 99 (except how many lumberjacks you can hire)','Levels cost less and each gives a little less, so the total at max is the same','Your levels were converted, so your bonuses stay the same']],[56,'Card details in the Deck builder',['Hold any card in the Deck builder to see what it does','Scarecrows on the board can be held too']],[55,'Card details in matches',['Hold any card during a match to see what it does','Works on your hand and on both sides of the board (right-click on a laptop)']],[54,'Charms rebalanced',['Every charm now goes to Lvl 99','Charms cost less per level and give a bit less per level','Your charm levels were converted, so your bonuses stay the same']],[53,'Wish tracker',['The Wishing Knot shows how many of each wish you have made','Your wishes are listed on the Axe tab, under Level bonus']],[52,'Sync fix',['Amber purchases are now kept when your phone and laptop saves meet','Your Fifth Crew Slot is back']],
  [51,'Update notes',["A \"What's new\" pop-up now appears after each update"]],
  [50,'Chest slot',['The waiting-chest slot glows white for Sacks, Crates and Chests']],
  [49,'Chest Trackers',['New Amber boost: your crew finds a chest every 30 min while you\'re away (up to 4)','Chests left behind when you change grove wait in a slot at the top-left']],
