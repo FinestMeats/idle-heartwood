@@ -4,7 +4,10 @@ const ROWCAP=3,SAPCAP=10,RINGCAP=6;
 const C=id=>CARDS[id];
 function rnd(G){G.rs=(G.rs+0x6D2B79F5)>>>0;let t=G.rs;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}
 function shuffle(G,a){for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd(G)*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-const clone=G=>JSON.parse(JSON.stringify(G));
+/* fast copy of the game state (the AI copies it a lot) */
+const cpU=x=>({u:x.u,id:x.id,exh:x.exh,sick:x.sick,tools:x.tools.slice(),tmp:x.tmp,sh:x.sh,moved:x.moved,row:x.row});
+const cpP=P=>({...P,k:{...P.k,used:{...P.k.used}},deck:P.deck.slice(),hand:P.hand.slice(),rings:P.rings.slice(),heart:P.heart.slice(),grave:P.grave.slice(),rows:{C:P.rows.C.map(cpU),T:P.rows.T.map(cpU)},stats:{...P.stats}});
+const clone=G=>({...G,aura:{...G.aura},log:G.log.slice(),p:G.p.map(cpP)});
 let UID=1;
 function inst(G,id){return {u:G.uid++,id,exh:false,sick:true,tools:[],tmp:0,sh:0,moved:false,row:null}}
 function newPlayer(G,cfg){const P={name:cfg.name,f:KEEPERS[cfg.keeper].f,k:{id:cfg.keeper,exh:false,dz:0,hush:0,used:{},row:KEEPERS[cfg.keeper].row==='W'?'C':KEEPERS[cfg.keeper].row},
@@ -140,14 +143,14 @@ function effect(G,i,op,v,target){const P=G.p[i],O=G.p[1-i];
 /* Trample (on: 'chip'). 0 = off. 'carry' = the power left over after beating a blocker carries on to the
    original target and must beat it on its own. 'chip' = any power left over after beating a blocker cracks a Ring
    (Keeper attacks) or fells the target if it is enough (unit attacks). */
-let TRAMPLE='chip';const setTrample=v=>{TRAMPLE=v};const TS={blocks:0,through:0,saved:0,gaveUp:0,kAtt:0,kills:0,readyKills:0};
+let TRAMPLE='chip';const DEFENDERS={};const setTrample=v=>{TRAMPLE=v};const TS={blocks:0,through:0,saved:0,gaveUp:0,kAtt:0,kills:0,readyKills:0};
 const tramples=(left,tpow,isK)=>left>0&&(TRAMPLE==='chip'&&isK?true:left>=tpow);
 /* one attack, with the defender's single React window */
 function attack(G,i,a,d,def){const P=G.p[i],O=G.p[1-i];let att,ap;
   if(a==='K'){P.k.exh=true;ap=kPower(G,P)}else{att=findU(P,a);att.exh=true;ap=power(G,P,att)}
   let tgt=d==='K'?null:findU(O,d);let dp=d==='K'?kPower(G,O):power(G,O,tgt);
   const aN=a==='K'?KEEPERS[P.k.id].n:nm(att.id),dN=d==='K'?(O.name==='You'?'your Keeper':O.name+"'s Keeper"):nm(tgt.id);
-  const plan=(def||aiDefend)(G,1-i,ap,d,dp);G.lastAttack={a:aN,d:dN,ap,dp,plan,landed:false,crack:null,isK:d==='K',trade:false};O.stats.react+=plan.cards.length;
+  const plan=(def||DEFENDERS[O.ai]||aiDefend)(G,1-i,ap,d,dp,a);G.lastAttack={a:aN,d:dN,ap,dp,plan,landed:false,crack:null,isK:d==='K',trade:false};O.stats.react+=plan.cards.length;
   for(const id of plan.cards){O.hand.splice(O.hand.indexOf(id),1);O.grave.push(id);const c=C(id);if(c.type==='reaction')O.sap-=c.cost}
   if(plan.negate){lg(G,aN+' attacks '+dN+': Fade, the attack misses');return}
   if(plan.decoy){lg(G,aN+' attacks '+dN+': a Scarecrow takes the hit');return}
@@ -167,7 +170,7 @@ function attack(G,i,a,d,def){const P=G.p[i],O=G.p[1-i];let att,ap;
   G.lastAttack.landed=true;
   /* two units of equal power fell each other; a Keeper is never felled */
   if(tgt&&att&&ap===dp){lg(G,aN+' ('+ap+') attacks '+nm(tgt.id)+' ('+dp+'): both felled'+how);G.lastAttack.trade=true;toGrave(G,O,tgt);toGrave(G,P,att);return}
-  if(tgt){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): felled'+how);TS.kills++;toGrave(G,O,tgt);return}
+  if(tgt){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): felled'+how);TS.kills++;G.kills=(G.kills||0)+1;toGrave(G,O,tgt);return}
   lg(G,aN+' ('+ap+') hits '+dN+' ('+dp+')'+how);
   const n=(att&&kwOf(att,'double'))?2:1;P.stats.hits++;
   for(let k=0;k<n&&!G.over;k++){if(!O.rings.length){end(G,i,'rings');return}
@@ -230,5 +233,5 @@ function preview(G,m){const i=G.turn,P=G.p[i],O=G.p[1-i];const ap=m.a==='K'?kPow
 function play(a,b,seed,maxTurns){const G=newGame(a,b,seed);maxTurns=maxTurns||80;
   while(!G.over&&G.turnNo<maxTurns){aiWork(G);if(!G.over&&G.phase==='fell')aiFell(G)}
   if(!G.over)end(G,-1,'timeout');return G}
-const API={setTrample,setTargets,TS,blockPower,blockers,newGame,moves,apply,play,value,power,kPower,units,findU,aiWork,aiFell,aiNext,aiDefend,preview,redraw,clone,abilityText,startRings,canAttack};
+const API={DEFENDERS,setTrample,setTargets,TS,blockPower,blockers,newGame,moves,apply,play,value,power,kPower,units,findU,aiWork,aiFell,aiNext,aiDefend,preview,redraw,clone,abilityText,startRings,canAttack};
 if(typeof module!=='undefined')module.exports=API;
