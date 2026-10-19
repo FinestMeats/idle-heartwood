@@ -135,15 +135,18 @@ function attack(G,i,a,d,def){const P=G.p[i],O=G.p[1-i];let att,ap;
   if(a==='K'){P.k.exh=true;ap=kPower(G,P)}else{att=findU(P,a);att.exh=true;ap=power(G,P,att)}
   let tgt=d==='K'?null:findU(O,d);let dp=d==='K'?kPower(G,O):power(G,O,tgt);
   const aN=a==='K'?KEEPERS[P.k.id].n:nm(att.id),dN=d==='K'?(O.name==='You'?'your Keeper':O.name+"'s Keeper"):nm(tgt.id);
-  const plan=(def||aiDefend)(G,1-i,ap,d,dp);G.lastAttack={a:aN,d:dN,ap,dp,plan,landed:false,crack:null};O.stats.react+=plan.cards.length;
+  const plan=(def||aiDefend)(G,1-i,ap,d,dp);G.lastAttack={a:aN,d:dN,ap,dp,plan,landed:false,crack:null,isK:d==='K',trade:false};O.stats.react+=plan.cards.length;
   for(const id of plan.cards){O.hand.splice(O.hand.indexOf(id),1);O.grave.push(id);const c=C(id);if(c.type==='reaction')O.sap-=c.cost}
   if(plan.negate){lg(G,aN+' attacks '+dN+': Fade, the attack misses');return}
   if(plan.decoy){lg(G,aN+' attacks '+dN+': a Scarecrow takes the hit');return}
   if(plan.guard!=null){const g=findU(O,plan.guard);g.exh=true;tgt=g;d=g.u;dp=power(G,O,g)}
   dp+=plan.plus;ap=Math.max(0,ap-plan.minus);
+  G.lastAttack.fap=ap;G.lastAttack.fdp=dp;G.lastAttack.dn=tgt?nm(tgt.id):dN;G.lastAttack.guarded=plan.guard!=null;
   const how=(plan.guard!=null?' (Guarded by '+nm(tgt.id)+')':'')+(plan.cards.length?' ('+plan.cards.map(nm).join(', ')+')':'');
   if(ap<dp){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): held'+how);return}
   G.lastAttack.landed=true;
+  /* two units of equal power fell each other; a Keeper is never felled */
+  if(tgt&&att&&ap===dp){lg(G,aN+' ('+ap+') attacks '+nm(tgt.id)+' ('+dp+'): both felled'+how);G.lastAttack.trade=true;toGrave(G,O,tgt);toGrave(G,P,att);return}
   if(tgt){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): felled'+how);toGrave(G,O,tgt);return}
   lg(G,aN+' ('+ap+') hits '+dN+' ('+dp+')'+how);
   const n=(att&&kwOf(att,'double'))?2:1;P.stats.hits++;
@@ -187,7 +190,7 @@ function aiFell(G){const i=G.turn;let guard=0;
     const P=G.p[i],O=G.p[1-i];let best=null,bs=-1e9;
     for(const m of ms){const ap=m.a==='K'?kPower(G,P):power(G,P,findU(P,m.a));
       const dp=m.d==='K'?kPower(G,O):power(G,O,findU(O,m.d));if(ap<dp)continue;
-      const tv=m.d==='K'?(O.rings.length===0?100:3+(6-O.rings.length)*0.2):dp+0.6;
+      const tv=m.d==='K'?(O.rings.length===0?100:3+(6-O.rings.length)*0.2):dp+0.6-(ap===dp?ap+0.6:0);
       const cost=m.a==='K'?0.3:0.5+ap*0.05;const s=tv-cost;if(s>bs){bs=s;best=m}}
     if(!best)break;apply(G,best)}
   if(!G.over)apply(G,{t:'end'})}
@@ -198,7 +201,7 @@ function aiNext(G){const i=G.turn;
     return best||{t:'tofell'}}
   const P=G.p[i],O=G.p[1-i];let best=null,bs=-1e9;
   for(const m of moves(G).filter(m=>m.t==='attack')){const ap=m.a==='K'?kPower(G,P):power(G,P,findU(P,m.a));const dp=m.d==='K'?kPower(G,O):power(G,O,findU(O,m.d));if(ap<dp)continue;
-    const tv=m.d==='K'?(O.rings.length===0?100:3+(6-O.rings.length)*0.2):dp+0.6;const s=tv-(0.5+ap*0.05);if(s>bs){bs=s;best=m}}
+    const tv=m.d==='K'?(O.rings.length===0?100:3+(6-O.rings.length)*0.2):dp+0.6-(ap===dp?ap+0.6:0);const s=tv-(0.5+ap*0.05);if(s>bs){bs=s;best=m}}
   return best||{t:'end'}}
 /* what an attack looks like before anyone reacts (for the React prompt) */
 function preview(G,m){const i=G.turn,P=G.p[i],O=G.p[1-i];const ap=m.a==='K'?kPower(G,P):power(G,P,findU(P,m.a));const dp=m.d==='K'?kPower(G,O):power(G,O,findU(O,m.d));
