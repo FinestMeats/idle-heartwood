@@ -196,6 +196,27 @@ nav .tab .pi{width:20px;height:20px}
 #cardZoom{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center}#cardZoom[hidden]{display:none}
 #cardZoom .czp{background:var(--panel);border:3px solid var(--edge);box-shadow:inset 0 0 0 2px var(--line);border-radius:6px;padding:12px 16px;width:min(84%,330px);text-align:center;font-size:20px;line-height:1.2}
 #cardZoom h2{font-family:var(--display);font-weight:400;font-size:26px;margin:0 0 4px}#cardZoom button{margin:10px auto 0}
+#tcg{position:fixed;inset:0;z-index:30;background:#0b1210;display:flex;flex-direction:column;max-width:560px;margin:0 auto;padding-top:env(safe-area-inset-top,0px);font-family:var(--ui);color:var(--fg)}
+#tcg[hidden]{display:none}
+.tbar{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--panel);flex:none;min-height:40px}
+.tbar.me{justify-content:flex-start}.tbar .dquit{margin-left:auto}
+.tcamp{display:flex;align-items:center;gap:7px;font-size:15px}.tbar.me .tcamp{margin-left:auto}
+.tkp{display:flex;align-items:center;gap:4px;font-family:var(--ui);font-size:14px;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;max-width:150px;min-height:32px}
+.tkp span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tkp b{background:#e8f4ee;color:#0a0d08;border-radius:9px;padding:0 5px;font-size:15px}
+.tkp.tgt{box-shadow:0 0 0 2px var(--sap);background:rgba(127,240,208,.14)}.tkp.hush,.tkp.dz{opacity:.6}
+.trg{display:flex;gap:2px}.trg i{width:10px;height:10px;border-radius:50%;border:2px solid var(--gold);box-sizing:border-box;background:rgba(242,201,76,.25)}.trg i.hw{border-style:dotted;background:none}
+.tsp{display:flex;align-items:center;gap:2px;color:#7fd0f0}
+.tr{flex:1 1 0;min-height:64px;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:2px 8px;border-bottom:1px solid #1f2e2a}
+.tr .tlab{font-size:12px;color:var(--muted);letter-spacing:.5px}.tr .tlab b.up{color:#7ff0d0}.tr .tlab b.dn{color:#ff9a9a}
+.tr .cs{display:flex;gap:4px;min-height:72px;align-items:center}
+.tr.tgt{background:rgba(127,240,208,.14);box-shadow:inset 0 0 0 2px var(--sap);cursor:pointer}
+.tmid{display:flex;align-items:center;gap:8px;padding:4px 8px;background:#101a16;border-top:2px solid var(--edge);border-bottom:2px solid var(--edge);font-size:14px;flex:none}
+.tmid .tph{color:var(--gold);white-space:nowrap}.tmid .tlog{flex:1;min-width:0;color:var(--muted);font-size:12.5px;line-height:1.25;cursor:pointer}.tmid .tlog div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cd.tc .sap{position:absolute;right:1px;top:1px;min-width:15px;height:15px;border-radius:8px;background:#7fd0f0;color:#0a0d08;font-size:12px;line-height:15px;text-align:center;border:1px solid #000}
+.cd.tc .tl{position:absolute;right:1px;bottom:1px;display:flex;align-items:center;font-size:12px}.cd.tc .tl .pi{width:11px;height:11px}
+.cd.tc .tic{position:absolute;left:50%;top:14px;transform:translateX(-50%)}.cd.tc .tic .pi{width:28px;height:28px}
+.cd.big.tc .sap{min-width:22px;height:22px;font-size:17px;line-height:22px;border-radius:11px}.cd.big.tc .tic .pi{width:56px;height:56px}
+.cd.ex{filter:grayscale(.7) brightness(.7);transform:rotate(8deg)}
 #duel{position:fixed;inset:0;z-index:30;background:#0b1210;display:flex;flex-direction:column;max-width:560px;margin:0 auto;padding-top:env(safe-area-inset-top,0px);font-family:var(--ui);color:var(--fg)}
 .dbar{display:flex;align-items:center;gap:7px;padding:5px 8px;background:var(--panel);font-size:17px;flex:none}
 .dbar .dn{display:flex;align-items:center;gap:5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -294,6 +315,7 @@ html.sideways #rotate{display:flex;position:fixed;inset:0;z-index:100;background
     <div id="cardZoom" hidden role="dialog" aria-label="Card details"></div>
   </div>
   <div id="duel" hidden role="dialog" aria-label="Card duel"></div>
+  <div id="tcg" hidden role="dialog" aria-label="Heartwood TCG"></div>
   <div id="dex" hidden role="dialog" aria-modal="true" aria-label="Field guide">
     <div class="book">
       <div class="bk-bar"><span id="dexTitle">Field Guide</span><button class="bk-btn" type="button" id="dexClose" aria-label="Close field guide">✕</button></div>
@@ -1620,11 +1642,11 @@ $('duel').addEventListener('click',duelClick);
 /* Hold (or right-click) any card in a match to see what it does. The tap that ends a hold is swallowed so it doesn't also play the card. */
 const holdInfo=du=>{let ht=null,hx=0,hy=0,held=0;const stop=()=>{clearTimeout(ht);ht=null};
  du.addEventListener('pointerdown',e=>{const c=e.target.closest('[data-cid]');if(!c||e.button>0||c.closest('#cardZoom'))return;hx=e.clientX;hy=e.clientY;stop();held=0;
-  ht=setTimeout(()=>{ht=null;held=Date.now();if(navigator.vibrate)try{navigator.vibrate(12)}catch(_){}cardPopup(c.dataset.cid)},450)});
+  ht=setTimeout(()=>{ht=null;held=Date.now();if(navigator.vibrate)try{navigator.vibrate(12)}catch(_){}(c.classList.contains('tc')?tcgPopup:cardPopup)(c.dataset.cid)},450)});
  du.addEventListener('pointermove',e=>{if(ht&&Math.hypot(e.clientX-hx,e.clientY-hy)>10)stop()});
  ['pointerup','pointercancel','pointerleave'].forEach(n=>du.addEventListener(n,stop));
  du.addEventListener('click',e=>{if(held&&Date.now()-held<1500){held=0;e.stopImmediatePropagation();e.preventDefault()}},true);
- du.addEventListener('contextmenu',e=>{const c=e.target.closest('[data-cid]');if(!c||c.closest('#cardZoom'))return;e.preventDefault();stop();cardPopup(c.dataset.cid)})};holdInfo(document);
+ du.addEventListener('contextmenu',e=>{const c=e.target.closest('[data-cid]');if(!c||c.closest('#cardZoom'))return;e.preventDefault();stop();(c.classList.contains('tc')?tcgPopup:cardPopup)(c.dataset.cid)})};holdInfo(document);
 $('cardZoom').addEventListener('click',e=>{e.stopPropagation();$('cardZoom').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('cardZoom').hidden)$('cardZoom').hidden=true});
 $('toast').addEventListener('click',e=>{if(e.target.closest('[data-mimic]')){mimicStop();return}{const ag=e.target.closest('[data-again]');if(ag){nextToast();startDuel(+ag.dataset.again);return}const gc=e.target.closest('[data-gc]');if(gc){cardPopup(gc.dataset.gc);return}}const md=e.target.closest('[data-med]');if(md&&dMed){const u=+md.dataset.med,id=md.dataset.cid;
@@ -1811,6 +1833,299 @@ function aiMulligan(G,pi){const P=G.p[pi];for(let k=0;k<3;k++){const dup=P.hand.
 /* deck validation: 22+ units, at most 10 specials */
 function deckCheck(list){const u=list.filter(id=>CARD[id]&&CARD[id].unit).length,s=list.filter(id=>CARD[id]&&!CARD[id].unit).length;return {u,s,ok:u>=22&&s<=10}}
 /*HWE-END*/
+/*TCG-START*/
+/* Heartwood TCG (preview): rules engine + computer opponent, bundled from tcg/cards.js and tcg/engine.js */
+const TCG=(()=>{
+/* Heartwood TCG card pool, converted from the Classic cards by fixed rules (rules doc: "Converting the existing cards").
+   Unit ids match Classic ids so one collection plays both formats. */
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const CARDS={},UNITS=[];
+const ROWF={L:'C',W:'T',S:'T',B:'C',N:'C'};
+function convertUnits(){
+  for(const f in CARDSRC)CARDSRC[f].forEach((c,i)=>{
+    const [n,oldRow,oldP,ab,r]=c,id=f+String(i+1).padStart(2,'0');
+    const kw={};let row=oldRow===0?'C':oldRow===1?'T':ROWF[f];
+    if(ab==='bond')kw.crew=1;else if(ab==='morale'||ab==='horn')kw.rally=1;else if(ab==='medic')kw.revive=1;
+    else if(ab==='spy')kw.scout=1;else if(ab==='agile'){kw.nimble=1;row='W'}else if(ab==='hero')kw.ancient=1;
+    else if(ab.startsWith('muster:')){kw.call=1}else if(ab.startsWith('scorch'))kw.fire=3;
+    let p=ab==='hero'?clamp(Math.round(oldP*0.6),6,8):clamp(Math.round(oldP*0.6),1,7);
+    if(ab==='horn')p=2;
+    /* faction flavour for plain cards (no ability), by position so it is stable */
+    const plain=!ab;
+    if(plain){
+      if(f==='L'&&row==='C'&&i%3===0)kw.eager=1;
+      else if(f==='L'&&row==='C'&&r>=2)kw.double=1;
+      else if(f==='W'&&row==='C')kw.guard=1;
+      else if(f==='W'&&row==='T'&&r>=1)kw.regrow=1;
+      else if(f==='S'&&r>=2)kw.sprout=1;
+      else if(f==='S')kw.eager=1;
+      else if(f==='B'&&row==='C'&&i%3===1)kw.eager=1;
+      else if(f==='N'&&row==='C')kw.guard=1;
+    }
+    const nk=Object.keys(kw).filter(k=>k!=='ancient').length;
+    /* +1 for a keyword; plain Treeline units pay +1 for their safety instead */
+    const cost=clamp(p+(nk||(row==='T'&&!kw.rally)?1:0)+(kw.ancient?2:0),1,10);
+    if(cost<=2&&!kw.ancient)kw.brace=1;
+    const d={id,n,f,type:'unit',r,p,row,kw,cost,mus:ab.startsWith('muster:')?ab.slice(7):null};
+    CARDS[id]=d;UNITS.push(d)});
+}
+convertUnits();
+/* Non-unit cards. fx keys are read by the engine. */
+const EXTRA=[
+ ['Xbell','Camp Bell','N','boon',2,{row:'C',v:1}],['Xlantern','Lantern Light','N','boon',2,{row:'T',v:1}],
+ ['Xfrost','Snowdrift','N','blight',2,{row:'C',v:-1}],['Xmist','Sawdust','N','blight',2,{row:'T',v:-1}],
+ ['Xstorm','Mudslide','N','reaction',1,{attackerMinus:2}],['Xsun','Sunbreak','N','event',2,{clearAuras:1,draw:1}],
+ ['Xscare','Scarecrow','N','reaction',2,{decoy:3}],['Xfire','Wildfire','N','event',5,{wipe:2}],
+ ['TL_axe','Sharp Axe','L','tool',2,{p:2}],['TL_hook','Peavey Hook','L','tool',1,{p:1,eager:1}],
+ ['TL_line','Hold the Line','L','reaction',2,{plus:3}],['TL_timber','Timber!','L','event',4,{fell:4}],
+ ['TW_bark','Bark Armour','W','tool',2,{p:1,guard:1}],['TW_rooted','Rooted','W','reaction',1,{plus:2}],
+ ['TW_roots','Return to the Roots','W','event',1,{fellOwn:1,regrow:1,draw:1}],['TW_moss','Mossbed','W','event',3,{regrow:1,draw:1}],
+ ['TS_charm','Wisp Charm','S','tool',1,{p:1,nimble:1}],['TS_fade','Fade','S','reaction',2,{negate:1}],
+ ['TS_path','Moonlit Path','S','event',2,{daze:1,draw:1}],['TS_gust','Gust','S','event',3,{bounce:4}],
+ ['TB_collar','Iron Collar','B','tool',2,{p:2}],['TB_pack','Pack Defence','B','reaction',2,{plusPerUnit:1}],
+ ['TB_stampede','Stampede','B','event',3,{clearingBuff:2}],['TB_howl','Howl','B','event',2,{reviveHand:1,draw:1}]];
+for(const [id,n,f,type,cost,fx] of EXTRA)CARDS[id]={id,n,f,type,cost,fx,kw:{},p:0,r:1};
+/* Keepers: power runs opposite to ability strength. Ability ops are read by the engine. */
+const KEEPERS={
+ L_a:{n:'Foreman Hale',f:'L',p:5,row:'C',ab:[[1,'buff',1],[3,'draw',1],[6,'buffRow',2]]},
+ L_b:{n:'Guild Mistress Ada',f:'L',p:3,row:'T',ab:[[1,'draw',1],[3,'fell',4],[6,'readyAll',1]]},
+ L_c:{n:'Tally Clerk Wen',f:'L',p:4,row:'C',ab:[[1,'buff',1],[3,'hush',1],[6,'draw',2]]},
+ W_a:{n:'Elder of Roots',f:'W',p:3,row:'T',ab:[[1,'shield',2],[3,'regrowDraw',1],[6,'fell',7]]},
+ W_b:{n:'Seer of Rings',f:'W',p:3,row:'T',ab:[[1,'draw',1],[3,'regrowDraw',1],[6,'fell',7]]},
+ W_c:{n:'Grove Judge',f:'W',p:4,row:'C',ab:[[1,'shield',1],[3,'daze',1],[6,'fellExhausted',1]]},
+ S_a:{n:'Moon Doe',f:'S',p:3,row:'W',ab:[[1,'draw',1],[3,'bounce',5],[6,'bounce',9]]},
+ S_b:{n:'Lantern Keeper',f:'S',p:3,row:'T',ab:[[1,'draw',1],[3,'bounce',5],[6,'readyAll',1]]},
+ S_c:{n:'Mist Mother',f:'S',p:4,row:'W',ab:[[1,'buff',1],[3,'daze',1],[6,'bounce',9]]},
+ B_a:{n:'Den Mother',f:'B',p:4,row:'C',ab:[[1,'buff',1],[3,'reviveHand',1],[6,'revivePlay',1]]},
+ B_b:{n:'The Alpha',f:'B',p:5,row:'C',ab:[[1,'buff',1],[3,'buffRow',2],[6,'readyAll',1]]},
+ B_c:{n:'Old Raven',f:'B',p:3,row:'T',ab:[[1,'draw',1],[3,'fell',4],[6,'fell',7]]}};
+for(const k in KEEPERS)KEEPERS[k].id=k;
+/* Starter decks: 30 main cards + 6 Ring cards, from one faction plus Neutral. */
+function starter(f){
+  /* a cost curve: 8 cheap (1-2), 8 mid (3-4), 4 big (5+) units, 2 copies each */
+  const pool=UNITS.filter(c=>c.f===f&&!c.kw.ancient&&c.r<=2);
+  const pick=(lo,hi,n)=>{const out=[];for(const c of pool.filter(c=>c.cost>=lo&&c.cost<=hi).sort((a,b)=>b.p-a.p)){if(out.length>=n)break;out.push(c.id,c.id)}return out.slice(0,n)};
+  const main=[...pick(1,2,8),...pick(3,4,8),...pick(5,7,4)];
+  for(const c of pool.slice().sort((a,b)=>a.cost-b.cost)){if(main.length>=20)break;if(main.filter(x=>x===c.id).length<2)main.push(c.id)}
+  const ex=Object.values(CARDS).filter(c=>c.type!=='unit'&&c.f===f).map(c=>c.id);
+  main.push(...ex,...ex.slice(0,2),'Xbell','Xfrost','Xstorm','Xscare','Xsun','Xfire');
+  while(main.length>30)main.pop();
+  const ring=UNITS.filter(c=>c.f===f&&c.r>=2).sort((a,b)=>b.cost-a.cost).slice(0,6).map(c=>c.id);
+  return {main,ring};
+}
+
+/* Heartwood TCG rules engine + computer opponent. No DOM: state is plain data (JSON-cloneable). */
+const ROWCAP=3,SAPCAP=10,RINGCAP=6;
+const C=id=>CARDS[id];
+function rnd(G){G.rs=(G.rs+0x6D2B79F5)>>>0;let t=G.rs;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}
+function shuffle(G,a){for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd(G)*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+const clone=G=>JSON.parse(JSON.stringify(G));
+let UID=1;
+function inst(G,id){return {u:G.uid++,id,exh:false,sick:true,tools:[],tmp:0,sh:0,moved:false,row:null}}
+function newPlayer(G,cfg){const P={name:cfg.name,f:KEEPERS[cfg.keeper].f,k:{id:cfg.keeper,exh:false,dz:0,hush:0,used:{},row:KEEPERS[cfg.keeper].row==='W'?'C':KEEPERS[cfg.keeper].row},
+  deck:shuffle(G,cfg.main.slice()),hand:[],rings:[],heart:null,grave:[],rows:{C:[],T:[]},sapLvl:0,sap:0,coin:false,stats:{abil:0,hits:0,react:0}};
+  /* stronger Keeper, fewer starting Rings: power 5 → 4 Rings, 4 → 5, 3 or less → 6. The rest wait in the Heartwood. */
+  const ring=shuffle(G,cfg.ring.slice()),n=startRings(cfg.keeper);P.rings=ring.slice(0,n);P.heart=ring.slice(n);
+  for(let i=0;i<5;i++)P.hand.push(P.deck.shift());return P}
+const startRings=k=>Math.max(4,Math.min(6,9-KEEPERS[k].p));
+function newGame(a,b,seed,human){const G={rs:seed>>>0||1,uid:1,turn:0,first:0,turnNo:0,phase:'work',aura:{C:0,T:0},over:false,winner:-1,reason:'',log:[]};
+  G.p=[newPlayer(G,a),newPlayer(G,b)];
+  /* coin flip: winner goes first, the other keeps the coin */
+  G.first=rnd(G)<0.5?0:1;G.turn=G.first;G.p[1-G.first].coin=true;
+  /* going second: keep the coin and draw one extra card */
+  draw(G,1-G.first);
+  for(let i=0;i<2;i++)if(i!==human)aiMulligan(G,i);
+  dawn(G,true);return G}
+function redraw(G,i){const P=G.p[i],n=P.hand.length;P.deck.push(...P.hand);P.hand=[];shuffle(G,P.deck);for(let k=0;k<n;k++)P.hand.push(P.deck.shift())}
+function aiMulligan(G,i){const P=G.p[i];if(P.hand.filter(id=>C(id).cost<=3).length>=2)return;P.deck.push(...P.hand);P.hand=[];shuffle(G,P.deck);for(let k=0;k<5;k++)P.hand.push(P.deck.shift())}
+const units=P=>P.rows.C.concat(P.rows.T);
+const findU=(P,u)=>units(P).find(x=>x.u===u);
+const kwOf=(x,k)=>C(x.id).kw[k]||x.tools.some(t=>C(t).fx[k]);
+function power(G,P,x){const d=C(x.id);let v=d.p+x.tmp+x.sh;for(const t of x.tools)v+=C(t).fx.p||0;
+  const row=x.row,au=G.aura[row];if(au&&!(au<0&&d.kw.ancient))v+=au;
+  if(G.p[G.turn]===P)v+=units(P).filter(y=>y!==x&&C(y.id).kw.rally).length;
+  if(d.kw.crew)v+=units(P).filter(y=>y!==x&&y.id===x.id).length;
+  return Math.max(0,v)}
+function kPower(G,P){return KEEPERS[P.k.id].p}
+function draw(G,i){const P=G.p[i];if(!P.deck.length){end(G,1-i,'deck-out');return false}P.hand.push(P.deck.shift());return true}
+const lg=(G,txt)=>{G.log.push(txt);if(G.log.length>80)G.log.shift()};
+const nm=id=>C(id).n;
+const vb=(P,v)=>P.name==='You'?({plays:'play',ends:'end',spends:'spend'}[v]||v):v;
+const own=P=>P.name==='You'?'your':P.name+"'s";
+function end(G,w,why){if(G.over)return;G.over=true;G.winner=w;G.reason=why}
+function dawn(G,firstTurn){const i=G.turn,P=G.p[i];G.turnNo++;G.phase='work';
+  for(const x of units(P)){x.exh=false;x.sick=false;x.moved=false;x.sh=0}
+  P.k.exh=P.k.dz>0;P.k.dz=0;P.k.used={};
+  if(KEEPERS[P.k.id].row==='W')P.k.row='C';
+  P.sapLvl=Math.min(SAPCAP,P.sapLvl+1);P.sap=P.sapLvl;
+  if(!(firstTurn&&i===G.first))draw(G,i)}
+function dusk(G){const P=G.p[G.turn];for(const x of units(P))x.tmp=0;P.k.hush=0;G.turn=1-G.turn;if(!G.over)dawn(G,false)}
+function toGrave(G,P,x){for(const r of ['C','T'])P.rows[r]=P.rows[r].filter(y=>y!==x);P.grave.push(x.id,...x.tools)}
+/* Regrow: the Heartwood card first; after that, a random card from your discard pile (never your deck) */
+function regrow(G,P){if(P.rings.length>=RINGCAP)return;if(P.heart.length){P.rings.push(P.heart.pop())}else if(P.grave.length){const j=Math.floor(rnd(G)*P.grave.length);P.rings.push(P.grave.splice(j,1)[0])}}
+function bestUnitIn(list,maxCost){let b=null;for(const id of list){const d=C(id);if(d.type==='unit'&&!d.kw.ancient&&d.cost<=maxCost&&(!b||d.p>C(b).p))b=id}return b}
+function abilityText(op,v){return {buff:'+'+v+' power this turn',shield:'+'+v+' power until your next turn',ready:'ready a unit',draw:'draw '+v,buffRow:'your Clearing +'+v+' this turn',readyAll:'ready everything',hush:'Hush their Keeper',daze:'Daze their Keeper',regrow:'Regrow',regrowDraw:'Regrow and draw 1',fell:'fell a unit with '+v+' or less power',fellExhausted:'fell an exhausted unit',bounce:'return a unit with '+v+' or less power to hand',reviveHand:'take a unit back from your discard pile',revivePlay:'play a unit from your discard pile'}[op]||op}
+/* ---------- legal moves ---------- */
+function rowsFor(P,d){const r=d.row==='W'?['C','T']:[d.row];return r.filter(x=>P.rows[x].length<ROWCAP)}
+function enemyTargets(G,i,pred){const O=G.p[1-i];return units(O).filter(x=>!C(x.id).kw.ancient&&pred(x,O))}
+function moves(G){const i=G.turn,P=G.p[i],O=G.p[1-i],out=[];
+  if(G.over)return out;
+  if(G.phase==='work'){
+    for(const id of new Set(P.hand)){const d=C(id);if(d.cost>P.sap)continue;
+      if(d.type==='unit'){for(const row of rowsFor(P,d))out.push({t:'play',id,row})}
+      else if(d.type==='tool'){for(const x of units(P))out.push({t:'play',id,target:x.u})}
+      else if(d.type==='boon'||d.type==='blight')out.push({t:'play',id});
+      else if(d.type==='event'){const fx=d.fx;
+        if(fx.fell)enemyTargets(G,i,(x,O)=>power(G,O,x)<=fx.fell).forEach(x=>out.push({t:'play',id,target:x.u}));
+        else if(fx.bounce)enemyTargets(G,i,(x,O)=>power(G,O,x)<=fx.bounce).forEach(x=>out.push({t:'play',id,target:x.u}));
+        else if(fx.fellOwn)units(P).forEach(x=>out.push({t:'play',id,target:x.u}));
+        else out.push({t:'play',id})}}
+    if(P.coin)out.push({t:'coin'});
+    if(!P.k.hush&&!P.k.exh)KEEPERS[P.k.id].ab.forEach(([cost,op,v],ai)=>{if(cost>P.sap||P.k.used[ai])return;
+      if(op==='buff'||op==='ready'||op==='shield')units(P).forEach(x=>out.push({t:'ability',ai,target:x.u}));
+      else if(op==='fell'||op==='bounce')enemyTargets(G,i,(x,O)=>power(G,O,x)<=v).forEach(x=>out.push({t:'ability',ai,target:x.u}));
+      else if(op==='fellExhausted')enemyTargets(G,i,x=>x.exh).forEach(x=>out.push({t:'ability',ai,target:x.u}));
+      else out.push({t:'ability',ai})});
+    for(const x of units(P))if(kwOf(x,'nimble')&&!x.moved){const to=x.row==='C'?'T':'C';if(P.rows[to].length<ROWCAP)out.push({t:'move',u:x.u})}
+    out.push({t:'tofell'})}
+  else{
+    for(const a of attackers(G,i))for(const d of targets(G,i))out.push({t:'attack',a,d});
+    out.push({t:'end'})}
+  return out}
+function canAttack(P,x){return !x.exh&&(!x.sick||kwOf(x,'eager'))}
+function attackers(G,i){const P=G.p[i],a=units(P).filter(x=>canAttack(P,x)).map(x=>x.u);return a}
+function targets(G,i){const O=G.p[1-i],t=[],clearEmpty=!O.rows.C.length;
+  t.push('K');
+  for(const x of O.rows.C)if(x.exh)t.push(x.u);
+  if(clearEmpty)for(const x of O.rows.T)if(x.exh)t.push(x.u);
+  return t}
+/* ---------- applying moves ---------- */
+function apply(G,m,def){const i=G.turn,P=G.p[i],O=G.p[1-i];if(G.over)return;
+  if(m.t==='tofell'){G.phase='fell';return}
+  if(m.t==='end'){lg(G,P.name+' '+vb(P,'ends')+' the turn');dusk(G);return}
+  if(m.t==='coin'){P.coin=false;P.sap+=1;lg(G,P.name+' '+vb(P,'spends')+' the coin: +1 Sap');return}
+  if(m.t==='move'){const x=findU(P,m.u);P.rows[x.row]=P.rows[x.row].filter(y=>y!==x);x.row=x.row==='C'?'T':'C';P.rows[x.row].push(x);x.moved=true;return}
+  if(m.t==='ability'){const [cost,op,v]=KEEPERS[P.k.id].ab[m.ai];lg(G,P.name+': '+KEEPERS[P.k.id].n+' uses '+abilityText(op,v)+(m.target?' on '+nm(findU(P,m.target)?.id||findU(O,m.target)?.id||'Xbell'):''));P.sap-=cost;P.k.used[m.ai]=1;P.stats.abil++;effect(G,i,op,v,m.target);return}
+  if(m.t==='play'){const d=C(m.id);P.hand.splice(P.hand.indexOf(m.id),1);P.sap-=d.cost;lg(G,P.name+' '+vb(P,'plays')+' '+d.n);
+    if(d.type==='unit')enter(G,i,m.id,m.row);
+    else if(d.type==='tool'){const x=findU(P,m.target);x.tools.push(m.id)}
+    else if(d.type==='boon'||d.type==='blight'){G.aura[d.fx.row]=d.fx.v;P.grave.push(m.id)}
+    else if(d.type==='event'){const fx=d.fx;
+      if(fx.fell||fx.bounce){const x=findU(O,m.target);if(x){if(fx.fell)toGrave(G,O,x);else{for(const r of ['C','T'])O.rows[r]=O.rows[r].filter(y=>y!==x);O.grave.push(...x.tools);O.hand.push(x.id)}}}
+      if(fx.fellOwn){const x=findU(P,m.target);if(x)toGrave(G,P,x)}
+      if(fx.clearAuras)G.aura={C:0,T:0};
+      if(fx.wipe)for(const Q of G.p)for(const x of units(Q).slice())if(!C(x.id).kw.ancient&&power(G,Q,x)<=fx.wipe)toGrave(G,Q,x);
+      if(fx.regrow)regrow(G,P);
+      if(fx.daze)O.k.dz=1;
+      if(fx.clearingBuff)for(const x of P.rows.C)x.tmp+=fx.clearingBuff;
+      if(fx.reviveHand){const b=bestUnitIn(P.grave,10);if(b){P.grave.splice(P.grave.indexOf(b),1);P.hand.push(b)}}
+      if(fx.draw)for(let k=0;k<fx.draw;k++)draw(G,i);
+      P.grave.push(m.id)}
+    else P.grave.push(m.id);return}
+  if(m.t==='attack')attack(G,i,m.a,m.d,def)}
+function enter(G,i,id,row){const P=G.p[i],O=G.p[1-i],d=C(id);if(P.rows[row].length>=ROWCAP){P.grave.push(id);return}
+  const x=inst(G,id);x.row=row;P.rows[row].push(x);const kw=d.kw;
+  if(kw.scout)draw(G,i);
+  if(kw.regrow)regrow(G,P);
+  if(kw.revive){const b=bestUnitIn(P.grave,3);if(b){P.grave.splice(P.grave.indexOf(b),1);P.hand.push(b)}}
+  if(kw.call){const j=P.deck.findIndex(z=>z===id||(d.mus&&C(z).mus===d.mus));if(j>=0)P.hand.push(P.deck.splice(j,1)[0])}
+  if(kw.fire){const t=enemyTargets(G,i,(y,Q)=>power(G,Q,y)<=kw.fire).sort((a,b)=>power(G,O,b)-power(G,O,a))[0];if(t)toGrave(G,O,t)}}
+function effect(G,i,op,v,target){const P=G.p[i],O=G.p[1-i];
+  if(op==='buff'){const x=findU(P,target);if(x)x.tmp+=v}
+  else if(op==='shield'){const x=findU(P,target);if(x)x.sh+=v}
+  else if(op==='ready'){const x=findU(P,target);if(x){x.exh=false;x.sick=false}}
+  else if(op==='draw'){for(let k=0;k<v;k++)draw(G,i)}
+  else if(op==='buffRow'){for(const x of P.rows.C)x.tmp+=v}
+  else if(op==='readyAll'){for(const x of units(P)){x.exh=false;x.sick=false}P.k.exh=false}
+  else if(op==='hush')O.k.hush=1;
+  else if(op==='daze')O.k.dz=1;
+  else if(op==='regrow')regrow(G,P);
+  else if(op==='regrowDraw'){regrow(G,P);draw(G,i)}
+  else if(op==='fell'||op==='fellExhausted'){const x=findU(O,target);if(x)toGrave(G,O,x)}
+  else if(op==='bounce'){const x=findU(O,target);if(x){for(const r of ['C','T'])O.rows[r]=O.rows[r].filter(y=>y!==x);O.grave.push(...x.tools);O.hand.push(x.id)}}
+  else if(op==='reviveHand'){const b=bestUnitIn(P.grave,10);if(b){P.grave.splice(P.grave.indexOf(b),1);P.hand.push(b)}}
+  else if(op==='revivePlay'){const b=bestUnitIn(P.grave,10);if(b){const d=C(b),rs=rowsFor(P,d);if(rs.length){P.grave.splice(P.grave.indexOf(b),1);enter(G,i,b,rs[0])}}}}
+/* one attack, with the defender's single React window */
+function attack(G,i,a,d,def){const P=G.p[i],O=G.p[1-i];let att,ap;
+  if(a==='K'){P.k.exh=true;ap=kPower(G,P)}else{att=findU(P,a);att.exh=true;ap=power(G,P,att)}
+  let tgt=d==='K'?null:findU(O,d);let dp=d==='K'?kPower(G,O):power(G,O,tgt);
+  const aN=a==='K'?KEEPERS[P.k.id].n:nm(att.id),dN=d==='K'?(O.name==='You'?'your Keeper':O.name+"'s Keeper"):nm(tgt.id);
+  const plan=(def||aiDefend)(G,1-i,ap,d,dp);G.lastAttack={a:aN,d:dN,ap,dp,plan,landed:false,crack:null};O.stats.react+=plan.cards.length;
+  for(const id of plan.cards){O.hand.splice(O.hand.indexOf(id),1);O.grave.push(id);const c=C(id);if(c.type==='reaction')O.sap-=c.cost}
+  if(plan.negate){lg(G,aN+' attacks '+dN+': Fade, the attack misses');return}
+  if(plan.decoy){lg(G,aN+' attacks '+dN+': a Scarecrow takes the hit');return}
+  if(plan.guard!=null){const g=findU(O,plan.guard);g.exh=true;tgt=g;d=g.u;dp=power(G,O,g)}
+  dp+=plan.plus;ap=Math.max(0,ap-plan.minus);
+  const how=(plan.guard!=null?' (Guarded by '+nm(tgt.id)+')':'')+(plan.cards.length?' ('+plan.cards.map(nm).join(', ')+')':'');
+  if(ap<dp){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): held'+how);return}
+  G.lastAttack.landed=true;
+  if(tgt){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): felled'+how);toGrave(G,O,tgt);return}
+  lg(G,aN+' ('+ap+') hits '+dN+' ('+dp+')'+how);
+  const n=(att&&kwOf(att,'double'))?2:1;P.stats.hits++;
+  for(let k=0;k<n&&!G.over;k++){if(!O.rings.length){end(G,i,'rings');return}
+    const id=O.rings.pop();const c=C(id);G.lastAttack.crack=id;lg(G,'  A Ring cracks: '+c.n+(c.kw.sprout&&c.type==='unit'?' Sprouts onto '+own(O)+' board':' goes to '+own(O)+' hand'));
+    if(c.kw.sprout&&c.type==='unit'){const rs=rowsFor(O,c);if(rs.length){enter(G,1-i,id,rs[0]);continue}}
+    O.hand.push(id)}}
+/* ---------- computer opponent ---------- */
+const W={ring:3,hand:1,heart:1.5};
+function value(G,i){const P=G.p[i],O=G.p[1-i];if(G.over)return G.winner===i?1e4:-1e4;
+  const side=(Q,j)=>units(Q).reduce((s,x)=>s+power(G,Q,x)+0.6+(x.tools.length*0.3),0)+W.ring*Q.rings.length+Q.heart.length*W.heart+W.hand*Q.hand.length+(Q.rings.length===0?-4:0);
+  return side(P,i)-side(O,1-i)}
+function aiDefend(G,j,ap,d,dp){const Q=G.p[j];const none={cards:[],plus:0,minus:0,guard:null,negate:false,decoy:false};
+  if(dp>ap)return none;
+  const isK=d==='K',lethal=isK&&Q.rings.length===0;
+  const worth=lethal?1e3:isK?(Q.rings.length<=2?4:2.2):(()=>{const x=findU(Q,d);return power(G,Q,x)+0.6})();
+  const need=ap-dp+1,opts=[];
+  /* single-card answers */
+  for(const id of new Set(Q.hand)){const c=C(id);if(c.type!=='reaction'||c.cost>Q.sap)continue;
+    if(c.fx.negate)opts.push({cost:1.6,p:{...none,cards:[id],negate:true}});
+    if(c.fx.decoy)opts.push({cost:1.3,p:{...none,cards:[id],decoy:true}})}
+  if(isK)for(const x of Q.rows.C)if(!x.exh&&kwOf(x,'guard')){const gp=power(G,Q,x);opts.push({cost:gp>ap?0.4:power(G,Q,x)+0.6,p:{...none,guard:x.u}})}
+  /* stack boosts: reactions then Brace cards, cheapest first */
+  let plus=0,minus=0,cards=[],sap=Q.sap,cost=0;const hand=Q.hand.slice();
+  const boosts=hand.map(id=>{const c=C(id);if(c.type==='reaction'){if(c.fx.plus)return {id,v:c.fx.plus,s:c.cost};if(c.fx.attackerMinus)return {id,v:c.fx.attackerMinus,s:c.cost,m:1};if(c.fx.plusPerUnit)return {id,v:units(Q).length,s:c.cost}}if(c.kw.brace)return {id,v:c.kw.brace,s:0};return null}).filter(Boolean).sort((a,b)=>b.v-a.v);
+  for(const b of boosts){if(plus+minus>=need)break;if(b.s>sap)continue;sap-=b.s;cards.push(b.id);if(b.m)minus+=b.v;else plus+=b.v;cost+=1}
+  if(plus+minus>=need)opts.push({cost,p:{...none,cards,plus,minus}});
+  opts.sort((a,b)=>a.cost-b.cost);
+  if(opts.length&&opts[0].cost<worth)return opts[0].p;
+  return none}
+function aiWork(G){const i=G.turn;let guard=0;const P0=G.p[i],O0=G.p[1-i];
+  const swing=!P0.k.exh&&KEEPERS[P0.k.id].p>=KEEPERS[O0.k.id].p;
+  while(!G.over&&G.phase==='work'&&guard++<30){const ms=moves(G).filter(m=>m.t!=='tofell'&&!(swing&&m.t==='ability'));const base=value(G,i);let best=null,bv=0.25;
+    for(const m of ms){const H=clone(G);apply(H,m);let v=value(H,i)-base;
+      if(m.t==='coin'){/* only worth it if it unlocks a play */const nm=moves(H).filter(x=>x.t==='play'&&C(x.id).cost===H.p[i].sap);v=nm.length?0.3:-1}
+      if(v>bv){bv=v;best=m}}
+    if(!best)break;apply(G,best)}
+  if(!G.over&&G.phase==='work')apply(G,{t:'tofell'})}
+function aiFell(G){const i=G.turn;let guard=0;
+  while(!G.over&&G.phase==='fell'&&guard++<12){const ms=moves(G).filter(m=>m.t==='attack');if(!ms.length)break;
+    const P=G.p[i],O=G.p[1-i];let best=null,bs=-1e9;
+    for(const m of ms){const ap=m.a==='K'?kPower(G,P):power(G,P,findU(P,m.a));
+      const dp=m.d==='K'?kPower(G,O):power(G,O,findU(O,m.d));if(ap<dp)continue;
+      const tv=m.d==='K'?(O.rings.length===0?100:3+(6-O.rings.length)*0.2):dp+0.6;
+      const cost=m.a==='K'?0.3:0.5+ap*0.05;const s=tv-cost;if(s>bs){bs=s;best=m}}
+    if(!best)break;apply(G,best)}
+  if(!G.over)apply(G,{t:'end'})}
+/* one AI decision at a time, for the screen */
+function aiNext(G){const i=G.turn;
+  if(G.phase==='work'){const P0=G.p[i],O0=G.p[1-i];const swing=false;const ms=moves(G).filter(m=>m.t!=='tofell');const base=value(G,i);let best=null,bv=0.25;
+    for(const m of ms){const H=clone(G);apply(H,m);let v=value(H,i)-base;if(m.t==='coin'){const nm2=moves(H).filter(x=>x.t==='play'&&C(x.id).cost===H.p[i].sap);v=nm2.length?0.3:-1}if(v>bv){bv=v;best=m}}
+    return best||{t:'tofell'}}
+  const P=G.p[i],O=G.p[1-i];let best=null,bs=-1e9;
+  for(const m of moves(G).filter(m=>m.t==='attack')){const ap=m.a==='K'?kPower(G,P):power(G,P,findU(P,m.a));const dp=m.d==='K'?kPower(G,O):power(G,O,findU(O,m.d));if(ap<dp)continue;
+    const tv=m.d==='K'?(O.rings.length===0?100:3+(6-O.rings.length)*0.2):dp+0.6;const s=tv-(0.5+ap*0.05);if(s>bs){bs=s;best=m}}
+  return best||{t:'end'}}
+/* what an attack looks like before anyone reacts (for the React prompt) */
+function preview(G,m){const i=G.turn,P=G.p[i],O=G.p[1-i];const ap=m.a==='K'?kPower(G,P):power(G,P,findU(P,m.a));const dp=m.d==='K'?kPower(G,O):power(G,O,findU(O,m.d));
+  return {ap,dp,aName:m.a==='K'?KEEPERS[P.k.id].n:nm(findU(P,m.a).id),dName:m.d==='K'?'your Keeper':nm(findU(O,m.d).id),d:m.d}}
+function play(a,b,seed,maxTurns){const G=newGame(a,b,seed);maxTurns=maxTurns||80;
+  while(!G.over&&G.turnNo<maxTurns){aiWork(G);if(!G.over&&G.phase==='fell')aiFell(G)}
+  if(!G.over)end(G,-1,'timeout');return G}
+const API={newGame,moves,apply,play,value,power,kPower,units,findU,aiWork,aiFell,aiNext,aiDefend,preview,redraw,clone,abilityText,startRings,canAttack};
+if(typeof module!=='undefined')module.exports=API;
+
+return Object.assign(API,{CARDS,UNITS,KEEPERS,starter});})();
+/*TCG-END*/
 
 /*HWUI-START*/
 /* ===================== Heartwood card game: art, collection, decks, duels ===================== */
@@ -2389,6 +2704,7 @@ function cardsHtml(){if(!S.decks||!Object.keys(S.decks).length)grantStarter('L')
   if(cView==='play'){const v=deckValid(S.deckF),st=S.duelStats||{w:0,l:0};
     h+=more(`<b>${HW_NAME}</b> · ${st.w} won, ${st.l} lost${st.d?', '+st.d+' drawn':''}`,`Best of three rounds. Each turn, play one card or pass. When both players pass, the higher total wins the round. Weather drops a row to 1, horns double a row, heroes ignore it all. Win two rounds to win the duel.`);
     h+=`<div class="row"><div class="t"><div class="n">${ico('card')}Your deck<small>${FACTIONS.find(f=>f.id===S.deckF).n}</small></div><div class="d">${v.u} units · ${v.s} specials${v.ok?'':` · <span style="color:var(--danger)">${v.over?'uses cards you don\'t own':'needs 22+ units, max 10 specials'}</span>`}</div></div><button class="info" type="button" data-cv="deck">Edit</button></div><p class="sec">Opponents</p>`;
+    h+=`<div class="row"><div class="t"><div class="n">${ico('card')}Heartwood TCG<small>preview${S.tcgStats?` · ${S.tcgStats.w} won, ${S.tcgStats.l} lost`:''}</small></div><div class="d">Try the new turn-based format: Keepers, Rings, Sap, attacks and reactions</div></div><button class="buy" type="button" data-tcg="1">Play</button></div>`;
     h+=`<div class="row"><div class="t"><div class="n">${ico('book')}How to play<small>${S.tutDone?'done ✓':'start here'}</small></div><div class="d">A short guided duel that teaches the rules</div></div><button class="${S.tutDone?'info':'buy'}" type="button" data-tut="1">${S.tutDone?'Replay':'Tutorial'}</button></div>`;
     h+=OPPS.map((o,i)=>{const open=i===0||(S.duelBeat||{})[i-1],beat=(S.duelBeat||{})[i],F=FACTIONS.find(f=>f.id===o.f);
       return `<div class="row"><div class="t"><div class="n"><span class="dot" style="background:${F.col}"></span>${o.n}<small>${beat?'beaten ✓':RAR[Math.min(6,o.t+1)].n+' reward'}</small></div><div class="d">${F.n} · tier ${o.t+1}</div></div><button class="buy" type="button" data-duel="${i}" ${open&&v.ok?'':'disabled'}>${open?'Duel':'Locked'}</button></div>`}).join('')}
@@ -2440,6 +2756,7 @@ function cardsClick(e){
   const us=e.target.closest('[data-unseal]');if(us){unseal(us.dataset.unseal);buildList(true);return true}
   const du=e.target.closest('[data-duel]');if(du){startDuel(+du.dataset.duel);return true}
   if(e.target.closest('[data-tut]')){startTutorial();return true}
+  if(e.target.closest('[data-tcg]')){tcgStart();return true}
   return false}
 /* ---------- the duel table ---------- */
 let DG=null,DOPP=null,dSel=null,dBusy=false,dMed=null,passArm=0,dSort='power',dAddF='all';
@@ -2518,6 +2835,153 @@ function duelClick(e){if(!DG)return;const P=DG.p[0];
   if(!dSel)return;const c=P.hand.find(x=>x.u===dSel);if(!c)return;const ms=movesFor(DG,0,c);
   const du=e.target.closest('[data-du]');if(du){const m=ms.find(x=>x.target===+du.dataset.du);if(m){dPlayMove(m);return}}
   const dr=e.target.closest('[data-dr]');if(dr){const k=+dr.dataset.dr,spy=CARD[c.id].ab==='spy',m=ms.find(x=>x.target==null&&x.row!=null&&(spy?3+x.row:x.row)===k);if(m)dPlayMove(m)}}
+/*TCGUI-START*/
+/* ===================== Heartwood TCG (preview): the phone board =====================
+   Mirrored like a real table: their camp top-left (their right), yours bottom-right.
+   Rows top to bottom: their Treeline, their Clearing, the middle line (auras), your Clearing, your Treeline. */
+let TG=null,TS={sel:null,att:null,ab:null,busy:false,move:null};
+const TK=()=>TCG.KEEPERS,TCd=id=>TCG.CARDS[id];
+const TKW={eager:'Eager',guard:'Guard',crew:'Work Crew',rally:'Rally',revive:'Revive',scout:'Scout',call:'Call the Pack',fire:'Firebrand',ancient:'Ancient',double:'Double Cut',brace:'Brace',sprout:'Sprout',regrow:'Regrow',nimble:'Nimble'};
+const TKW_TXT={eager:'can attack the turn it is played',guard:'can take an attack aimed at your Keeper',crew:'+1 power for each other copy on your board',rally:'your other units +1 power on your turn',revive:'when played, take back a unit costing 3 or less from your discard pile',scout:'when played, draw a card',call:'when played, find a copy in your deck and add it to your hand',fire:'when played, fell an enemy unit with that much power or less',ancient:'can\'t be targeted by abilities, Blights or Firebrand',double:'a landed hit on a Keeper cracks 2 Rings',brace:'discard while defending: +1 power for that fight',sprout:'if cracked from your Rings, it plays itself for free',regrow:'when played, Regrow (add a Ring)',nimble:'may switch rows once per turn'};
+const TTYPE_IC={tool:'hammer',reaction:'glove',event:'scroll',boon:'sun',blight:'snow'};
+const TROW={C:'Clearing',T:'Treeline',W:'Wanderer'};
+function tKwLine(d){return Object.keys(d.kw||{}).map(k=>k==='fire'?'Firebrand '+d.kw.fire:k==='brace'?'Brace +'+d.kw.brace:TKW[k]).join(' · ')}
+function tFxText(d){const f=d.fx||{};if(d.type==='tool')return 'Attach to a unit: +'+(f.p||0)+' power'+(f.eager?', Eager':'')+(f.guard?', Guard':'')+(f.nimble?', Nimble':'');
+  if(d.type==='boon'||d.type==='blight')return (f.row==='C'?'Clearing':'Treeline')+' units on both sides '+(f.v>0?'+':'')+f.v+' power, until replaced';
+  if(d.type==='reaction')return 'When attacked: '+(f.negate?'the attack misses':f.decoy?'a 3-power Scarecrow takes the hit':f.plus?'+'+f.plus+' power':f.attackerMinus?'the attacker gets −'+f.attackerMinus:f.plusPerUnit?'+1 power for each of your units':'');
+  const out=[];if(f.fell)out.push('fell an enemy unit with '+f.fell+' or less power');if(f.bounce)out.push('return an enemy unit with '+f.bounce+' or less power to its owner\'s hand');if(f.fellOwn)out.push('fell one of your units');if(f.regrow)out.push('Regrow');if(f.clearAuras)out.push('clear both aura slots');if(f.wipe)out.push('fell every unit with '+f.wipe+' or less power');if(f.daze)out.push('Daze their Keeper');if(f.clearingBuff)out.push('your Clearing +'+f.clearingBuff+' this turn');if(f.reviveHand)out.push('take your best unit back from the discard pile');if(f.draw)out.push('draw '+f.draw);
+  return out.join(', ').replace(/^./,c=>c.toUpperCase())}
+function tCard(id,o){o=o||{};const d=TCd(id),F=FACTIONS.find(f=>f.id===d.f)||FACTIONS[4];const art=CARD[id]?`<img src="${cardArt(id)}" alt="">`:`<span class="tic">${ico(TTYPE_IC[d.type]||'card')}</span>`;
+  const pw=d.type==='unit'?`<span class="pw${o.pw!=null&&o.pw>d.p?' up':o.pw!=null&&o.pw<d.p?' dn':''}">${o.pw!=null?o.pw:d.p}</span>`:'';
+  return `<div class="cd tc${o.sm?' sm':''}${d.kw&&d.kw.ancient?' hero':''}${o.ex?' ex':''}${o.cls?' '+o.cls:''}" style="--fc:${F.col};--rc:${RAR[Math.min(6,d.r||0)].c}" data-cid="${id}"${o.attr||''}>${art}${pw}<span class="sap">${d.cost}</span>${o.tools?`<span class="tl">${ico('hammer')}${o.tools>1?o.tools:''}</span>`:''}${o.nm?`<span class="tn">${d.n}</span>`:''}</div>`}
+function tcgPopup(id){const d=TCd(id);if(!d)return;const F=FACTIONS.find(f=>f.id===d.f)||FACTIONS[4];const z=$('cardZoom');
+  const kw=Object.keys(d.kw||{}).map(k=>`<b>${k==='fire'?'Firebrand '+d.kw.fire:k==='brace'?'Brace +'+d.kw.brace:TKW[k]}</b>: ${TKW_TXT[k]}`).join('<br>');
+  z.innerHTML=`<div class="czp"><h2 style="color:${RAR[Math.min(6,d.r||0)].c}">${d.n}</h2><div class="note">${F.n} · ${d.type==='unit'?TROW[d.row]+' unit':d.type[0].toUpperCase()+d.type.slice(1)} · ${d.cost} Sap</div><div style="display:flex;justify-content:center;margin:10px 0">${tCard(id,{cls:'big'})}</div><div style="font-size:17px;line-height:1.3;text-align:left">${d.type==='unit'?`<b>${d.p}</b> power<br>`:''}${kw}${d.type!=='unit'?tFxText(d):''}</div><button class="buy" type="button">Close</button></div>`;z.hidden=false}
+/* ---------- start ---------- */
+function tcgStart(){showModal(`<h2>${ico('card')} Heartwood TCG</h2><div class="note">Preview of the new turn-based format. Pick a faction; you get its starter deck.</div><div class="btns" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">${FACTIONS.slice(0,4).map(f=>`<button class="buy" type="button" data-tcgf="${f.id}" style="background:${f.col};color:#fff">${f.n}</button>`).join('')}</div><button class="info" type="button" id="toastOk">Cancel</button>`)}
+function tcgPickKeeper(f){const ks=Object.values(TK()).filter(k=>k.f===f);
+  showModal(`<h2>Choose your Keeper</h2><div class="note">More power: harder to hit, fewer Rings, weaker abilities.</div>${ks.map(k=>`<div class="row" style="text-align:left"><div class="t"><div class="n">${k.n}<small>${k.p} power · ${TCG.startRings(k.id)} Rings</small></div><div class="d">${k.ab.map(([c,op,v])=>`${c} Sap: ${TCG.abilityText(op,v)}`).join('<br>')}</div></div><button class="buy" type="button" data-tcgk="${k.id}">Pick</button></div>`).join('')}<button class="info" type="button" id="toastOk">Cancel</button>`);$('toast').classList.add('wide')}
+function tcgBegin(kid){const f=TK()[kid].f,of='LWSB'.replace(f,'')[Math.floor(Math.random()*3)],ok=Object.values(TK()).filter(k=>k.f===of);const okid=ok[Math.floor(Math.random()*ok.length)].id;
+  const mine=TCG.starter(f),theirs=TCG.starter(of);
+  TG=TCG.newGame({name:'You',keeper:kid,main:mine.main,ring:mine.ring},{name:TK()[okid].n,keeper:okid,main:theirs.main,ring:theirs.ring},(Math.random()*4e9)>>>0,0);
+  TG.redrawn=false;TS={sel:null,att:null,ab:null,busy:false,move:null};nextToast();$('tcg').hidden=false;sfx('shimmer');
+  showToast('Coin flip',TG.first===0?'You go first':'They go first. You keep the coin (+1 Sap once) and drew an extra card','amber');
+  tcgRender();tcgAfter()}
+/* ---------- render ---------- */
+function tRow(pi,r){const P=TG.p[pi],tg=tTargets(),mine=pi===0;const rowTgt=mine&&tg.rows.includes(r);
+  const au=TG.aura[r];
+  return `<div class="tr${rowTgt?' tgt':''}" data-trow="${pi}${r}"><span class="tlab">${pi?'Their':'Your'} ${TROW[r]}${au?` <b class="${au>0?'up':'dn'}">${au>0?'+':''}${au}</b>`:''}</span><div class="cs">${P.rows[r].map(x=>{const can=tg.units.includes(x.u);return tCard(x.id,{pw:TCG.power(TG,P,x),ex:x.exh,tools:x.tools.length,cls:(can?'tgt':'')+(TS.att===x.u?' sel':''),attr:` data-tu="${x.u}"`})}).join('')}</div></div>`}
+function tCamp(pi){const P=TG.p[pi],K=TK()[P.k.id],tg=tTargets(),kt=pi===1&&tg.keeper;
+  const rings=`<span class="trg">${P.rings.map(()=>'<i></i>').join('')}${P.heart.map(()=>'<i class="hw"></i>').join('')}</span>`;
+  const sap=`<span class="tsp">${ico('drop')}${P.sap}/${P.sapLvl}</span>`;
+  return `<div class="tcamp${pi?' opp':''}">${pi?'':`<span class="hc">${ico('chest')}${P.deck.length}</span>`}${pi?`<span class="hc">${ico('card')}${P.hand.length}</span>`:''}${sap}${rings}<button type="button" class="tkp${kt?' tgt':''}${P.k.hush?' hush':''}${P.k.dz?' dz':''}" data-tkeep="${pi}">${ico('crew')}<span>${K.n}</span><b>${K.p}</b></button>${pi?`<span class="hc">${ico('chest')}${P.deck.length}</span>`:''}</div>`}
+function tcgRender(){const el=$('tcg');if(!TG){el.hidden=true;return}const P=TG.p[0],O=TG.p[1],my=TG.turn===0&&!TG.over&&!TS.busy;
+  let h=`<div class="tbar opp">${tCamp(1)}<button type="button" class="dquit" id="tQuit" aria-label="Leave">✕</button></div>`;
+  h+=tRow(1,'T')+tRow(1,'C');
+  const last=TG.log.slice(-2).map(x=>`<div>${x}</div>`).join('');
+  h+=`<div class="tmid"><span class="tph">${TG.over?'Game over':TG.turn===0?(TG.phase==='work'?'Your turn · Work':'Your turn · Fell'):'Their turn…'}</span><div class="tlog" id="tLog" role="button">${last||'Match log'}</div></div>`;
+  h+=tRow(0,'C')+tRow(0,'T');
+  h+=`<div class="tbar me">${my&&P.coin?`<button type="button" class="info" id="tCoin">${ico('amber')}Coin</button>`:''}${my&&TG.phase==='work'?`<button type="button" class="buy" id="tFell">Attack ▸</button>`:my&&TG.phase==='fell'?`<button type="button" class="buy" id="tEnd">End turn</button>`:''}${tCamp(0)}</div>`;
+  h+=`<div class="dinfo" id="tInfo">${tInfo()}</div><div class="dhand">${P.hand.map((id,k)=>tCard(id,{cls:TS.sel===k?'sel':'',attr:` data-th="${k}"`})).join('')}</div>`;
+  el.innerHTML=h}
+function tInfo(){if(!TG)return '';const P=TG.p[0];if(TG.over)return '';if(TG.turn!==0||TS.busy)return '<i>They are thinking…</i>';
+  if(!TG.redrawn&&TG.turnNo<=2)return `Starting hand. <button type="button" class="info" id="tRedraw">Redraw once</button> <button type="button" class="buy" id="tKeep">Keep</button>`;
+  if(TS.ab!=null){const [c,op,v]=TK()[P.k.id].ab[TS.ab];return `${TCG.abilityText(op,v)}: tap a glowing unit <button type="button" class="info" id="tCancel">Cancel</button>`}
+  if(TS.sel!=null){const id=P.hand[TS.sel],d=TCd(id),ms=tMovesFor(id);
+    const what=`<b>${d.n}</b> · ${d.cost} Sap${d.type==='unit'?' · '+d.p+' power · '+TROW[d.row]:''}${d.type==='unit'&&tKwLine(d)?' · '+tKwLine(d):d.type!=='unit'?' · '+tFxText(d):''}`;
+    if(TG.phase!=='work')return what;
+    if(!ms.length)return what+(d.type==='reaction'?' · <i>played when you are attacked</i>':d.cost>P.sap?' · <i>not enough Sap</i>':' · <i>nothing to play it on</i>');
+    if(ms.length===1&&ms[0].row==null&&ms[0].target==null)return what+` <button type="button" class="buy" id="tPlay">Play</button>`;
+    return what+' · tap a glowing '+(ms[0].row!=null?'row':'unit')}
+  if(TS.att!=null){const x=TCG.findU(P,TS.att),ap=TCG.power(TG,P,x),kp=TCG.kPower(TG,TG.p[1]);return `<b>${TCd(x.id).n}</b> (${ap}) attacks: tap their Keeper (${kp}) or a glowing exhausted unit. Equal or higher power lands, unless they react.${ap<kp?' <i>Too weak to hit their Keeper alone.</i>':''} <button type="button" class="info" id="tCancel">Cancel</button>`}
+  if(TS.move!=null)return `<button type="button" class="info" id="tMove">Switch row</button> <button type="button" class="info" id="tCancel">Cancel</button>`;
+  return TG.phase==='work'?'Play cards from your hand, or tap your Keeper for abilities. Then Attack.':'Tap one of your ready units to attack with it, or End turn.'}
+function tMovesFor(id){return TCG.moves(TG).filter(m=>m.t==='play'&&m.id===id)}
+function tTargets(){const out={rows:[],units:[],keeper:false};if(!TG||TG.turn!==0||TS.busy)return out;const P=TG.p[0];
+  if(TS.sel!=null&&TG.phase==='work'){tMovesFor(P.hand[TS.sel]).forEach(m=>{if(m.row!=null)out.rows.push(m.row);if(m.target!=null)out.units.push(m.target)})}
+  else if(TS.ab!=null){TCG.moves(TG).filter(m=>m.t==='ability'&&m.ai===TS.ab&&m.target!=null).forEach(m=>out.units.push(m.target))}
+  else if(TS.att!=null){TCG.moves(TG).filter(m=>m.t==='attack'&&m.a===TS.att).forEach(m=>{if(m.d==='K')out.keeper=true;else out.units.push(m.d)})}
+  else if(TG.phase==='fell'){TCG.moves(TG).filter(m=>m.t==='attack').forEach(m=>{if(!out.units.includes(m.a))out.units.push(m.a)})}
+  return out}
+/* ---------- your moves ---------- */
+function tDo(m){if(!TG||TG.over)return;TS.sel=null;TS.att=null;TS.ab=null;TS.move=null;const rings=TG.p[1].rings.length;TCG.apply(TG,m);
+  if(m.t==='attack'&&TG.lastAttack){const la=TG.lastAttack;sfx(la.landed?'fell':'buy');if(la.landed&&TG.p[1].rings.length<rings)addQuake(4)}else sfx('chop');
+  tcgRender();tcgAfter()}
+function tcgClick(e){if(!TG)return;const P=TG.p[0];
+  if(e.target.closest('#tQuit')){if(TG.over||confirm('Leave this game? It won\'t be saved.')){TG=null;$('tcg').hidden=true}return}
+  if(e.target.closest('#tLog')){showModal(`<h2>${ico('book')} Match log</h2><div class="logl">${TG.log.map(x=>`<div>${x}</div>`).join('')}</div><button class="buy" type="button" id="toastOk">Close</button>`);const l=$('toast').querySelector('.logl');if(l)l.scrollTop=l.scrollHeight;return}
+  {const kp=e.target.closest('[data-tkeep]');if(kp&&kp.dataset.tkeep==='1'&&TS.att!=null){tDo({t:'attack',a:TS.att,d:'K'});return}if(kp){tKeeperSheet(+kp.dataset.tkeep);return}}
+  if(TG.turn!==0||TS.busy||TG.over)return;
+  if(e.target.closest('#tKeep')){TG.redrawn=true;tcgRender();return}
+  if(e.target.closest('#tRedraw')){TCG.redraw(TG,0);TG.redrawn=true;sfx('buy');tcgRender();return}
+  if(e.target.closest('#tCancel')){TS.sel=TS.att=TS.ab=TS.move=null;tcgRender();return}
+  if(e.target.closest('#tCoin')){tDo({t:'coin'});return}
+  if(e.target.closest('#tFell')){tDo({t:'tofell'});return}
+  if(e.target.closest('#tEnd')){tcgEndTurn();return}
+  if(e.target.closest('#tPlay')){const ms=tMovesFor(P.hand[TS.sel]);if(ms[0])tDo(ms[0]);return}
+  if(e.target.closest('#tMove')){tDo({t:'move',u:TS.move});return}
+  const th=e.target.closest('[data-th]');if(th){const k=+th.dataset.th;TS.att=TS.ab=TS.move=null;
+    if(TS.sel===k&&TG.phase==='work'){const ms=tMovesFor(P.hand[k]);if(ms.length===1){tDo(ms[0]);return}}
+    TS.sel=TS.sel===k?null:k;tcgRender();return}
+  const tu=e.target.closest('[data-tu]');if(tu){const u=+tu.dataset.tu;
+    if(TS.sel!=null){const m=tMovesFor(P.hand[TS.sel]).find(m=>m.target===u);if(m){tDo(m);return}}
+    if(TS.ab!=null){const m=TCG.moves(TG).find(m=>m.t==='ability'&&m.ai===TS.ab&&m.target===u);if(m){tDo(m);return}}
+    if(TS.att!=null){const m=TCG.moves(TG).find(m=>m.t==='attack'&&m.a===TS.att&&m.d===u);if(m){tDo(m);return}}
+    const mine=TCG.findU(P,u);
+    if(mine&&TG.phase==='fell'&&TCG.moves(TG).some(m=>m.t==='attack'&&m.a===u)){TS.att=TS.att===u?null:u;TS.sel=null;tcgRender();return}
+    if(mine&&TG.phase==='work'&&TCG.moves(TG).some(m=>m.t==='move'&&m.u===u)){TS.move=u;TS.sel=null;tcgRender();return}
+    return}
+  const tr=e.target.closest('[data-trow]');if(tr&&TS.sel!=null){const r=tr.dataset.trow.slice(1);if(tr.dataset.trow[0]==='0'){const m=tMovesFor(P.hand[TS.sel]).find(m=>m.row===r);if(m)tDo(m)}}}
+function tKeeperSheet(pi){const P=TG.p[pi],K=TK()[P.k.id],my=pi===0&&TG.turn===0&&TG.phase==='work'&&!TS.busy&&!TG.over;const ms=my?TCG.moves(TG).filter(m=>m.t==='ability'):[];
+  showModal(`<h2>${ico('crew')} ${K.n}</h2><div class="note">${FACTIONS.find(f=>f.id===K.f).n} · ${K.p} power · ${P.rings.length} Rings left${P.heart.length?' · '+P.heart.length+' in the Heartwood':''}${P.k.hush?' · <b>Hushed</b>':''}${P.k.dz?' · <b>Dazed</b>':''}</div><div style="text-align:left;margin-top:8px">${K.ab.map(([c,op,v],i)=>{const can=ms.some(m=>m.ai===i);return `<div class="row"><div class="t"><div class="n">${c} Sap<small>${P.k.used[i]?'used this turn':''}</small></div><div class="d">${TCG.abilityText(op,v)}</div></div>${my?`<button class="buy" type="button" data-tab2="${i}" ${can?'':'disabled'}>Use</button>`:''}</div>`}).join('')}</div><div class="note">${pi?'':'Keepers never attack. Each ability once per turn, during Work.'}</div><button class="info" type="button" id="toastOk">Close</button>`);$('toast').classList.add('wide')}
+function tUseAbility(i){nextToast();const ms=TCG.moves(TG).filter(m=>m.t==='ability'&&m.ai===i);if(!ms.length)return;if(ms.length===1&&ms[0].target==null){tDo(ms[0]);return}TS.ab=i;TS.sel=TS.att=TS.move=null;tcgRender()}
+/* ---------- their turn ---------- */
+function tcgEndTurn(){tDo({t:'end'})}
+function tcgAfter(){if(!TG)return;if(TG.over){tcgFinish();return}if(TG.turn!==1)return;TS.busy=true;tcgRender();setTimeout(tcgAIStep,650)}
+function tcgAIStep(){if(!TG||TG.over){TS.busy=false;tcgAfter();return}if(TG.turn!==1){TS.busy=false;tcgRender();return}
+  const m=TCG.aiNext(TG);
+  if(m.t==='attack'){tcgReact(m);return}
+  const before=TG.log.length;TCG.apply(TG,m);if(m.t==='play'||m.t==='ability')sfx('chop');
+  tcgRender();if(TG.over){TS.busy=false;tcgFinish();return}setTimeout(tcgAIStep,m.t==='tofell'?300:700)}
+/* the React window: you choose Guard, Reactions and Brace cards, and see if it holds */
+let TR=null;
+function tcgReact(m){const pv=TCG.preview(TG,m),P=TG.p[0];TR={m,pv,idx:[],guard:null};
+  const can=P.hand.some(id=>{const d=TCd(id);return (d.type==='reaction'&&d.cost<=P.sap)||(d.kw&&d.kw.brace)})||(pv.d==='K'&&P.rows.C.some(x=>!x.exh&&(TCd(x.id).kw.guard||x.tools.some(t=>TCd(t).fx.guard))));
+  if(!can){const ring=P.rings.length;TCG.apply(TG,m,()=>({cards:[],plus:0,minus:0,guard:null,negate:false,decoy:false}));tReactDone(ring);return}
+  tReactShow()}
+function tReactPlan(){const P=TG.p[0];let plus=0,minus=0,negate=false,decoy=false,sap=0;
+  const cards=TR.idx.map(k=>P.hand[k]);for(const id of cards){const d=TCd(id);if(d.type==='reaction'){sap+=d.cost;const f=d.fx;if(f.negate)negate=true;if(f.decoy)decoy=true;if(f.plus)plus+=f.plus;if(f.attackerMinus)minus+=f.attackerMinus;if(f.plusPerUnit)plus+=TCG.units(P).length}else if(d.kw.brace)plus+=d.kw.brace}
+  let dp=TR.pv.dp;if(TR.guard!=null){const g=TCG.findU(P,TR.guard);dp=TCG.power(TG,P,g)}
+  const ap=Math.max(0,TR.pv.ap-minus),holds=negate||decoy||ap<dp+plus;return {plan:{cards,plus,minus,guard:TR.guard,negate,decoy},sap,ap,dp:dp+plus,holds}}
+function tReactShow(){const P=TG.p[0],pl=tReactPlan(),pv=TR.pv;
+  const opts=[];P.hand.forEach((id,k)=>{const d=TCd(id);if(d.type==='reaction'||(d.kw&&d.kw.brace))opts.push([id,k])});
+  const guards=pv.d==='K'?P.rows.C.filter(x=>!x.exh&&(TCd(x.id).kw.guard||x.tools.some(t=>TCd(t).fx.guard))):[];
+  showModal(`<h2>${ico('swords')} You're attacked!</h2><div style="font-size:19px"><b>${pv.aName}</b> (${pl.ap}) attacks <b>${pv.dName}</b> (${pl.dp})</div><div class="note">${pl.holds?'<b style="color:var(--sap)">Your defence holds</b>':pv.d==='K'?'It lands: a Ring cracks into your hand':'It lands: your unit is felled'} · Sap left ${P.sap-pl.sap}</div>
+  ${guards.length?`<p class="sec">Guard</p><div class="cgrid" style="justify-content:center">${guards.map(x=>tCard(x.id,{pw:TCGpow(x),cls:TR.guard===x.u?'sel':'',attr:` data-rg="${x.u}"`})).join('')}</div>`:''}
+  ${opts.length?`<p class="sec">Reactions and Brace</p><div class="cgrid" style="justify-content:center">${opts.map(([id,k])=>tCard(id,{cls:TR.idx.includes(k)?'sel':'',attr:` data-rc="${k}"`})).join('')}</div>`:''}
+  <div class="note">Tap cards to add them. Hold a card to read it.</div><div class="pair" style="justify-content:center"><button class="info" type="button" data-rtake="1">Take it</button><button class="buy" type="button" data-rdef="1" ${TR.idx.length||TR.guard!=null?'':'disabled'} ${pl.sap>P.sap?'disabled':''}>Defend</button></div>`);$('toast').classList.add('wide')}
+function TCGpow(x){return TCG.power(TG,TG.p[0],x)}
+function tReactDone(ring){const la=TG.lastAttack,P=TG.p[0];TR=null;
+  if(la){sfx(la.landed?'fell':'buy');if(la.landed&&la.crack){addQuake(5);buzz([20,30]);showToast('A Ring cracks',`${TCd(la.crack).n} goes to your hand${TCd(la.crack).kw.sprout?' and Sprouts':''}`,'card')}else if(la.landed&&!TG.over)showToast('Felled',la.d+' was felled','card');else showToast('Held!','Your defence held','card')}
+  tcgRender();if(TG.over){TS.busy=false;tcgFinish();return}setTimeout(tcgAIStep,800)}
+function tcgReactClick(e){if(!TR)return false;const P=TG.p[0];
+  const g=e.target.closest('[data-rg]');if(g){const u=+g.dataset.rg;TR.guard=TR.guard===u?null:u;tReactShow();return true}
+  const c=e.target.closest('[data-rc]');if(c){const k=+c.dataset.rc,i=TR.idx.indexOf(k);if(i>=0)TR.idx.splice(i,1);else TR.idx.push(k);tReactShow();return true}
+  if(e.target.closest('[data-rtake]')){const m=TR.m,ring=P.rings.length;nextToast();TCG.apply(TG,m,()=>({cards:[],plus:0,minus:0,guard:null,negate:false,decoy:false}));tReactDone(ring);return true}
+  if(e.target.closest('[data-rdef]')){const pl=tReactPlan(),m=TR.m,ring=P.rings.length;if(pl.sap>P.sap)return true;nextToast();TCG.apply(TG,m,()=>pl.plan);tReactDone(ring);return true}
+  return false}
+function tcgFinish(){const won=TG.winner===0;S.tcgStats=S.tcgStats||{w:0,l:0};if(won)S.tcgStats.w++;else S.tcgStats.l++;save();
+  setTimeout(()=>{if(!TG)return;showModal(`<h2>${won?'Victory!':'Defeat'}</h2><div class="note">${TG.reason==='deck-out'?(won?'They ran out of cards':'You ran out of cards'):won?'You broke through their last Ring':'They broke through your last Ring'} · ${Math.ceil(TG.turnNo/2)} turns</div><div class="note">Preview format: no rewards yet. Tell us what you think with Suggest an idea.</div><div class="btns" style="display:flex;gap:6px;justify-content:center;margin-top:6px"><button class="buy" type="button" data-tcgagain="1">Play again</button><button class="info" type="button" data-tcgclose="1">Close</button></div>`);sfx(won?'level':'buy')},700)}
+
+$('tcg').addEventListener('click',tcgClick);
+$('toast').addEventListener('click',e=>{if(tcgReactClick(e))return;
+  const f=e.target.closest('[data-tcgf]');if(f){tcgPickKeeper(f.dataset.tcgf);return}
+  const k=e.target.closest('[data-tcgk]');if(k){tcgBegin(k.dataset.tcgk);return}
+  const a=e.target.closest('[data-tab2]');if(a){tUseAbility(+a.dataset.tab2);return}
+  if(e.target.closest('[data-tcgagain]')){nextToast();TG=null;$('tcg').hidden=true;tcgStart();return}
+  if(e.target.closest('[data-tcgclose]')){nextToast();TG=null;$('tcg').hidden=true;buildList(true);return}});
+
+/*TCGUI-END*/
 /* ---------- tutorial duel: a scripted match that teaches the rules step by step ---------- */
 let TUT=null;
 const TUT_STEPS=[
@@ -2611,8 +3075,8 @@ document.addEventListener('visibilitychange',async()=>{if(document.hidden){save(
 window.addEventListener('pagehide',()=>{save();cloudSave()});
 
 /* ---------- What's new: shown once per update ---------- */
-const GAME_VER=82;
-const CHANGELOG=[[82,'Heartwood, refreshed',['New names: Work Crew, Rally, Revive, Turncoat, Nimble, Ancient, Camp Bell, Call the Pack and Call the Crew, Firebrand. Weather is now Snowdrift, Sawdust and Mudslide','Weather halves a row instead of dropping it to 1','Work Crew: +2 for every other copy in the row (it used to multiply)','Firebrand and Wildfire burn the strongest unit in a row that holds 3 or more units','Camp Bell cards have no power of their own, but still double their row','New faction perks. Lumberjacks, Overtime: when you pass, your weakest unit in each row gets +2. Wardens, Deep Roots: weather can\'t touch your units. Forest Spirits, Drift: once per duel, take a unit back into your hand. Beasts, Scavenge: after a round you don\'t win, a random unit returns from your discard pile','Redraw up to 3 cards at the start, and the Seer of Rings now shows 2 enemy cards','The four factions are now much more evenly matched']],[81,'Richer chests',['Better chests now give more of each item, not just better odds','Amber, Frenzy Tonics, Spirit Lures and Time Skips: ×1.5 in a Chest, ×2 Iron-bound, ×3 Gilded, ×4 Mythic, ×5 Secret','Cards come in bigger bundles from locked chests too','Keys, looks, wishes and starter decks are still one each','See the new Loot column in Market → Stash → Odds']],[80,'Medic choices',['Medic chains are now your call: if the card you revive is also a Medic, you pick the next card too, all the way down the chain','A revived Agile card asks which row to go on','You can cancel a Medic before picking']],[79,'Card art',['New detailed artwork for every card when you hold it: each character has its own look, tools, outfit and scene','Epic, Legendary, Mythic and Secret cards are now full art, with the picture covering the whole card and a foil shine','Deck building: an orange Max label shows when a deck already has the most copies of a card it can hold']],[78,'Deck labels',['Deck building: cards in your deck show how many spare copies are left in your collection, and cards in your collection show how many are already in your deck']],[77,'Card details',['Hold any card anywhere to see it up close with what it does: in packs, discard piles, the medic pick, your deck and collection. Closing it takes you right back where you were']],[76,'Chests and cards',['Better chests turn up far more often: Iron-bound, Gilded, Mythic and Secret chests are 2 to 6 times as common','New: Restless Chests. After a run of plain chests, one may start rattling. Tap it and stop the marker in the middle to turn it into a Chest, Iron-bound or Gilded chest, key included','Duel: warning before you pass while behind, a Fast/Normal opponent speed button, a match log (tap the strip in the middle) and both discard piles','Duel: Rematch and Next opponent buttons after a match','Deck: Fill deck button, filters (units, specials, neutral, new) and sorting (power, row, rarity), plus a row and power summary','Packs: Open all, and New tags on cards you just found','Fixed: forfeiting a duel after the redraw now counts as a ladder loss, and draws show as draws in your record']],[75,'Wishing Knots',['Wishing Knots no longer have a 25 minute wait. Instead they get rarer the faster you chop, so fast and slow players find them at a similar pace']],[74,'Wishing Knots',['Wishing Knots are rarer for fast cutters: after you find one, the next can only appear after about 25 minutes of play. Wishes you already made are kept']],[73,'Typing fix',['Fixed: the bug report box vanished or ignored taps on iPhone. It now opens on its own screen, a normal tap starts typing, and anything you type is kept if it closes','Typing your ladder name works with a normal tap too','Fixed: xp in the Woods list showed long decimals like 4.590000000000001']],[72,'Fix',['Fixed: the bug report box vanished when you tapped it to type on iPhone. The game thought the keyboard meant your phone was turned sideways. The box also now sits at the top of the screen, above the keyboard']],[71,'Community',['Report a bug or suggest an idea from the new Community section on the Map tab','Community polls will appear there too, so players can vote on future updates']],[70,'Clearer levels',['Furniture you are not high enough level to craft is now greyed out with a lock','Levels now read "Lvl" everywhere']],[69,'Tidier start',['The "Played before?" sign-in prompt can now be closed with ✕. Sign-in is still on the Map tab']],[68,'Phone fixes',['The game now fits your phone screen properly when played from the website','Fixed the new-player tip sometimes showing twice']],[67,'Ready for playtesters',['The game can now run on its own website with cloud saves and the card ladder, for friends without Claude','Pick your ladder name on the Ladder screen when playing on the web']],[66,'Late game and Replant',['New Shrine Offering on the Home tab from Woodcutting 75: spend gold for more damage and logs, up to Lvl 99','Your crew now swings the average of your axe and theirs, so a better axe helps them too','Replant is a true new forest: charms, Home, Shrine and Offering reset as well. You keep acorns, Guild lumberjacks, Amber upgrades, woods found and cards','Acorns now boost damage only, with diminishing returns, so every replant is quicker but still a climb','Fixed: deep Shrine sets showed "undefined" in their names']],[65,'Settling in',['If the tougher trees caught you deep in the forest, you have been moved back to a grove where trees fall in a few seconds','Time away now counts your Shrine bonus properly','The Cards tab opens after 300 trees']],[64,'Daily goals, ladder and a guide',['New Today section on the Map tab: a daily chest that grows with your streak, three daily goals worth Amber, and a Wood of the week with double logs and xp','New card Ladder on the Cards tab: every duel against the computer moves your rating, ranked against other players','New players get a step-by-step guide, and tabs now unlock a little more gradually','Big upgrades you can afford, like a new axe, now glow','The welcome-back screen shows how full your camp stores got']],[63,'A longer journey',['Rebalanced: trees in later groves are much tougher, xp is slower and upgrades cost more per level, so reaching Lvl 99 takes weeks, not days','If a grove feels slow, use the Map to farm an earlier one while you build up','Replant now starts a new forest: your level resets, acorns are fewer but last, and a full run pays 25 Amber','Time away can no longer farm an easy grove faster than you could by hand','Your save is now backed up, so a damaged save can be restored']],[62,'Looks',['Crew outfits now show on Loggers\' Guild lumberjacks too','Finding a look you already own in a chest sells it for its Amber price instead']],[61,'Foldable menus',['Tap any section heading in a menu to fold it away, and tap again to open it','Your choices are remembered when you leave the menu and next time you play']],[60,'Milestones',['Every upgrade, charm and Merchant\'s Scales now has milestones at Lvl 10, 25, 50 and 99','Each milestone gives a big jump; levels in between give a little less','The total bonus at Lvl 99 is unchanged','Your levels were moved up where needed so no bonus went down']],[59,'Time away rebalanced',['Time away now earns about a quarter of active play (20%, up to 25% with Night Cloaks)','Camp Stores now max out at 12 hours','New Amber upgrade: Bedrolls double time away to 24 hours','Night Owl Nell now adds +5% to that instead of +50%','Time Skips still give the full hour of crew, mill and crafting']],[58,'Update notes',['The What\'s new list now shows every update you missed, in one scrolling list']],[57,'Every upgrade to Lvl 99',['All upgrades now go to Lvl 99 (except how many lumberjacks you can hire)','Levels cost less and each gives a little less, so the total at max is the same','Your levels were converted, so your bonuses stay the same']],[56,'Card details in the Deck builder',['Hold any card in the Deck builder to see what it does','Scarecrows on the board can be held too']],[55,'Card details in matches',['Hold any card during a match to see what it does','Works on your hand and on both sides of the board (right-click on a laptop)']],[54,'Charms rebalanced',['Every charm now goes to Lvl 99','Charms cost less per level and give a bit less per level','Your charm levels were converted, so your bonuses stay the same']],[53,'Wish tracker',['The Wishing Knot shows how many of each wish you have made','Your wishes are listed on the Axe tab, under Level bonus']],[52,'Sync fix',['Amber purchases are now kept when your phone and laptop saves meet','Your Fifth Crew Slot is back']],
+const GAME_VER=83;
+const CHANGELOG=[[83,'Heartwood TCG preview',['Try the new turn-based card game: Cards tab, Duel, Heartwood TCG','Pick a faction and a Keeper, then grow your Sap, play units into your Clearing and Treeline, and attack','Crack all of their Rings and land one more hit to win. When you are attacked, you can react with Guard, Reactions and Brace cards','Preview only: uses starter decks, gives no rewards, and the rules may change']],[82,'Heartwood, refreshed',['New names: Work Crew, Rally, Revive, Turncoat, Nimble, Ancient, Camp Bell, Call the Pack and Call the Crew, Firebrand. Weather is now Snowdrift, Sawdust and Mudslide','Weather halves a row instead of dropping it to 1','Work Crew: +2 for every other copy in the row (it used to multiply)','Firebrand and Wildfire burn the strongest unit in a row that holds 3 or more units','Camp Bell cards have no power of their own, but still double their row','New faction perks. Lumberjacks, Overtime: when you pass, your weakest unit in each row gets +2. Wardens, Deep Roots: weather can\'t touch your units. Forest Spirits, Drift: once per duel, take a unit back into your hand. Beasts, Scavenge: after a round you don\'t win, a random unit returns from your discard pile','Redraw up to 3 cards at the start, and the Seer of Rings now shows 2 enemy cards','The four factions are now much more evenly matched']],[81,'Richer chests',['Better chests now give more of each item, not just better odds','Amber, Frenzy Tonics, Spirit Lures and Time Skips: ×1.5 in a Chest, ×2 Iron-bound, ×3 Gilded, ×4 Mythic, ×5 Secret','Cards come in bigger bundles from locked chests too','Keys, looks, wishes and starter decks are still one each','See the new Loot column in Market → Stash → Odds']],[80,'Medic choices',['Medic chains are now your call: if the card you revive is also a Medic, you pick the next card too, all the way down the chain','A revived Agile card asks which row to go on','You can cancel a Medic before picking']],[79,'Card art',['New detailed artwork for every card when you hold it: each character has its own look, tools, outfit and scene','Epic, Legendary, Mythic and Secret cards are now full art, with the picture covering the whole card and a foil shine','Deck building: an orange Max label shows when a deck already has the most copies of a card it can hold']],[78,'Deck labels',['Deck building: cards in your deck show how many spare copies are left in your collection, and cards in your collection show how many are already in your deck']],[77,'Card details',['Hold any card anywhere to see it up close with what it does: in packs, discard piles, the medic pick, your deck and collection. Closing it takes you right back where you were']],[76,'Chests and cards',['Better chests turn up far more often: Iron-bound, Gilded, Mythic and Secret chests are 2 to 6 times as common','New: Restless Chests. After a run of plain chests, one may start rattling. Tap it and stop the marker in the middle to turn it into a Chest, Iron-bound or Gilded chest, key included','Duel: warning before you pass while behind, a Fast/Normal opponent speed button, a match log (tap the strip in the middle) and both discard piles','Duel: Rematch and Next opponent buttons after a match','Deck: Fill deck button, filters (units, specials, neutral, new) and sorting (power, row, rarity), plus a row and power summary','Packs: Open all, and New tags on cards you just found','Fixed: forfeiting a duel after the redraw now counts as a ladder loss, and draws show as draws in your record']],[75,'Wishing Knots',['Wishing Knots no longer have a 25 minute wait. Instead they get rarer the faster you chop, so fast and slow players find them at a similar pace']],[74,'Wishing Knots',['Wishing Knots are rarer for fast cutters: after you find one, the next can only appear after about 25 minutes of play. Wishes you already made are kept']],[73,'Typing fix',['Fixed: the bug report box vanished or ignored taps on iPhone. It now opens on its own screen, a normal tap starts typing, and anything you type is kept if it closes','Typing your ladder name works with a normal tap too','Fixed: xp in the Woods list showed long decimals like 4.590000000000001']],[72,'Fix',['Fixed: the bug report box vanished when you tapped it to type on iPhone. The game thought the keyboard meant your phone was turned sideways. The box also now sits at the top of the screen, above the keyboard']],[71,'Community',['Report a bug or suggest an idea from the new Community section on the Map tab','Community polls will appear there too, so players can vote on future updates']],[70,'Clearer levels',['Furniture you are not high enough level to craft is now greyed out with a lock','Levels now read "Lvl" everywhere']],[69,'Tidier start',['The "Played before?" sign-in prompt can now be closed with ✕. Sign-in is still on the Map tab']],[68,'Phone fixes',['The game now fits your phone screen properly when played from the website','Fixed the new-player tip sometimes showing twice']],[67,'Ready for playtesters',['The game can now run on its own website with cloud saves and the card ladder, for friends without Claude','Pick your ladder name on the Ladder screen when playing on the web']],[66,'Late game and Replant',['New Shrine Offering on the Home tab from Woodcutting 75: spend gold for more damage and logs, up to Lvl 99','Your crew now swings the average of your axe and theirs, so a better axe helps them too','Replant is a true new forest: charms, Home, Shrine and Offering reset as well. You keep acorns, Guild lumberjacks, Amber upgrades, woods found and cards','Acorns now boost damage only, with diminishing returns, so every replant is quicker but still a climb','Fixed: deep Shrine sets showed "undefined" in their names']],[65,'Settling in',['If the tougher trees caught you deep in the forest, you have been moved back to a grove where trees fall in a few seconds','Time away now counts your Shrine bonus properly','The Cards tab opens after 300 trees']],[64,'Daily goals, ladder and a guide',['New Today section on the Map tab: a daily chest that grows with your streak, three daily goals worth Amber, and a Wood of the week with double logs and xp','New card Ladder on the Cards tab: every duel against the computer moves your rating, ranked against other players','New players get a step-by-step guide, and tabs now unlock a little more gradually','Big upgrades you can afford, like a new axe, now glow','The welcome-back screen shows how full your camp stores got']],[63,'A longer journey',['Rebalanced: trees in later groves are much tougher, xp is slower and upgrades cost more per level, so reaching Lvl 99 takes weeks, not days','If a grove feels slow, use the Map to farm an earlier one while you build up','Replant now starts a new forest: your level resets, acorns are fewer but last, and a full run pays 25 Amber','Time away can no longer farm an easy grove faster than you could by hand','Your save is now backed up, so a damaged save can be restored']],[62,'Looks',['Crew outfits now show on Loggers\' Guild lumberjacks too','Finding a look you already own in a chest sells it for its Amber price instead']],[61,'Foldable menus',['Tap any section heading in a menu to fold it away, and tap again to open it','Your choices are remembered when you leave the menu and next time you play']],[60,'Milestones',['Every upgrade, charm and Merchant\'s Scales now has milestones at Lvl 10, 25, 50 and 99','Each milestone gives a big jump; levels in between give a little less','The total bonus at Lvl 99 is unchanged','Your levels were moved up where needed so no bonus went down']],[59,'Time away rebalanced',['Time away now earns about a quarter of active play (20%, up to 25% with Night Cloaks)','Camp Stores now max out at 12 hours','New Amber upgrade: Bedrolls double time away to 24 hours','Night Owl Nell now adds +5% to that instead of +50%','Time Skips still give the full hour of crew, mill and crafting']],[58,'Update notes',['The What\'s new list now shows every update you missed, in one scrolling list']],[57,'Every upgrade to Lvl 99',['All upgrades now go to Lvl 99 (except how many lumberjacks you can hire)','Levels cost less and each gives a little less, so the total at max is the same','Your levels were converted, so your bonuses stay the same']],[56,'Card details in the Deck builder',['Hold any card in the Deck builder to see what it does','Scarecrows on the board can be held too']],[55,'Card details in matches',['Hold any card during a match to see what it does','Works on your hand and on both sides of the board (right-click on a laptop)']],[54,'Charms rebalanced',['Every charm now goes to Lvl 99','Charms cost less per level and give a bit less per level','Your charm levels were converted, so your bonuses stay the same']],[53,'Wish tracker',['The Wishing Knot shows how many of each wish you have made','Your wishes are listed on the Axe tab, under Level bonus']],[52,'Sync fix',['Amber purchases are now kept when your phone and laptop saves meet','Your Fifth Crew Slot is back']],
  [51,'Update notes',["A \"What's new\" pop-up now appears after each update"]],
  [50,'Chest slot',['The waiting-chest slot glows white for Sacks, Crates and Chests']],
  [49,'Chest Trackers',['New Amber boost: your crew finds a chest every 30 min while you\'re away (up to 4)','Chests left behind when you change grove wait in a slot at the top-left']],

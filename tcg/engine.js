@@ -13,14 +13,15 @@ function newPlayer(G,cfg){const P={name:cfg.name,f:KEEPERS[cfg.keeper].f,k:{id:c
   const ring=shuffle(G,cfg.ring.slice()),n=startRings(cfg.keeper);P.rings=ring.slice(0,n);P.heart=ring.slice(n);
   for(let i=0;i<5;i++)P.hand.push(P.deck.shift());return P}
 const startRings=k=>Math.max(4,Math.min(6,9-KEEPERS[k].p));
-function newGame(a,b,seed){const G={rs:seed>>>0||1,uid:1,turn:0,first:0,turnNo:0,phase:'work',aura:{C:0,T:0},over:false,winner:-1,reason:'',log:[]};
+function newGame(a,b,seed,human){const G={rs:seed>>>0||1,uid:1,turn:0,first:0,turnNo:0,phase:'work',aura:{C:0,T:0},over:false,winner:-1,reason:'',log:[]};
   G.p=[newPlayer(G,a),newPlayer(G,b)];
   /* coin flip: winner goes first, the other keeps the coin */
   G.first=rnd(G)<0.5?0:1;G.turn=G.first;G.p[1-G.first].coin=true;
   /* going second: keep the coin and draw one extra card */
   draw(G,1-G.first);
-  for(let i=0;i<2;i++)aiMulligan(G,i);
+  for(let i=0;i<2;i++)if(i!==human)aiMulligan(G,i);
   dawn(G,true);return G}
+function redraw(G,i){const P=G.p[i],n=P.hand.length;P.deck.push(...P.hand);P.hand=[];shuffle(G,P.deck);for(let k=0;k<n;k++)P.hand.push(P.deck.shift())}
 function aiMulligan(G,i){const P=G.p[i];if(P.hand.filter(id=>C(id).cost<=3).length>=2)return;P.deck.push(...P.hand);P.hand=[];shuffle(G,P.deck);for(let k=0;k<5;k++)P.hand.push(P.deck.shift())}
 const units=P=>P.rows.C.concat(P.rows.T);
 const findU=(P,u)=>units(P).find(x=>x.u===u);
@@ -32,6 +33,10 @@ function power(G,P,x){const d=C(x.id);let v=d.p+x.tmp+x.sh;for(const t of x.tool
   return Math.max(0,v)}
 function kPower(G,P){return KEEPERS[P.k.id].p}
 function draw(G,i){const P=G.p[i];if(!P.deck.length){end(G,1-i,'deck-out');return false}P.hand.push(P.deck.shift());return true}
+const lg=(G,txt)=>{G.log.push(txt);if(G.log.length>80)G.log.shift()};
+const nm=id=>C(id).n;
+const vb=(P,v)=>P.name==='You'?({plays:'play',ends:'end',spends:'spend'}[v]||v):v;
+const own=P=>P.name==='You'?'your':P.name+"'s";
 function end(G,w,why){if(G.over)return;G.over=true;G.winner=w;G.reason=why}
 function dawn(G,firstTurn){const i=G.turn,P=G.p[i];G.turnNo++;G.phase='work';
   for(const x of units(P)){x.exh=false;x.sick=false;x.moved=false;x.sh=0}
@@ -44,6 +49,7 @@ function toGrave(G,P,x){for(const r of ['C','T'])P.rows[r]=P.rows[r].filter(y=>y
 /* Regrow: the Heartwood card first; after that, a random card from your discard pile (never your deck) */
 function regrow(G,P){if(P.rings.length>=RINGCAP)return;if(P.heart.length){P.rings.push(P.heart.pop())}else if(P.grave.length){const j=Math.floor(rnd(G)*P.grave.length);P.rings.push(P.grave.splice(j,1)[0])}}
 function bestUnitIn(list,maxCost){let b=null;for(const id of list){const d=C(id);if(d.type==='unit'&&!d.kw.ancient&&d.cost<=maxCost&&(!b||d.p>C(b).p))b=id}return b}
+function abilityText(op,v){return {buff:'+'+v+' power this turn',shield:'+'+v+' power until your next turn',ready:'ready a unit',draw:'draw '+v,buffRow:'your Clearing +'+v+' this turn',readyAll:'ready everything',hush:'Hush their Keeper',daze:'Daze their Keeper',regrow:'Regrow',regrowDraw:'Regrow and draw 1',fell:'fell a unit with '+v+' or less power',fellExhausted:'fell an exhausted unit',bounce:'return a unit with '+v+' or less power to hand',reviveHand:'take a unit back from your discard pile',revivePlay:'play a unit from your discard pile'}[op]||op}
 /* ---------- legal moves ---------- */
 function rowsFor(P,d){const r=d.row==='W'?['C','T']:[d.row];return r.filter(x=>P.rows[x].length<ROWCAP)}
 function enemyTargets(G,i,pred){const O=G.p[1-i];return units(O).filter(x=>!C(x.id).kw.ancient&&pred(x,O))}
@@ -81,11 +87,11 @@ function targets(G,i){const O=G.p[1-i],t=[],clearEmpty=!O.rows.C.length;
 /* ---------- applying moves ---------- */
 function apply(G,m,def){const i=G.turn,P=G.p[i],O=G.p[1-i];if(G.over)return;
   if(m.t==='tofell'){G.phase='fell';return}
-  if(m.t==='end'){dusk(G);return}
-  if(m.t==='coin'){P.coin=false;P.sap+=1;return}
+  if(m.t==='end'){lg(G,P.name+' '+vb(P,'ends')+' the turn');dusk(G);return}
+  if(m.t==='coin'){P.coin=false;P.sap+=1;lg(G,P.name+' '+vb(P,'spends')+' the coin: +1 Sap');return}
   if(m.t==='move'){const x=findU(P,m.u);P.rows[x.row]=P.rows[x.row].filter(y=>y!==x);x.row=x.row==='C'?'T':'C';P.rows[x.row].push(x);x.moved=true;return}
-  if(m.t==='ability'){const [cost,op,v]=KEEPERS[P.k.id].ab[m.ai];P.sap-=cost;P.k.used[m.ai]=1;P.stats.abil++;effect(G,i,op,v,m.target);return}
-  if(m.t==='play'){const d=C(m.id);P.hand.splice(P.hand.indexOf(m.id),1);P.sap-=d.cost;
+  if(m.t==='ability'){const [cost,op,v]=KEEPERS[P.k.id].ab[m.ai];lg(G,P.name+': '+KEEPERS[P.k.id].n+' uses '+abilityText(op,v)+(m.target?' on '+nm(findU(P,m.target)?.id||findU(O,m.target)?.id||'Xbell'):''));P.sap-=cost;P.k.used[m.ai]=1;P.stats.abil++;effect(G,i,op,v,m.target);return}
+  if(m.t==='play'){const d=C(m.id);P.hand.splice(P.hand.indexOf(m.id),1);P.sap-=d.cost;lg(G,P.name+' '+vb(P,'plays')+' '+d.n);
     if(d.type==='unit')enter(G,i,m.id,m.row);
     else if(d.type==='tool'){const x=findU(P,m.target);x.tools.push(m.id)}
     else if(d.type==='boon'||d.type==='blight'){G.aura[d.fx.row]=d.fx.v;P.grave.push(m.id)}
@@ -128,17 +134,21 @@ function effect(G,i,op,v,target){const P=G.p[i],O=G.p[1-i];
 function attack(G,i,a,d,def){const P=G.p[i],O=G.p[1-i];let att,ap;
   if(a==='K'){P.k.exh=true;ap=kPower(G,P)}else{att=findU(P,a);att.exh=true;ap=power(G,P,att)}
   let tgt=d==='K'?null:findU(O,d);let dp=d==='K'?kPower(G,O):power(G,O,tgt);
-  const plan=(def||aiDefend)(G,1-i,ap,d,dp);O.stats.react+=plan.cards.length;
+  const aN=a==='K'?KEEPERS[P.k.id].n:nm(att.id),dN=d==='K'?(O.name==='You'?'your Keeper':O.name+"'s Keeper"):nm(tgt.id);
+  const plan=(def||aiDefend)(G,1-i,ap,d,dp);G.lastAttack={a:aN,d:dN,ap,dp,plan,landed:false,crack:null};O.stats.react+=plan.cards.length;
   for(const id of plan.cards){O.hand.splice(O.hand.indexOf(id),1);O.grave.push(id);const c=C(id);if(c.type==='reaction')O.sap-=c.cost}
-  if(plan.negate)return;
-  if(plan.decoy)return;
+  if(plan.negate){lg(G,aN+' attacks '+dN+': Fade, the attack misses');return}
+  if(plan.decoy){lg(G,aN+' attacks '+dN+': a Scarecrow takes the hit');return}
   if(plan.guard!=null){const g=findU(O,plan.guard);g.exh=true;tgt=g;d=g.u;dp=power(G,O,g)}
   dp+=plan.plus;ap=Math.max(0,ap-plan.minus);
-  if(ap<dp)return;
-  if(tgt){toGrave(G,O,tgt);return}
+  const how=(plan.guard!=null?' (Guarded by '+nm(tgt.id)+')':'')+(plan.cards.length?' ('+plan.cards.map(nm).join(', ')+')':'');
+  if(ap<dp){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): held'+how);return}
+  G.lastAttack.landed=true;
+  if(tgt){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): felled'+how);toGrave(G,O,tgt);return}
+  lg(G,aN+' ('+ap+') hits '+dN+' ('+dp+')'+how);
   const n=(att&&kwOf(att,'double'))?2:1;P.stats.hits++;
   for(let k=0;k<n&&!G.over;k++){if(!O.rings.length){end(G,i,'rings');return}
-    const id=O.rings.pop();const c=C(id);
+    const id=O.rings.pop();const c=C(id);G.lastAttack.crack=id;lg(G,'  A Ring cracks: '+c.n+(c.kw.sprout&&c.type==='unit'?' Sprouts onto '+own(O)+' board':' goes to '+own(O)+' hand'));
     if(c.kw.sprout&&c.type==='unit'){const rs=rowsFor(O,c);if(rs.length){enter(G,1-i,id,rs[0]);continue}}
     O.hand.push(id)}}
 /* ---------- computer opponent ---------- */
@@ -181,7 +191,20 @@ function aiFell(G){const i=G.turn;let guard=0;
       const cost=m.a==='K'?0.3:0.5+ap*0.05;const s=tv-cost;if(s>bs){bs=s;best=m}}
     if(!best)break;apply(G,best)}
   if(!G.over)apply(G,{t:'end'})}
+/* one AI decision at a time, for the screen */
+function aiNext(G){const i=G.turn;
+  if(G.phase==='work'){const P0=G.p[i],O0=G.p[1-i];const swing=false;const ms=moves(G).filter(m=>m.t!=='tofell');const base=value(G,i);let best=null,bv=0.25;
+    for(const m of ms){const H=clone(G);apply(H,m);let v=value(H,i)-base;if(m.t==='coin'){const nm2=moves(H).filter(x=>x.t==='play'&&C(x.id).cost===H.p[i].sap);v=nm2.length?0.3:-1}if(v>bv){bv=v;best=m}}
+    return best||{t:'tofell'}}
+  const P=G.p[i],O=G.p[1-i];let best=null,bs=-1e9;
+  for(const m of moves(G).filter(m=>m.t==='attack')){const ap=m.a==='K'?kPower(G,P):power(G,P,findU(P,m.a));const dp=m.d==='K'?kPower(G,O):power(G,O,findU(O,m.d));if(ap<dp)continue;
+    const tv=m.d==='K'?(O.rings.length===0?100:3+(6-O.rings.length)*0.2):dp+0.6;const s=tv-(0.5+ap*0.05);if(s>bs){bs=s;best=m}}
+  return best||{t:'end'}}
+/* what an attack looks like before anyone reacts (for the React prompt) */
+function preview(G,m){const i=G.turn,P=G.p[i],O=G.p[1-i];const ap=m.a==='K'?kPower(G,P):power(G,P,findU(P,m.a));const dp=m.d==='K'?kPower(G,O):power(G,O,findU(O,m.d));
+  return {ap,dp,aName:m.a==='K'?KEEPERS[P.k.id].n:nm(findU(P,m.a).id),dName:m.d==='K'?'your Keeper':nm(findU(O,m.d).id),d:m.d}}
 function play(a,b,seed,maxTurns){const G=newGame(a,b,seed);maxTurns=maxTurns||80;
   while(!G.over&&G.turnNo<maxTurns){aiWork(G);if(!G.over&&G.phase==='fell')aiFell(G)}
   if(!G.over)end(G,-1,'timeout');return G}
-module.exports={newGame,moves,apply,play,value,power,units,aiWork,aiFell,clone};
+const API={newGame,moves,apply,play,value,power,kPower,units,findU,aiWork,aiFell,aiNext,aiDefend,preview,redraw,clone,abilityText,startRings,canAttack};
+if(typeof module!=='undefined')module.exports=API;
