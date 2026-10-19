@@ -71,7 +71,7 @@ function tTargets(){const out={rows:[],units:[],keeper:false};if(!TG||TG.turn!==
 function tDo(m){if(!TG||TG.over)return;TS.sel=null;TS.att=null;TS.ab=null;TS.move=null;const rings=TG.p[1].rings.length;TCG.apply(TG,m);
   if(m.t==='attack'&&TG.lastAttack){const la=TG.lastAttack;sfx(la.landed?'fell':'buy');if(la.landed&&TG.p[1].rings.length<rings)addQuake(4)}else sfx('chop');
   tcgRender();tcgAfter()}
-function tcgClick(e){if(!TG)return;const P=TG.p[0];
+function tcgClick(e){if(!TG||!$('peekBack').hidden)return;const P=TG.p[0];
   if(e.target.closest('#tQuit')){if(TG.over||confirm('Leave this game? It won\'t be saved.')){TG=null;$('tcg').hidden=true}return}
   if(e.target.closest('#tLog')){showModal(`<h2>${ico('book')} Match log</h2><div class="logl">${TG.log.map(x=>`<div>${x}</div>`).join('')}</div><button class="buy" type="button" id="toastOk">Close</button>`);const l=$('toast').querySelector('.logl');if(l)l.scrollTop=l.scrollHeight;return}
   {const kp=e.target.closest('[data-tkeep]');if(kp&&kp.dataset.tkeep==='1'&&TS.att!=null){tDo({t:'attack',a:TS.att,d:'K'});return}if(kp){tKeeperSheet(+kp.dataset.tkeep);return}}
