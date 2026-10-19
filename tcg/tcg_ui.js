@@ -4,7 +4,7 @@
 let TG=null,TS={sel:null,att:null,ab:null,busy:false,move:null};
 const TK=()=>TCG.KEEPERS,TCd=id=>TCG.CARDS[id];
 const TKW={eager:'Eager',guard:'Guard',crew:'Work Crew',rally:'Rally',revive:'Revive',scout:'Scout',call:'Call the Pack',fire:'Firebrand',ancient:'Ancient',double:'Double Cut',brace:'Brace',sprout:'Sprout',regrow:'Regrow',nimble:'Nimble'};
-const TKW_TXT={eager:'can attack the turn it is played',guard:'can take an attack aimed at your Keeper',crew:'+1 power for each other copy on your board',rally:'your other units +1 power on your turn',revive:'when played, take back a unit costing 3 or less from your discard pile',scout:'when played, draw a card',call:'when played, find a copy in your deck and add it to your hand',fire:'when played, fell an enemy unit with that much power or less',ancient:'can\'t be targeted by abilities, Blights or Firebrand',double:'a landed hit on a Keeper cracks 2 Rings',brace:'discard while defending: +1 power for that fight',sprout:'if cracked from your Rings, it plays itself for free',regrow:'when played, Regrow (add a Ring)',nimble:'may switch rows once per turn'};
+const TKW_TXT={eager:'can attack the turn it is played',guard:'can block from either row, and gets +2 power while blocking',crew:'+1 power for each other copy on your board',rally:'your other units +1 power on your turn',revive:'when played, take back a unit costing 3 or less from your discard pile',scout:'when played, draw a card',call:'when played, find a copy in your deck and add it to your hand',fire:'when played, fell an enemy unit with that much power or less',ancient:'can\'t be targeted by abilities, Blights or Firebrand',double:'a landed hit on a Keeper cracks 2 Rings',brace:'discard while defending: +1 power for that fight',sprout:'if cracked from your Rings, it plays itself for free',regrow:'when played, Regrow (add a Ring)',nimble:'may switch rows once per turn'};
 const TTYPE_IC={tool:'hammer',reaction:'glove',event:'scroll',boon:'sun',blight:'snow'};
 const TROW={C:'Clearing',T:'Treeline',W:'Wanderer'};
 function tKwLine(d){return Object.keys(d.kw||{}).map(k=>k==='fire'?'Firebrand '+d.kw.fire:k==='brace'?'Brace +'+d.kw.brace:TKW[k]).join(' · ')}
@@ -27,7 +27,7 @@ function tcgBegin(kid){const f=TK()[kid].f,of='LWSB'.replace(f,'')[Math.floor(Ma
   const mine=TCG.starter(f),theirs=TCG.starter(of);
   TG=TCG.newGame({name:'You',keeper:kid,main:mine.main,ring:mine.ring},{name:FACTIONS.find(x=>x.id===of).n,keeper:okid,main:theirs.main,ring:theirs.ring},(Math.random()*4e9)>>>0,0);
   TG.redrawn=false;TS={sel:null,att:null,ab:null,busy:false,move:null};nextToast();$('tcg').hidden=false;sfx('shimmer');
-  showToast('Coin flip',TG.first===0?'You go first':'They go first. You keep the coin (+1 Sap once) and drew an extra card','amber');
+  showToast('Coin flip',TG.first===0?'You go first':'They go first. You keep the coin (+2 Sap once) and drew an extra card','amber');
   tcgRender()}
 const tMull=()=>TG&&!TG.redrawn;
 /* ---------- render ---------- */
@@ -72,7 +72,7 @@ function tDo(m){if(!TG||TG.over)return;TS.sel=null;TS.att=null;TS.ab=null;TS.mov
   if(m.t==='attack'&&TG.lastAttack){const la=TG.lastAttack;sfx(la.landed?'fell':'buy');if(la.landed&&TG.p[1].rings.length<rings)addQuake(4);if(!TG.over)tAttackResult(la,true)}else sfx('chop');
   tcgRender();tcgAfter()}
 /* plain-words result of a fight, including any cards the defender used from their hand */
-function tAttackResult(la,mine){const used=(la.plan&&la.plan.cards||[]).map(id=>TCd(id).n);const tgt=la.guarded?la.dn+' (Guarding)':la.isK?(mine?'Their Keeper':'Your Keeper'):la.dn;
+function tAttackResult(la,mine){const used=(la.plan&&la.plan.cards||[]).map(id=>TCd(id).n);const tgt=la.guarded?la.dn+' (blocking)':la.isK?(mine?'Their Keeper':'Your Keeper'):la.dn;
   if(la.plan&&la.plan.negate){showToast('Missed',`${mine?'They':'You'} played Fade: the attack missed`,'card');return}
   if(la.plan&&la.plan.decoy){showToast('Scarecrow',`A Scarecrow took the hit`,'card');return}
   const fap=la.fap!=null?la.fap:la.ap,fdp=la.fdp!=null?la.fdp:la.dp,boost=used.length?` with ${used.join(', ')} from ${mine?'their':'your'} hand`:'';
@@ -114,23 +114,23 @@ function tcgAIStep(){if(!TG||TG.over){TS.busy=false;tcgAfter();return}if(TG.turn
   if(m.t==='attack'){tcgReact(m);return}
   const before=TG.log.length;TCG.apply(TG,m);if(m.t==='play'||m.t==='ability')sfx('chop');
   tcgRender();if(TG.over){TS.busy=false;tcgFinish();return}setTimeout(tcgAIStep,m.t==='tofell'?300:700)}
-/* the React window: you choose Guard, Reactions and Brace cards, and see if it holds */
+/* the React window: you choose a blocker, Reactions and Brace cards, and see if it holds */
 let TR=null;
 function tcgReact(m){const pv=TCG.preview(TG,m),P=TG.p[0];TR={m,pv,idx:[],guard:null};
-  const can=P.hand.some(id=>{const d=TCd(id);return (d.type==='reaction'&&d.cost<=P.sap)||(d.kw&&d.kw.brace)})||(pv.d==='K'&&P.rows.C.some(x=>!x.exh&&(TCd(x.id).kw.guard||x.tools.some(t=>TCd(t).fx.guard))));
+  const can=P.hand.some(id=>{const d=TCd(id);return (d.type==='reaction'&&d.cost<=P.sap)||(d.kw&&d.kw.brace)})||TCG.blockers(TG,P,pv.d).length>0;
   if(!can){const ring=P.rings.length;TCG.apply(TG,m,()=>({cards:[],plus:0,minus:0,guard:null,negate:false,decoy:false}));tReactDone(ring);return}
   tReactShow()}
 function tReactPlan(){const P=TG.p[0];let plus=0,minus=0,negate=false,decoy=false,sap=0;
   const cards=TR.idx.map(k=>P.hand[k]);for(const id of cards){const d=TCd(id);if(d.type==='reaction'){sap+=d.cost;const f=d.fx;if(f.negate)negate=true;if(f.decoy)decoy=true;if(f.plus)plus+=f.plus;if(f.attackerMinus)minus+=f.attackerMinus;if(f.plusPerUnit)plus+=TCG.units(P).length}else if(d.kw.brace)plus+=d.kw.brace}
-  let dp=TR.pv.dp;if(TR.guard!=null){const g=TCG.findU(P,TR.guard);dp=TCG.power(TG,P,g)}
+  let dp=TR.pv.dp;if(TR.guard!=null){const g=TCG.findU(P,TR.guard);dp=TCG.blockPower(TG,P,g)}
   const ap=Math.max(0,TR.pv.ap-minus),holds=negate||decoy||ap<dp+plus;return {plan:{cards,plus,minus,guard:TR.guard,negate,decoy},sap,ap,dp:dp+plus,holds}}
 function tReactShow(){const P=TG.p[0],pl=tReactPlan(),pv=TR.pv;
   const opts=[];P.hand.forEach((id,k)=>{const d=TCd(id);if(d.type==='reaction'||(d.kw&&d.kw.brace))opts.push([id,k])});
-  const guards=pv.d==='K'?P.rows.C.filter(x=>!x.exh&&(TCd(x.id).kw.guard||x.tools.some(t=>TCd(t).fx.guard))):[];
+  const guards=TCG.blockers(TG,P,pv.d);
   showModal(`<h2>${ico('swords')} You're attacked!</h2><div style="font-size:19px"><b>${pv.aName}</b> (${pl.ap}) attacks <b>${pv.dName}</b> (${pl.dp})</div><div class="note">${pl.holds?'<b style="color:var(--sap)">Your defence holds</b>':pv.d==='K'&&TR.guard==null?'It lands: a Ring cracks into your hand':pl.ap===pl.dp?'Equal power: both units are felled':'It lands: your unit is felled'} · Sap left ${P.sap-pl.sap}</div>
-  ${guards.length?`<p class="sec">Guard</p><div class="cgrid" style="justify-content:center">${guards.map(x=>tCard(x.id,{pw:TCGpow(x),cls:TR.guard===x.u?'sel':'',attr:` data-rg="${x.u}"`})).join('')}</div>`:''}
+  ${guards.length?`<p class="sec">Block with</p><div class="cgrid" style="justify-content:center">${guards.map(x=>tCard(x.id,{pw:TCG.blockPower(TG,P,x),cls:TR.guard===x.u?'sel':'',attr:` data-rg="${x.u}"`})).join('')}</div>`:''}
   ${opts.length?`<p class="sec">Reactions and Brace</p><div class="cgrid" style="justify-content:center">${opts.map(([id,k])=>tCard(id,{cls:TR.idx.includes(k)?'sel':'',attr:` data-rc="${k}"`})).join('')}</div>`:''}
-  <div class="note">Tap cards to add them. Hold a card to read it.</div><div class="pair" style="justify-content:center"><button class="info" type="button" data-rtake="1">Take it</button><button class="buy" type="button" data-rdef="1" ${TR.idx.length||TR.guard!=null?'':'disabled'} ${pl.sap>P.sap?'disabled':''}>Defend</button></div>`,true);$('toast').classList.add('wide')}
+  <div class="note">Any ready unit in your Clearing can block (Guard units from either row, +2). Tap cards to add them; hold to read.</div><div class="pair" style="justify-content:center"><button class="info" type="button" data-rtake="1">Take it</button><button class="buy" type="button" data-rdef="1" ${TR.idx.length||TR.guard!=null?'':'disabled'} ${pl.sap>P.sap?'disabled':''}>Defend</button></div>`,true);$('toast').classList.add('wide')}
 function TCGpow(x){return TCG.power(TG,TG.p[0],x)}
 function tReactDone(ring){const la=TG.lastAttack,P=TG.p[0];TR=null;
   if(la){sfx(la.landed?'fell':'buy');if(la.landed&&la.crack){addQuake(5);buzz([20,30]);showToast('A Ring cracks',`${TCd(la.crack).n} goes to your hand${TCd(la.crack).kw.sprout?' and Sprouts':''}`,'card')}else if(!TG.over)tAttackResult(la,false)}
