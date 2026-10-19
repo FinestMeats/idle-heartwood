@@ -28,7 +28,8 @@ function tcgBegin(kid){const f=TK()[kid].f,of='LWSB'.replace(f,'')[Math.floor(Ma
   TG=TCG.newGame({name:'You',keeper:kid,main:mine.main,ring:mine.ring},{name:FACTIONS.find(x=>x.id===of).n,keeper:okid,main:theirs.main,ring:theirs.ring},(Math.random()*4e9)>>>0,0);
   TG.redrawn=false;TS={sel:null,att:null,ab:null,busy:false,move:null};nextToast();$('tcg').hidden=false;sfx('shimmer');
   showToast('Coin flip',TG.first===0?'You go first':'They go first. You keep the coin (+1 Sap once) and drew an extra card','amber');
-  tcgRender();tcgAfter()}
+  tcgRender()}
+const tMull=()=>TG&&!TG.redrawn;
 /* ---------- render ---------- */
 function tRow(pi,r){const P=TG.p[pi],tg=tTargets(),mine=pi===0;const rowTgt=mine&&tg.rows.includes(r);
   const au=TG.aura[r];
@@ -37,7 +38,7 @@ function tCamp(pi){const P=TG.p[pi],K=TK()[P.k.id],tg=tTargets(),kt=pi===1&&tg.k
   const rings=`<span class="trg">${P.rings.map(()=>'<i></i>').join('')}${P.heart.map(()=>'<i class="hw"></i>').join('')}</span>`;
   const sap=`<span class="tsp">${ico('drop')}${P.sap}/${P.sapLvl}</span>`;
   return `<div class="tcamp${pi?' opp':''}">${pi?'':`<span class="hc">${ico('chest')}${P.deck.length}</span>`}${pi?`<span class="hc">${ico('card')}${P.hand.length}</span>`:''}${sap}${rings}<button type="button" class="tkp${kt?' tgt':''}${P.k.hush?' hush':''}${P.k.dz?' dz':''}" data-tkeep="${pi}">${ico('crew')}<span>${K.n}</span><b>${K.p}</b></button>${pi?`<span class="hc">${ico('chest')}${P.deck.length}</span>`:''}</div>`}
-function tcgRender(){const el=$('tcg');if(!TG){el.hidden=true;return}const P=TG.p[0],O=TG.p[1],my=TG.turn===0&&!TG.over&&!TS.busy;
+function tcgRender(){const el=$('tcg');if(!TG){el.hidden=true;return}const P=TG.p[0],O=TG.p[1],my=!tMull()&&TG.turn===0&&!TG.over&&!TS.busy;
   let h=`<div class="tbar opp">${tCamp(1)}<button type="button" class="dquit" id="tQuit" aria-label="Leave">✕</button></div>`;
   h+=tRow(1,'T')+tRow(1,'C');
   const last=TG.log.slice(-2).map(x=>`<div>${x}</div>`).join('');
@@ -46,8 +47,9 @@ function tcgRender(){const el=$('tcg');if(!TG){el.hidden=true;return}const P=TG.
   h+=`<div class="tbar me">${my&&P.coin?`<button type="button" class="info" id="tCoin">${ico('amber')}Coin</button>`:''}${my&&TG.phase==='work'?`<button type="button" class="buy" id="tFell">Attack ▸</button>`:my&&TG.phase==='fell'?`<button type="button" class="buy" id="tEnd">End turn</button>`:''}${tCamp(0)}</div>`;
   h+=`<div class="dinfo" id="tInfo">${tInfo()}</div><div class="dhand">${P.hand.map((id,k)=>tCard(id,{cls:TS.sel===k?'sel':'',attr:` data-th="${k}"`})).join('')}</div>`;
   el.innerHTML=h}
-function tInfo(){if(!TG)return '';const P=TG.p[0];if(TG.over)return '';if(TG.turn!==0||TS.busy)return '<i>They are thinking…</i>';
-  if(!TG.redrawn&&TG.turnNo<=2)return `Starting hand. <button type="button" class="info" id="tRedraw">Redraw once</button> <button type="button" class="buy" id="tKeep">Keep</button>`;
+function tInfo(){if(!TG)return '';const P=TG.p[0];if(TG.over)return '';
+  if(tMull())return `Starting hand. Keep it, or shuffle it back and draw a new one (once). <button type="button" class="info" id="tRedraw">Redraw once</button> <button type="button" class="buy" id="tKeep">Keep</button>`;
+  if(TG.turn!==0||TS.busy)return '<i>They are thinking…</i>';
   if(TS.ab!=null){const [c,op,v]=TK()[P.k.id].ab[TS.ab];return `${TCG.abilityText(op,v)}: tap a glowing unit <button type="button" class="info" id="tCancel">Cancel</button>`}
   if(TS.sel!=null){const id=P.hand[TS.sel],d=TCd(id),ms=tMovesFor(id);
     const what=`<b>${d.n}</b> · ${d.cost} Sap${d.type==='unit'?' · '+d.p+' power · '+TROW[d.row]:''}${d.type==='unit'&&tKwLine(d)?' · '+tKwLine(d):d.type!=='unit'?' · '+tFxText(d):''}`;
@@ -73,9 +75,9 @@ function tcgClick(e){if(!TG)return;const P=TG.p[0];
   if(e.target.closest('#tQuit')){if(TG.over||confirm('Leave this game? It won\'t be saved.')){TG=null;$('tcg').hidden=true}return}
   if(e.target.closest('#tLog')){showModal(`<h2>${ico('book')} Match log</h2><div class="logl">${TG.log.map(x=>`<div>${x}</div>`).join('')}</div><button class="buy" type="button" id="toastOk">Close</button>`);const l=$('toast').querySelector('.logl');if(l)l.scrollTop=l.scrollHeight;return}
   {const kp=e.target.closest('[data-tkeep]');if(kp&&kp.dataset.tkeep==='1'&&TS.att!=null){tDo({t:'attack',a:TS.att,d:'K'});return}if(kp){tKeeperSheet(+kp.dataset.tkeep);return}}
-  if(TG.turn!==0||TS.busy||TG.over)return;
-  if(e.target.closest('#tKeep')){TG.redrawn=true;tcgRender();return}
-  if(e.target.closest('#tRedraw')){TCG.redraw(TG,0);TG.redrawn=true;sfx('buy');tcgRender();return}
+  if(e.target.closest('#tKeep')){TG.redrawn=true;tcgRender();tcgAfter();return}
+  if(e.target.closest('#tRedraw')){TCG.redraw(TG,0);TG.redrawn=true;sfx('buy');tcgRender();tcgAfter();return}
+  if(tMull()||TG.turn!==0||TS.busy||TG.over)return;
   if(e.target.closest('#tCancel')){TS.sel=TS.att=TS.ab=TS.move=null;tcgRender();return}
   if(e.target.closest('#tCoin')){tDo({t:'coin'});return}
   if(e.target.closest('#tFell')){tDo({t:'tofell'});return}
@@ -93,9 +95,9 @@ function tcgClick(e){if(!TG)return;const P=TG.p[0];
     if(mine&&TG.phase==='work'&&TCG.moves(TG).some(m=>m.t==='move'&&m.u===u)){TS.move=u;TS.sel=null;tcgRender();return}
     return}
   const tr=e.target.closest('[data-trow]');if(tr&&TS.sel!=null){const r=tr.dataset.trow.slice(1);if(tr.dataset.trow[0]==='0'){const m=tMovesFor(P.hand[TS.sel]).find(m=>m.row===r);if(m)tDo(m)}}}
-function tKeeperSheet(pi){const P=TG.p[pi],K=TK()[P.k.id],my=pi===0&&TG.turn===0&&TG.phase==='work'&&!TS.busy&&!TG.over;const ms=my?TCG.moves(TG).filter(m=>m.t==='ability'):[];
+function tKeeperSheet(pi){const P=TG.p[pi],K=TK()[P.k.id],my=pi===0&&!tMull()&&TG.turn===0&&TG.phase==='work'&&!TS.busy&&!TG.over;const ms=my?TCG.moves(TG).filter(m=>m.t==='ability'):[];
   showModal(`<h2>${ico('crew')} ${K.n}</h2><div class="note">${FACTIONS.find(f=>f.id===K.f).n} · ${K.p} power · ${P.rings.length} Rings left${P.heart.length?' · '+P.heart.length+' in the Heartwood':''}${P.k.hush?' · <b>Hushed</b>':''}${P.k.dz?' · <b>Dazed</b>':''}</div><div style="text-align:left;margin-top:8px">${K.ab.map(([c,op,v],i)=>{const can=ms.some(m=>m.ai===i);return `<div class="row"><div class="t"><div class="n">${c} Sap<small>${P.k.used[i]?'used this turn':''}</small></div><div class="d">${TCG.abilityText(op,v)}</div></div>${my?`<button class="buy" type="button" data-tab2="${i}" ${can?'':'disabled'}>Use</button>`:''}</div>`}).join('')}</div><div class="note">${pi?'':'Keepers never attack. Each ability once per turn, during Work.'}</div><button class="info" type="button" id="toastOk">Close</button>`);$('toast').classList.add('wide')}
-function tUseAbility(i){nextToast();const ms=TCG.moves(TG).filter(m=>m.t==='ability'&&m.ai===i);if(!ms.length)return;if(ms.length===1&&ms[0].target==null){tDo(ms[0]);return}TS.ab=i;TS.sel=TS.att=TS.move=null;tcgRender()}
+function tUseAbility(i){nextToast();if(tMull())return;const ms=TCG.moves(TG).filter(m=>m.t==='ability'&&m.ai===i);if(!ms.length)return;if(ms.length===1&&ms[0].target==null){tDo(ms[0]);return}TS.ab=i;TS.sel=TS.att=TS.move=null;tcgRender()}
 /* ---------- their turn ---------- */
 function tcgEndTurn(){tDo({t:'end'})}
 function tcgAfter(){if(!TG)return;if(TG.over){tcgFinish();return}if(TG.turn!==1)return;TS.busy=true;tcgRender();setTimeout(tcgAIStep,650)}
