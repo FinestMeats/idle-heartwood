@@ -76,6 +76,8 @@ function tAttackResult(la,mine){const used=(la.plan&&la.plan.cards||[]).map(id=>
   if(la.plan&&la.plan.negate){showToast('Missed',`${mine?'They':'You'} played Fade: the attack missed`,'card');return}
   if(la.plan&&la.plan.decoy){showToast('Scarecrow',`A Scarecrow took the hit`,'card');return}
   const fap=la.fap!=null?la.fap:la.ap,fdp=la.fdp!=null?la.fdp:la.dp,boost=used.length?` with ${used.join(', ')} from ${mine?'their':'your'} hand`:'';
+  if(la.trample){const thr=la.through==='K'?(mine?'their Keeper: a Ring cracks':'your Keeper: a Ring cracks'):la.through+', felling it too';
+    showToast('Trample',`${la.a} (${fap}) beat ${la.blk} (${fdp})${boost} and ${la.trample} carried on to ${thr}`,'card');return}
   if(!la.landed)showToast('Held',`${tgt} defended at ${fdp}${boost}, beating ${la.a} (${fap}). ${mine?'Your':'Their'} ${la.a} is tired (exhausted), not felled.`,'card');
   else if(la.trade)showToast('Both felled',`${la.a} and ${tgt} were equal (${fap}), so they felled each other${boost}`,'card');
   else if(!la.crack)showToast('Felled',`${la.a} (${fap}) felled ${tgt} (${fdp})${boost}`,'card')}
@@ -123,17 +125,20 @@ function tcgReact(m){const pv=TCG.preview(TG,m),P=TG.p[0];TR={m,pv,idx:[],guard:
 function tReactPlan(){const P=TG.p[0];let plus=0,minus=0,negate=false,decoy=false,sap=0;
   const cards=TR.idx.map(k=>P.hand[k]);for(const id of cards){const d=TCd(id);if(d.type==='reaction'){sap+=d.cost;const f=d.fx;if(f.negate)negate=true;if(f.decoy)decoy=true;if(f.plus)plus+=f.plus;if(f.attackerMinus)minus+=f.attackerMinus;if(f.plusPerUnit)plus+=TCG.units(P).length}else if(d.kw.brace)plus+=d.kw.brace}
   let dp=TR.pv.dp;if(TR.guard!=null){const g=TCG.findU(P,TR.guard);dp=TCG.blockPower(TG,P,g)}
-  const ap=Math.max(0,TR.pv.ap-minus),holds=negate||decoy||ap<dp+plus;return {plan:{cards,plus,minus,guard:TR.guard,negate,decoy},sap,ap,dp:dp+plus,holds}}
+  const ap=Math.max(0,TR.pv.ap-minus);let holds=negate||decoy||ap<dp+plus,tr=null;
+  /* trample: a blocker that loses lets the leftover power carry on */
+  if(!holds&&TR.guard!=null&&ap>dp+plus){const left=ap-dp-plus;tr={left,hit:TR.pv.d==='K'||left>=TR.pv.dp}}
+  return {plan:{cards,plus,minus,guard:TR.guard,negate,decoy},sap,ap,dp:dp+plus,holds,tr}}
 function tReactShow(){const P=TG.p[0],pl=tReactPlan(),pv=TR.pv;
   const opts=[];P.hand.forEach((id,k)=>{const d=TCd(id);if(d.type==='reaction'||(d.kw&&d.kw.brace))opts.push([id,k])});
   const guards=TCG.blockers(TG,P,pv.d);
-  showModal(`<h2>${ico('swords')} You're attacked!</h2><div style="font-size:19px"><b>${pv.aName}</b> (${pl.ap}) attacks <b>${pv.dName}</b> (${pl.dp})</div><div class="note">${pl.holds?'<b style="color:var(--sap)">Your defence holds</b>':pv.d==='K'&&TR.guard==null?'It lands: a Ring cracks into your hand':pl.ap===pl.dp?'Equal power: both units are felled':'It lands: your unit is felled'} · Sap left ${P.sap-pl.sap}</div>
+  showModal(`<h2>${ico('swords')} You're attacked!</h2><div style="font-size:19px"><b>${pv.aName}</b> (${pl.ap}) attacks <b>${pv.dName}</b> (${TR.guard!=null?pv.dp:pl.dp})${TR.guard!=null?`<br>blocked by <b>${TCd(TCG.findU(P,TR.guard).id).n}</b> (${pl.dp})`:''}</div><div class="note">${pl.holds?'<b style="color:var(--sap)">Your defence holds</b>':pl.tr?(pl.tr.hit?(pv.d==='K'?`Trample: your blocker is felled and ${pl.tr.left} carries on, so a Ring still cracks`:`Trample: your blocker is felled and ${pl.tr.left} carries on, felling ${pv.dName} too`):`Your blocker is felled, but the ${pl.tr.left} that carries on can't beat ${pv.dName}`):pv.d==='K'&&TR.guard==null?'It lands: a Ring cracks into your hand':pl.ap===pl.dp?'Equal power: both units are felled':'It lands: your unit is felled'} · Sap left ${P.sap-pl.sap}</div>
   ${guards.length?`<p class="sec">Block with</p><div class="cgrid" style="justify-content:center">${guards.map(x=>tCard(x.id,{pw:TCG.blockPower(TG,P,x),cls:TR.guard===x.u?'sel':'',attr:` data-rg="${x.u}"`})).join('')}</div>`:''}
   ${opts.length?`<p class="sec">Reactions and Brace</p><div class="cgrid" style="justify-content:center">${opts.map(([id,k])=>tCard(id,{cls:TR.idx.includes(k)?'sel':'',attr:` data-rc="${k}"`})).join('')}</div>`:''}
-  <div class="note">Any ready unit in your Clearing can block (Guard units from either row, +2). Tap cards to add them; hold to read.</div><div class="pair" style="justify-content:center"><button class="info" type="button" data-rtake="1">Take it</button><button class="buy" type="button" data-rdef="1" ${TR.idx.length||TR.guard!=null?'':'disabled'} ${pl.sap>P.sap?'disabled':''}>Defend</button></div>`,true);$('toast').classList.add('wide')}
+  <div class="note">Any ready unit in your Clearing can block (Guard units from either row, +2). Trample: if the attacker beats your blocker, the power left over carries on. Tap cards to add them; hold to read.</div><div class="pair" style="justify-content:center"><button class="info" type="button" data-rtake="1">Take it</button><button class="buy" type="button" data-rdef="1" ${TR.idx.length||TR.guard!=null?'':'disabled'} ${pl.sap>P.sap?'disabled':''}>Defend</button></div>`,true);$('toast').classList.add('wide')}
 function TCGpow(x){return TCG.power(TG,TG.p[0],x)}
 function tReactDone(ring){const la=TG.lastAttack,P=TG.p[0];TR=null;
-  if(la){sfx(la.landed?'fell':'buy');if(la.landed&&la.crack){addQuake(5);buzz([20,30]);showToast('A Ring cracks',`${TCd(la.crack).n} goes to your hand${TCd(la.crack).kw.sprout?' and Sprouts':''}`,'card')}else if(!TG.over)tAttackResult(la,false)}
+  if(la){sfx(la.landed?'fell':'buy');if(la.landed&&la.crack){addQuake(5);buzz([20,30]);showToast(la.trample?'Trample: a Ring cracks':'A Ring cracks',`${la.trample?`${la.a} beat ${la.blk} and ${la.trample} carried on. `:''}${TCd(la.crack).n} goes to your hand${TCd(la.crack).kw.sprout?' and Sprouts':''}`,'card')}else if(!TG.over)tAttackResult(la,false)}
   tcgRender();if(TG.over){TS.busy=false;tcgFinish();return}setTimeout(tcgAIStep,800)}
 function tcgReactClick(e){if(!TR)return false;const P=TG.p[0];
   const g=e.target.closest('[data-rg]');if(g){const u=+g.dataset.rg;TR.guard=TR.guard===u?null:u;tReactShow();return true}

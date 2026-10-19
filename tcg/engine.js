@@ -82,10 +82,14 @@ function moves(G){const i=G.turn,P=G.p[i],O=G.p[1-i],out=[];
   return out}
 function canAttack(P,x){return !x.exh&&(!x.sick||kwOf(x,'eager'))}
 function attackers(G,i){const P=G.p[i],a=units(P).filter(x=>canAttack(P,x)).map(x=>x.u);return a}
+/* Target test switch: 0 = now (tired Clearing units; tired Treeline units once the Clearing is empty).
+   'tired' = any tired unit, either row. 'clearing' = any Clearing unit, ready or tired (Treeline once the Clearing is empty).
+   'all' = any unit anywhere. */
+let TARGETS=0;const setTargets=v=>{TARGETS=v};
 function targets(G,i){const O=G.p[1-i],t=[],clearEmpty=!O.rows.C.length;
   t.push('K');
-  for(const x of O.rows.C)if(x.exh)t.push(x.u);
-  if(clearEmpty)for(const x of O.rows.T)if(x.exh)t.push(x.u);
+  const ok=(x,row)=>TARGETS==='all'?true:TARGETS==='tired'?x.exh:TARGETS==='clearing'?(row==='C'||clearEmpty):x.exh&&(row==='C'||clearEmpty);
+  for(const r of ['C','T'])for(const x of O.rows[r])if(ok(x,r))t.push(x.u);
   return t}
 /* ---------- applying moves ---------- */
 function apply(G,m,def){const i=G.turn,P=G.p[i],O=G.p[1-i];if(G.over)return;
@@ -133,6 +137,11 @@ function effect(G,i,op,v,target){const P=G.p[i],O=G.p[1-i];
   else if(op==='bounce'){const x=findU(O,target);if(x){for(const r of ['C','T'])O.rows[r]=O.rows[r].filter(y=>y!==x);O.grave.push(...x.tools);O.hand.push(x.id)}}
   else if(op==='reviveHand'){const b=bestUnitIn(P.grave,10);if(b){P.grave.splice(P.grave.indexOf(b),1);P.hand.push(b)}}
   else if(op==='revivePlay'){const b=bestUnitIn(P.grave,10);if(b){const d=C(b),rs=rowsFor(P,d);if(rs.length){P.grave.splice(P.grave.indexOf(b),1);enter(G,i,b,rs[0])}}}}
+/* Trample (on: 'chip'). 0 = off. 'carry' = the power left over after beating a blocker carries on to the
+   original target and must beat it on its own. 'chip' = any power left over after beating a blocker cracks a Ring
+   (Keeper attacks) or fells the target if it is enough (unit attacks). */
+let TRAMPLE='chip';const setTrample=v=>{TRAMPLE=v};const TS={blocks:0,through:0,saved:0,gaveUp:0,kAtt:0,kills:0,readyKills:0};
+const tramples=(left,tpow,isK)=>left>0&&(TRAMPLE==='chip'&&isK?true:left>=tpow);
 /* one attack, with the defender's single React window */
 function attack(G,i,a,d,def){const P=G.p[i],O=G.p[1-i];let att,ap;
   if(a==='K'){P.k.exh=true;ap=kPower(G,P)}else{att=findU(P,a);att.exh=true;ap=power(G,P,att)}
@@ -142,15 +151,23 @@ function attack(G,i,a,d,def){const P=G.p[i],O=G.p[1-i];let att,ap;
   for(const id of plan.cards){O.hand.splice(O.hand.indexOf(id),1);O.grave.push(id);const c=C(id);if(c.type==='reaction')O.sap-=c.cost}
   if(plan.negate){lg(G,aN+' attacks '+dN+': Fade, the attack misses');return}
   if(plan.decoy){lg(G,aN+' attacks '+dN+': a Scarecrow takes the hit');return}
-  if(plan.guard!=null){const g=findU(O,plan.guard);g.exh=true;tgt=g;d=g.u;dp=blockPower(G,O,g)}
+  const orig=tgt,origK=d==='K',origP=dp;let blocked=false,bN='';
+  if(plan.guard!=null){const g=findU(O,plan.guard);g.exh=true;tgt=g;d=g.u;dp=blockPower(G,O,g);blocked=true;bN=nm(g.id)}
   dp+=plan.plus;ap=Math.max(0,ap-plan.minus);
-  G.lastAttack.fap=ap;G.lastAttack.fdp=dp;G.lastAttack.dn=tgt?nm(tgt.id):dN;G.lastAttack.guarded=plan.guard!=null;
-  const how=(plan.guard!=null?' (blocked by '+nm(tgt.id)+')':'')+(plan.cards.length?' ('+plan.cards.map(nm).join(', ')+')':'');
+  if(blocked&&TRAMPLE){TS.blocks++;
+    if(ap>dp){const left=ap-dp;
+      if(tramples(left,origP,origK)){TS.through++;lg(G,aN+' ('+ap+') tramples '+nm(tgt.id)+' ('+dp+'), '+left+' carries on');toGrave(G,O,tgt);
+        G.lastAttack.landed=true;G.lastAttack.trample=left;G.lastAttack.blk=nm(tgt.id);G.lastAttack.through=origK?'K':nm(orig.id);G.lastAttack.fap=ap;G.lastAttack.fdp=dp;
+        if(!origK){if(orig&&O.rows.C.concat(O.rows.T).includes(orig)){lg(G,'  '+nm(orig.id)+' ('+origP+') is felled too');toGrave(G,O,orig)}return}
+        tgt=null;d='K';dp=origP;ap=Math.max(ap,dp);/* fall through to the Keeper hit below */
+      }else TS.saved++}}
+  G.lastAttack.fap=ap;G.lastAttack.fdp=dp;G.lastAttack.dn=tgt?nm(tgt.id):(bN||dN);G.lastAttack.guarded=plan.guard!=null;
+  const how=(plan.guard!=null?' (blocked by '+bN+')':'')+(plan.cards.length?' ('+plan.cards.map(nm).join(', ')+')':'');
   if(ap<dp){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): held'+how);return}
   G.lastAttack.landed=true;
   /* two units of equal power fell each other; a Keeper is never felled */
   if(tgt&&att&&ap===dp){lg(G,aN+' ('+ap+') attacks '+nm(tgt.id)+' ('+dp+'): both felled'+how);G.lastAttack.trade=true;toGrave(G,O,tgt);toGrave(G,P,att);return}
-  if(tgt){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): felled'+how);toGrave(G,O,tgt);return}
+  if(tgt){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): felled'+how);TS.kills++;toGrave(G,O,tgt);return}
   lg(G,aN+' ('+ap+') hits '+dN+' ('+dp+')'+how);
   const n=(att&&kwOf(att,'double'))?2:1;P.stats.hits++;
   for(let k=0;k<n&&!G.over;k++){if(!O.rings.length){end(G,i,'rings');return}
@@ -171,7 +188,8 @@ function aiDefend(G,j,ap,d,dp){const Q=G.p[j];const none={cards:[],plus:0,minus:
   for(const id of new Set(Q.hand)){const c=C(id);if(c.type!=='reaction'||c.cost>Q.sap)continue;
     if(c.fx.negate)opts.push({cost:1.6,p:{...none,cards:[id],negate:true}});
     if(c.fx.decoy)opts.push({cost:1.3,p:{...none,cards:[id],decoy:true}})}
-  for(const x of blockers(G,Q,d)){const gp=blockPower(G,Q,x);opts.push({cost:gp>ap?0.4:power(G,Q,x)+0.6,p:{...none,guard:x.u}})}
+  let lost=0;for(const x of blockers(G,Q,d)){const gp=blockPower(G,Q,x);if(TRAMPLE&&tramples(ap-gp,dp,isK)){lost++;continue}opts.push({cost:gp>ap?0.4:power(G,Q,x)+0.6,p:{...none,guard:x.u}})}
+  if(lost&&!opts.some(o=>o.p.guard!=null))TS.gaveUp++;if(isK)TS.kAtt++;
   /* stack boosts: reactions then Brace cards, cheapest first */
   let plus=0,minus=0,cards=[],sap=Q.sap,cost=0;const hand=Q.hand.slice();
   const boosts=hand.map(id=>{const c=C(id);if(c.type==='reaction'){if(c.fx.plus)return {id,v:c.fx.plus,s:c.cost};if(c.fx.attackerMinus)return {id,v:c.fx.attackerMinus,s:c.cost,m:1};if(c.fx.plusPerUnit)return {id,v:units(Q).length,s:c.cost}}if(c.kw.brace)return {id,v:c.kw.brace,s:0};return null}).filter(Boolean).sort((a,b)=>b.v-a.v);
@@ -212,5 +230,5 @@ function preview(G,m){const i=G.turn,P=G.p[i],O=G.p[1-i];const ap=m.a==='K'?kPow
 function play(a,b,seed,maxTurns){const G=newGame(a,b,seed);maxTurns=maxTurns||80;
   while(!G.over&&G.turnNo<maxTurns){aiWork(G);if(!G.over&&G.phase==='fell')aiFell(G)}
   if(!G.over)end(G,-1,'timeout');return G}
-const API={blockPower,blockers,newGame,moves,apply,play,value,power,kPower,units,findU,aiWork,aiFell,aiNext,aiDefend,preview,redraw,clone,abilityText,startRings,canAttack};
+const API={setTrample,setTargets,TS,blockPower,blockers,newGame,moves,apply,play,value,power,kPower,units,findU,aiWork,aiFell,aiNext,aiDefend,preview,redraw,clone,abilityText,startRings,canAttack};
 if(typeof module!=='undefined')module.exports=API;
