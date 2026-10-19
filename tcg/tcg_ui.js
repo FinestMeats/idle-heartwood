@@ -25,7 +25,7 @@ function tcgPickKeeper(f){const ks=Object.values(TK()).filter(k=>k.f===f);
   showModal(`<h2>Choose your Keeper</h2><div class="note">More power: harder to hit, fewer Rings, weaker abilities.</div>${ks.map(k=>`<div class="row" style="text-align:left"><div class="t"><div class="n">${k.n}<small>${k.p} power · ${TCG.startRings(k.id)} Rings</small></div><div class="d">${k.ab.map(([c,op,v])=>`${c} Sap: ${TCG.abilityText(op,v)}`).join('<br>')}</div></div><button class="buy" type="button" data-tcgk="${k.id}">Pick</button></div>`).join('')}<button class="info" type="button" id="toastOk">Cancel</button>`);$('toast').classList.add('wide')}
 function tcgBegin(kid){const f=TK()[kid].f,of='LWSB'.replace(f,'')[Math.floor(Math.random()*3)],ok=Object.values(TK()).filter(k=>k.f===of);const okid=ok[Math.floor(Math.random()*ok.length)].id;
   const mine=TCG.starter(f),theirs=TCG.starter(of);
-  TG=TCG.newGame({name:'You',keeper:kid,main:mine.main,ring:mine.ring},{name:TK()[okid].n,keeper:okid,main:theirs.main,ring:theirs.ring},(Math.random()*4e9)>>>0,0);
+  TG=TCG.newGame({name:'You',keeper:kid,main:mine.main,ring:mine.ring},{name:FACTIONS.find(x=>x.id===of).n,keeper:okid,main:theirs.main,ring:theirs.ring},(Math.random()*4e9)>>>0,0);
   TG.redrawn=false;TS={sel:null,att:null,ab:null,busy:false,move:null};nextToast();$('tcg').hidden=false;sfx('shimmer');
   showToast('Coin flip',TG.first===0?'You go first':'They go first. You keep the coin (+1 Sap once) and drew an extra card','amber');
   tcgRender();tcgAfter()}
@@ -83,7 +83,6 @@ function tcgClick(e){if(!TG)return;const P=TG.p[0];
   if(e.target.closest('#tPlay')){const ms=tMovesFor(P.hand[TS.sel]);if(ms[0])tDo(ms[0]);return}
   if(e.target.closest('#tMove')){tDo({t:'move',u:TS.move});return}
   const th=e.target.closest('[data-th]');if(th){const k=+th.dataset.th;TS.att=TS.ab=TS.move=null;
-    if(TS.sel===k&&TG.phase==='work'){const ms=tMovesFor(P.hand[k]);if(ms.length===1){tDo(ms[0]);return}}
     TS.sel=TS.sel===k?null:k;tcgRender();return}
   const tu=e.target.closest('[data-tu]');if(tu){const u=+tu.dataset.tu;
     if(TS.sel!=null){const m=tMovesFor(P.hand[TS.sel]).find(m=>m.target===u);if(m){tDo(m);return}}
@@ -136,6 +135,8 @@ function tcgFinish(){const won=TG.winner===0;S.tcgStats=S.tcgStats||{w:0,l:0};if
   setTimeout(()=>{if(!TG)return;showModal(`<h2>${won?'Victory!':'Defeat'}</h2><div class="note">${TG.reason==='deck-out'?(won?'They ran out of cards':'You ran out of cards'):won?'You broke through their last Ring':'They broke through your last Ring'} · ${Math.ceil(TG.turnNo/2)} turns</div><div class="note">Preview format: no rewards yet. Tell us what you think with Suggest an idea.</div><div class="btns" style="display:flex;gap:6px;justify-content:center;margin-top:6px"><button class="buy" type="button" data-tcgagain="1">Play again</button><button class="info" type="button" data-tcgclose="1">Close</button></div>`);sfx(won?'level':'buy')},700)}
 
 $('tcg').addEventListener('click',tcgClick);
+$('toast').addEventListener('click',e=>{if(e.target.closest('[data-peek]')){e.stopImmediatePropagation();peekBoard(true)}},true);
+$('peekBack').addEventListener('click',()=>peekBoard(false));
 $('toast').addEventListener('click',e=>{if(tcgReactClick(e))return;
   const f=e.target.closest('[data-tcgf]');if(f){tcgPickKeeper(f.dataset.tcgf);return}
   const k=e.target.closest('[data-tcgk]');if(k){tcgBegin(k.dataset.tcgk);return}
