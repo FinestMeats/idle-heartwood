@@ -21,6 +21,15 @@ const V={
  clock16:()=>E.setRule('clock',16),clock20:()=>E.setRule('clock',20),
  wear:()=>E.setRule('wear',1),
  rings_m1:()=>E.setRule('ringDelta',-1),
+ /* Sap growth tests */
+ sap2:()=>E.setRule('sapStep',2),
+ p1first1:()=>E.setRule('p1first',1),
+ ramp6:()=>E.setRule('rampTo',6),
+ cap12:()=>E.setRule('sapCap',12),
+ nocoin:()=>E.setRule('noCoin',1),
+ noextra:()=>E.setRule('noExtra',1),
+ noclock:()=>E.setRule('clock',0),
+ clock24:()=>E.setRule('clock',24),
  /* option 2: faction balance levers */
  hale1:()=>setAb('L_a',0,[1,'buff',1]),
  alpha1:()=>setAb('B_b',0,[1,'buff',1]),

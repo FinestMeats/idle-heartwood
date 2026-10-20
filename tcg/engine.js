@@ -19,9 +19,9 @@ const startRings=k=>(KEEPERS[k].p>=4?5:6)+RULES.ringDelta;
 function newGame(a,b,seed,human){const G={rs:seed>>>0||1,uid:1,turn:0,first:0,turnNo:0,phase:'work',aura:{C:0,T:0},over:false,winner:-1,reason:'',log:[]};
   G.p=[newPlayer(G,a),newPlayer(G,b)];
   /* coin flip: winner goes first, the other keeps the coin */
-  G.first=rnd(G)<0.5?0:1;G.turn=G.first;G.p[1-G.first].coin=true;
+  G.first=rnd(G)<0.5?0:1;G.turn=G.first;G.p[1-G.first].coin=!RULES.noCoin;
   /* going second: keep the coin and draw one extra card */
-  draw(G,1-G.first);
+  if(!RULES.noExtra)draw(G,1-G.first);
   for(let i=0;i<2;i++)if(i!==human)aiMulligan(G,i);
   dawn(G,true);return G}
 function redraw(G,i){const P=G.p[i],n=P.hand.length;P.deck.push(...P.hand);P.hand=[];shuffle(G,P.deck);for(let k=0;k<n;k++)P.hand.push(P.deck.shift())}
@@ -40,7 +40,7 @@ function kPower(G,P){return Math.max(1,KEEPERS[P.k.id].p-(RULES.wear?(P.k.wear||
 const blockPower=(G,P,x)=>power(G,P,x)+(kwOf(x,'guard')?RULES.guardBonus:0);
 const blockers=(G,P,d)=>units(P).filter(x=>!x.exh&&x.u!==d&&(x.row==='C'||kwOf(x,'guard')));
 /* rule switches for testing (all off = the live rules) */
-const RULES={fatigue:0,guardBonus:2,clock:0,wear:0,ringDelta:0};const setRule=(k,v)=>{RULES[k]=v};
+const RULES={fatigue:0,guardBonus:2,clock:0,wear:0,ringDelta:0,sapStep:1,sapCap:10,p1first:null,rampTo:0,noCoin:0,noExtra:0};const setRule=(k,v)=>{RULES[k]=v};
 function draw(G,i){const P=G.p[i];
   if(!P.deck.length){
     /* 'reshuffle': the first time your deck runs out, shuffle your discard pile in as a new deck */
@@ -58,7 +58,11 @@ function dawn(G,firstTurn){const i=G.turn,P=G.p[i];G.turnNo++;G.phase='work';
   for(const x of units(P)){x.exh=false;x.sick=false;x.moved=false;x.sh=0}
   P.k.exh=P.k.dz>0;P.k.dz=0;P.k.used={};
   if(KEEPERS[P.k.id].row==='W')P.k.row='C';
-  P.sapLvl=Math.min(SAPCAP,P.sapLvl+1);P.sap=P.sapLvl;
+  /* Sap growth (tests): sapStep a turn up to sapCap; rampTo = +sapStep only until that level, then +1;
+     p1first = what the first player gets on their very first turn */
+  let step=RULES.sapStep;if(RULES.rampTo&&P.sapLvl>=RULES.rampTo)step=1;
+  if(P.sapLvl===0&&i===G.first&&RULES.p1first!=null)step=RULES.p1first;
+  P.sapLvl=Math.min(RULES.sapCap,P.sapLvl+step);P.sap=P.sapLvl;
   if(!(firstTurn&&i===G.first))draw(G,i)}
 function dusk(G){const P=G.p[G.turn];for(const x of units(P))x.tmp=0;P.k.hush=0;G.turn=1-G.turn;if(!G.over)dawn(G,false)}
 function toGrave(G,P,x){for(const r of ['C','T'])P.rows[r]=P.rows[r].filter(y=>y!==x);P.grave.push(x.id,...x.tools)}
