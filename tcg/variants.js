@@ -1,4 +1,6 @@
-/* Named, combinable test variants ("a+b+c"). Each one changes cards, Keepers or rules in memory only. */
+/* NOTE: 'base' is now the v91 rules, with the balance-pass changes already built in.
+   Don't stack the old balance variants (warden_p1, spirit_p1, seer_shield ...) on top: they would apply twice.
+   Named, combinable test variants ("a+b+c"). Each one changes cards, Keepers or rules in memory only. */
 const E=require('./engine.js');const {CARDS,UNITS,KEEPERS}=require('./cards.js');
 const setAb=(k,i,ab)=>{KEEPERS[k].ab[i]=ab};
 const V={
@@ -55,6 +57,8 @@ const V={
  lantern_ready8:()=>setAb('S_b',2,[8,'readyAll',1]),
  raven_2sap:()=>setAb('B_c',0,[2,'draw',1]),
  raven_fell5:()=>setAb('B_c',2,[6,'fell',5]),
+ doe_bounce4:()=>setAb('S_a',1,[3,'bounce',4]),
+ lantern_1sap:()=>setAb('S_b',0,[1,'draw',1]),
  mist_up:()=>{setAb('S_c',0,[1,'buff',2])},
  seer_p4:()=>{KEEPERS.W_b.p=4},
 };

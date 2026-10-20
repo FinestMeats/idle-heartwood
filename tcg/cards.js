@@ -32,7 +32,10 @@ function convertUnits(){
     const cost=clamp(p+(nk||(row==='T'&&!kw.rally)?1:0)+(kw.ancient?2:0),1,10);
     if(cost<=2&&!kw.ancient)kw.brace=1;
     /* Beasts: plain Clearing commons hit 1 harder for the same cost */
-    const pp=feral?p+1:p;
+    let pp=feral?p+1:p;
+    /* v91 balance (smart-AI tested): Warden Treeline units +1 power; Spirit units costing 3 or less +1 power */
+    if(f==='W'&&row==='T'&&!kw.ancient)pp+=1;
+    if(f==='S'&&cost<=3)pp+=1;
     const d={id,n,f,type:'unit',r,p:pp,row,kw,cost,mus:ab.startsWith('muster:')?ab.slice(7):null};
     CARDS[id]=d;UNITS.push(d)});
 }
@@ -55,17 +58,17 @@ for(const [id,n,f,type,cost,fx] of EXTRA)CARDS[id]={id,n,f,type,cost,fx,kw:{},p:
 /* Keepers: power runs opposite to ability strength. Ability ops are read by the engine. */
 const KEEPERS={
  L_a:{n:'Foreman Hale',f:'L',p:5,row:'C',ab:[[1,'buff',2],[3,'draw',1],[6,'buffRow',2]]},
- L_b:{n:'Guild Mistress Ada',f:'L',p:3,row:'T',ab:[[1,'draw',1],[3,'fell',4],[6,'readyAll',1]]},
- L_c:{n:'Tally Clerk Wen',f:'L',p:4,row:'C',ab:[[1,'buff',1],[3,'hush',1],[6,'draw',2]]},
+ L_b:{n:'Guild Mistress Ada',f:'L',p:3,row:'T',ab:[[1,'draw',1],[3,'fell',3],[6,'readyAll',1]]},
+ L_c:{n:'Tally Clerk Wen',f:'L',p:4,row:'C',ab:[[1,'buff',2],[3,'hush',1],[6,'draw',2]]},
  W_a:{n:'Elder of Roots',f:'W',p:3,row:'T',ab:[[1,'shield',2],[3,'regrowDraw',1],[6,'fell',7]]},
- W_b:{n:'Seer of Rings',f:'W',p:3,row:'T',ab:[[1,'draw',1],[3,'regrowDraw',1],[6,'fell',7]]},
- W_c:{n:'Grove Judge',f:'W',p:4,row:'C',ab:[[1,'shield',1],[3,'daze',1],[6,'fellExhausted',1]]},
- S_a:{n:'Moon Doe',f:'S',p:3,row:'W',ab:[[1,'draw',1],[3,'bounce',5],[6,'bounce',9]]},
- S_b:{n:'Lantern Keeper',f:'S',p:3,row:'T',ab:[[1,'draw',1],[3,'bounce',5],[6,'readyAll',1]]},
- S_c:{n:'Mist Mother',f:'S',p:4,row:'W',ab:[[1,'buff',1],[3,'daze',1],[6,'bounce',9]]},
- B_a:{n:'Den Mother',f:'B',p:4,row:'C',ab:[[1,'draw',1],[3,'reviveHand',1],[6,'revivePlay',1]]},
+ W_b:{n:'Seer of Rings',f:'W',p:3,row:'T',ab:[[1,'shield',2],[3,'regrowDraw',1],[6,'fell',7]]},
+ W_c:{n:'Grove Judge',f:'W',p:4,row:'C',ab:[[1,'shield',1],[3,'daze',1],[6,'fell',5]]},
+ S_a:{n:'Moon Doe',f:'S',p:3,row:'W',ab:[[2,'draw',1],[3,'bounce',5],[6,'bounce',9]]},
+ S_b:{n:'Lantern Keeper',f:'S',p:3,row:'T',ab:[[2,'draw',1],[3,'bounce',5],[6,'readyAll',1]]},
+ S_c:{n:'Mist Mother',f:'S',p:4,row:'W',ab:[[1,'buff',2],[3,'daze',1],[6,'bounce',9]]},
+ B_a:{n:'Den Mother',f:'B',p:4,row:'C',ab:[[1,'buff',2],[2,'reviveHand',1],[6,'revivePlay',1]]},
  B_b:{n:'The Alpha',f:'B',p:5,row:'C',ab:[[1,'buff',2],[3,'buffRow',2],[6,'readyAll',1]]},
- B_c:{n:'Old Raven',f:'B',p:3,row:'T',ab:[[1,'draw',1],[3,'fell',3],[6,'fell',7]]}};
+ B_c:{n:'Old Raven',f:'B',p:3,row:'T',ab:[[2,'draw',1],[3,'fell',3],[6,'fell',7]]}};
 for(const k in KEEPERS)KEEPERS[k].id=k;
 /* Starter decks: 30 main cards + 6 Ring cards, from one faction plus Neutral. */
 function starter(f){

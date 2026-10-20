@@ -40,7 +40,8 @@ function kPower(G,P){return Math.max(1,KEEPERS[P.k.id].p-(RULES.wear?(P.k.wear||
 const blockPower=(G,P,x)=>power(G,P,x)+(kwOf(x,'guard')?RULES.guardBonus:0);
 const blockers=(G,P,d)=>units(P).filter(x=>!x.exh&&x.u!==d&&(x.row==='C'||kwOf(x,'guard')));
 /* rule switches for testing (all off = the live rules) */
-const RULES={fatigue:0,guardBonus:2,clock:0,wear:0,ringDelta:0,sapStep:1,sapCap:10,p1first:null,rampTo:0,noCoin:0,noExtra:0,regrowDiscard:1};const setRule=(k,v)=>{RULES[k]=v};
+const RULES={fatigue:0,guardBonus:2,clock:0,wear:0,ringDelta:0,sapStep:2,sapCap:10,p1first:1,rampTo:0,noCoin:1,noExtra:1,regrowDiscard:0};
+/* v91 rules: +2 Sap a turn (first player starts on 1, second on 2), no coin, no extra card, Regrow only from the Heartwood */const setRule=(k,v)=>{RULES[k]=v};
 function draw(G,i){const P=G.p[i];
   if(!P.deck.length){
     /* 'reshuffle': the first time your deck runs out, shuffle your discard pile in as a new deck */

@@ -4,7 +4,7 @@
 let TG=null,TS={sel:null,att:null,ab:null,busy:false,move:null};
 const TK=()=>TCG.KEEPERS,TCd=id=>TCG.CARDS[id];
 const TKW={eager:'Eager',guard:'Guard',crew:'Work Crew',rally:'Rally',revive:'Revive',scout:'Scout',call:'Call the Pack',fire:'Firebrand',ancient:'Ancient',double:'Double Cut',brace:'Brace',sprout:'Sprout',regrow:'Regrow',nimble:'Nimble'};
-const TKW_TXT={eager:'can attack the turn it is played',guard:'can block from either row, and gets +2 power while blocking',crew:'+1 power for each other copy on your board',rally:'your other units +1 power on your turn',revive:'when played, take back a unit costing 3 or less from your discard pile',scout:'when played, draw a card',call:'when played, find a copy in your deck and add it to your hand',fire:'when played, fell an enemy unit with that much power or less',ancient:'can\'t be targeted by abilities, Blights or Firebrand',double:'a landed hit on a Keeper cracks 2 Rings',brace:'discard while defending: +1 power for that fight',sprout:'if cracked from your Rings, it plays itself for free',regrow:'when played, Regrow (add a Ring)',nimble:'may switch rows once per turn'};
+const TKW_TXT={eager:'can attack the turn it is played',guard:'can block from either row, and gets +2 power while blocking',crew:'+1 power for each other copy on your board',rally:'your other units +1 power on your turn',revive:'when played, take back a unit costing 3 or less from your discard pile',scout:'when played, draw a card',call:'when played, find a copy in your deck and add it to your hand',fire:'when played, fell an enemy unit with that much power or less',ancient:'can\'t be targeted by abilities, Blights or Firebrand',double:'a landed hit on a Keeper cracks 2 Rings',brace:'discard while defending: +1 power for that fight',sprout:'if cracked from your Rings, it plays itself for free',regrow:'when played, Regrow (move a card from your Heartwood to your Rings)',nimble:'may switch rows once per turn'};
 const TTYPE_IC={tool:'hammer',reaction:'glove',event:'scroll',boon:'sun',blight:'snow'};
 const TROW={C:'Clearing',T:'Treeline',W:'Wanderer'};
 function tKwLine(d){return Object.keys(d.kw||{}).map(k=>k==='fire'?'Firebrand '+d.kw.fire:k==='brace'?'Brace +'+d.kw.brace:TKW[k]).join(' · ')}
@@ -27,7 +27,7 @@ function tcgBegin(kid){const f=TK()[kid].f,of='LWSB'.replace(f,'')[Math.floor(Ma
   const mine=TCG.starter(f),theirs=TCG.starter(of);
   TG=TCG.newGame({name:'You',keeper:kid,main:mine.main,ring:mine.ring},{name:FACTIONS.find(x=>x.id===of).n,keeper:okid,main:theirs.main,ring:theirs.ring},(Math.random()*4e9)>>>0,0);
   TG.redrawn=false;TS={sel:null,att:null,ab:null,busy:false,move:null};nextToast();$('tcg').hidden=false;sfx('shimmer');
-  showToast('Coin flip',TG.first===0?'You go first':'They go first. You keep the coin (+2 Sap once) and drew an extra card','amber');
+  showToast('Coin flip',TG.first===0?'You go first, starting on 1 Sap. Sap grows by 2 every turn':'They go first. You start on 2 Sap, and Sap grows by 2 every turn','amber');
   tcgRender()}
 const tMull=()=>TG&&!TG.redrawn;
 /* ---------- render ---------- */
