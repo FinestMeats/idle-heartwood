@@ -42,7 +42,7 @@ function convertUnits(){
 convertUnits();
 /* Non-unit cards. fx keys are read by the engine. */
 const EXTRA=[
- ['Xbell','Camp Bell','N','boon',2,{row:'C',v:1}],['Xlantern','Lantern Light','N','boon',2,{row:'T',v:1}],
+ ['Xhorn','Camp Bell','N','boon',2,{row:'C',v:1}],['Xlantern','Lantern Light','N','boon',2,{row:'T',v:1}],
  ['Xfrost','Snowdrift','N','blight',2,{row:'C',v:-1}],['Xmist','Sawdust','N','blight',2,{row:'T',v:-1}],
  ['Xstorm','Mudslide','N','reaction',1,{attackerMinus:2}],['Xsun','Sunbreak','N','event',2,{clearAuras:1,draw:1}],
  ['Xscare','Scarecrow','N','reaction',2,{decoy:3}],['Xfire','Wildfire','N','event',5,{wipe:2}],
@@ -54,7 +54,10 @@ const EXTRA=[
  ['TS_path','Moonlit Path','S','event',2,{daze:1,draw:1}],['TS_gust','Gust','S','event',3,{bounce:4}],
  ['TB_collar','Iron Collar','B','tool',2,{p:2}],['TB_pack','Pack Defence','B','reaction',2,{plusPerUnit:1}],
  ['TB_stampede','Stampede','B','event',3,{clearingBuff:2}],['TB_howl','Howl','B','event',2,{reviveHand:1,draw:1}]];
-for(const [id,n,f,type,cost,fx] of EXTRA)CARDS[id]={id,n,f,type,cost,fx,kw:{},p:0,r:1};
+/* rarity (Common 0 … Epic 3): Classic specials keep their Classic rarity; TCG-only cards drop from sealed cards of this rarity */
+const XR={Xhorn:2,Xlantern:1,Xfrost:0,Xmist:0,Xstorm:0,Xsun:1,Xscare:1,Xfire:3,TL_axe:1,TL_hook:0,TL_line:1,TL_timber:2,TW_bark:1,TW_rooted:0,TW_roots:1,TW_moss:2,
+  TS_charm:0,TS_fade:2,TS_path:1,TS_gust:2,TB_collar:1,TB_pack:1,TB_stampede:2,TB_howl:1};
+for(const [id,n,f,type,cost,fx] of EXTRA)CARDS[id]={id,n,f,type,cost,fx,kw:{},p:0,r:XR[id]!=null?XR[id]:1};
 /* Keepers: power runs opposite to ability strength. Ability ops are read by the engine. */
 const KEEPERS={
  L_a:{n:'Foreman Hale',f:'L',p:5,row:'C',ab:[[1,'buff',2],[3,'draw',1],[6,'buffRow',2]]},
@@ -78,7 +81,7 @@ function starter(f){
   const main=[...pick(1,2,8),...pick(3,4,8),...pick(5,7,4)];
   for(const c of pool.slice().sort((a,b)=>a.cost-b.cost)){if(main.length>=20)break;if(main.filter(x=>x===c.id).length<2)main.push(c.id)}
   const ex=Object.values(CARDS).filter(c=>c.type!=='unit'&&c.f===f).map(c=>c.id);
-  main.push(...ex,...ex.slice(0,2),'Xbell','Xfrost','Xstorm','Xscare','Xsun','Xfire');
+  main.push(...ex,...ex.slice(0,2),'Xhorn','Xfrost','Xstorm','Xscare','Xsun','Xfire');
   while(main.length>30)main.pop();
   const ring=UNITS.filter(c=>c.f===f&&c.r>=2).sort((a,b)=>b.cost-a.cost).slice(0,6).map(c=>c.id);
   return {main,ring};

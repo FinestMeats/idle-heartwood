@@ -7,6 +7,10 @@ const TKW={eager:'Eager',guard:'Guard',crew:'Work Crew',rally:'Rally',revive:'Re
 const TKW_TXT={eager:'can attack the turn it is played',guard:'can block from either row, and gets +2 power while blocking',crew:'+1 power for each other copy on your board',rally:'your other units +1 power on your turn',revive:'when played, take back a unit costing 3 or less from your discard pile',scout:'when played, draw a card',call:'when played, find a copy in your deck and add it to your hand',fire:'when played, fell an enemy unit with that much power or less',ancient:'can\'t be targeted by abilities, Blights or Firebrand',double:'a landed hit on a Keeper cracks 2 Rings',brace:'discard while defending: +1 power for that fight',sprout:'if cracked from your Rings, it plays itself for free',regrow:'when played, Regrow (move a card from your Heartwood to your Rings)',nimble:'may switch rows once per turn'};
 const TTYPE_IC={tool:'hammer',reaction:'glove',event:'scroll',boon:'sun',blight:'snow'};
 const TROW={C:'Clearing',T:'Treeline',W:'Wanderer'};
+/* Cards that only exist in the TCG (Tools, Reactions, Events, Lantern Light) are part of the idle game's collection too:
+   they drop from sealed cards, show under TCG in the collection, and are shared with the Heartwood TCG account. */
+const TCG_ONLY=Object.values(TCG.CARDS).filter(d=>d.type!=='unit'&&!CARD[d.id]);
+TCG_ONLY.forEach(d=>{CARD[d.id]={id:d.id,n:d.n,f:d.f,row:-1,p:0,ab:'tcg',r:d.r,unit:0,sp:'tcg',tcg:d.type,ic:TTYPE_IC[d.type]}});
 function tKwLine(d){return Object.keys(d.kw||{}).map(k=>k==='fire'?'Firebrand '+d.kw.fire:k==='brace'?'Brace +'+d.kw.brace:TKW[k]).join(' · ')}
 function tFxText(d){const f=d.fx||{};if(d.type==='tool')return 'Attach to a unit: +'+(f.p||0)+' power'+(f.eager?', Eager':'')+(f.guard?', Guard':'')+(f.nimble?', Nimble':'');
   if(d.type==='boon'||d.type==='blight')return (f.row==='C'?'Clearing':'Treeline')+' units on both sides '+(f.v>0?'+':'')+f.v+' power, until replaced';

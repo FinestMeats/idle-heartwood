@@ -115,7 +115,7 @@ function apply(G,m,def){const i=G.turn,P=G.p[i],O=G.p[1-i];if(G.over)return;
   if(m.t==='end'){lg(G,P.name+' '+vb(P,'ends')+' the turn');dusk(G);return}
   if(m.t==='coin'){P.coin=false;P.sap+=2;lg(G,P.name+' '+vb(P,'spends')+' the coin: +2 Sap');return}
   if(m.t==='move'){const x=findU(P,m.u);P.rows[x.row]=P.rows[x.row].filter(y=>y!==x);x.row=x.row==='C'?'T':'C';P.rows[x.row].push(x);x.moved=true;return}
-  if(m.t==='ability'){const [cost,op,v]=KEEPERS[P.k.id].ab[m.ai];lg(G,P.name+': '+KEEPERS[P.k.id].n+' uses '+abilityText(op,v)+(m.target?' on '+nm(findU(P,m.target)?.id||findU(O,m.target)?.id||'Xbell'):''));P.sap-=cost;P.k.used[m.ai]=1;P.stats.abil++;effect(G,i,op,v,m.target);return}
+  if(m.t==='ability'){const [cost,op,v]=KEEPERS[P.k.id].ab[m.ai];lg(G,P.name+': '+KEEPERS[P.k.id].n+' uses '+abilityText(op,v)+(m.target?' on '+nm(findU(P,m.target)?.id||findU(O,m.target)?.id||'Xhorn'):''));P.sap-=cost;P.k.used[m.ai]=1;P.stats.abil++;effect(G,i,op,v,m.target);return}
   if(m.t==='play'){const d=C(m.id);P.hand.splice(P.hand.indexOf(m.id),1);P.sap-=d.cost;lg(G,P.name+' '+vb(P,'plays')+' '+d.n);
     if(d.type==='unit')enter(G,i,m.id,m.row);
     else if(d.type==='tool'){const x=findU(P,m.target);x.tools.push(m.id)}
