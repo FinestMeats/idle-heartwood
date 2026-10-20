@@ -40,7 +40,7 @@ function kPower(G,P){return Math.max(1,KEEPERS[P.k.id].p-(RULES.wear?(P.k.wear||
 const blockPower=(G,P,x)=>power(G,P,x)+(kwOf(x,'guard')?RULES.guardBonus:0);
 const blockers=(G,P,d)=>units(P).filter(x=>!x.exh&&x.u!==d&&(x.row==='C'||kwOf(x,'guard')));
 /* rule switches for testing (all off = the live rules) */
-const RULES={fatigue:0,guardBonus:2,clock:0,wear:0,ringDelta:0,sapStep:1,sapCap:10,p1first:null,rampTo:0,noCoin:0,noExtra:0};const setRule=(k,v)=>{RULES[k]=v};
+const RULES={fatigue:0,guardBonus:2,clock:0,wear:0,ringDelta:0,sapStep:1,sapCap:10,p1first:null,rampTo:0,noCoin:0,noExtra:0,regrowDiscard:1};const setRule=(k,v)=>{RULES[k]=v};
 function draw(G,i){const P=G.p[i];
   if(!P.deck.length){
     /* 'reshuffle': the first time your deck runs out, shuffle your discard pile in as a new deck */
@@ -67,7 +67,7 @@ function dawn(G,firstTurn){const i=G.turn,P=G.p[i];G.turnNo++;G.phase='work';
 function dusk(G){const P=G.p[G.turn];for(const x of units(P))x.tmp=0;P.k.hush=0;G.turn=1-G.turn;if(!G.over)dawn(G,false)}
 function toGrave(G,P,x){for(const r of ['C','T'])P.rows[r]=P.rows[r].filter(y=>y!==x);P.grave.push(x.id,...x.tools)}
 /* Regrow: the Heartwood card first; after that, a random card from your discard pile (never your deck) */
-function regrow(G,P){if(P.rings.length>=RINGCAP)return;if(P.heart.length){P.rings.push(P.heart.pop())}else if(P.grave.length){const j=Math.floor(rnd(G)*P.grave.length);P.rings.push(P.grave.splice(j,1)[0])}}
+function regrow(G,P){if(P.rings.length>=RINGCAP)return;if(P.heart.length){P.rings.push(P.heart.pop())}else if(RULES.regrowDiscard&&P.grave.length){const j=Math.floor(rnd(G)*P.grave.length);P.rings.push(P.grave.splice(j,1)[0])}}
 function bestUnitIn(list,maxCost){let b=null;for(const id of list){const d=C(id);if(d.type==='unit'&&!d.kw.ancient&&d.cost<=maxCost&&(!b||d.p>C(b).p))b=id}return b}
 function abilityText(op,v){return {buff:'+'+v+' power this turn',shield:'+'+v+' power until your next turn',ready:'ready a unit',draw:'draw '+v,buffRow:'your Clearing +'+v+' this turn',readyAll:'ready everything',hush:'Hush their Keeper',daze:'Daze their Keeper',regrow:'Regrow',regrowDraw:'Regrow and draw 1',cycleDraw:'put a card from your discard pile under your deck, then draw '+v,fell:'fell a unit with '+v+' or less power',fellExhausted:'fell an exhausted unit',bounce:'return a unit with '+v+' or less power to hand',reviveHand:'take a unit back from your discard pile',revivePlay:'play a unit from your discard pile'}[op]||op}
 /* ---------- legal moves ---------- */

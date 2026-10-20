@@ -30,6 +30,9 @@ const V={
  noextra:()=>E.setRule('noExtra',1),
  noclock:()=>E.setRule('clock',0),
  clock24:()=>E.setRule('clock',24),
+ regrow_heart:()=>E.setRule('regrowDiscard',0),
+ guard1:()=>E.setRule('guardBonus',1),
+ guard0:()=>E.setRule('guardBonus',0),
  /* option 2: faction balance levers */
  hale1:()=>setAb('L_a',0,[1,'buff',1]),
  alpha1:()=>setAb('B_b',0,[1,'buff',1]),
@@ -50,6 +53,8 @@ const V={
  den_rev2:()=>setAb('B_a',1,[2,'reviveHand',1]),
  lantern_bounce4:()=>setAb('S_b',1,[3,'bounce',4]),
  lantern_ready8:()=>setAb('S_b',2,[8,'readyAll',1]),
+ raven_2sap:()=>setAb('B_c',0,[2,'draw',1]),
+ raven_fell5:()=>setAb('B_c',2,[6,'fell',5]),
  mist_up:()=>{setAb('S_c',0,[1,'buff',2])},
  seer_p4:()=>{KEEPERS.W_b.p=4},
 };
