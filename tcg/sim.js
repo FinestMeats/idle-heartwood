@@ -1,3 +1,5 @@
+/* Uses the smart look-ahead opponent on both sides (smart.js). Set QUICK=1 to use the old quick AI. */
+const S=require('./smart.js');const AI=process.env.QUICK?['quick','quick']:['smart','smart'];
 /* node sim.js [gamesPerPairing] — faction balance, first-player edge, game length, how games end */
 const {play}=require('./engine.js');
 const {starter,KEEPERS}=require('./cards.js');
@@ -7,7 +9,7 @@ const res={},fk={},reasons={},turns=[];let firstWins=0,games=0,decided=0;
 let seed=1;
 for(const a of F)for(const b of F){let w=0,n=0;
   for(let g=0;g<N;g++){const ka=a+'_'+'abc'[g%3],kb=b+'_'+'abc'[(g+1)%3];
-    const G=play(deck(a,ka),deck(b,kb),seed++*7919);games++;turns.push(G.turnNo);reasons[G.reason]=(reasons[G.reason]||0)+1;
+    const G=S.playMatch(deck(a,ka),deck(b,kb),seed++*7919,AI);games++;turns.push(G.turnNo);reasons[G.reason]=(reasons[G.reason]||0)+1;
     if(G.winner>=0){decided++;if(G.winner===G.first)firstWins++;if(G.winner===0)w++;
       const kw=G.winner===0?ka:kb,kl=G.winner===0?kb:ka;fk[kw]=fk[kw]||{w:0,n:0};fk[kl]=fk[kl]||{w:0,n:0};fk[kw].w++;fk[kw].n++;fk[kl].n++}
     n++}

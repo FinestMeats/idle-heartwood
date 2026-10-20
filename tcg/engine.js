@@ -15,7 +15,7 @@ function newPlayer(G,cfg){const P={name:cfg.name,f:KEEPERS[cfg.keeper].f,k:{id:c
   /* stronger Keeper, fewer starting Rings: power 5 → 4 Rings, 4 → 5, 3 or less → 6. The rest wait in the Heartwood. */
   const ring=shuffle(G,cfg.ring.slice()),n=startRings(cfg.keeper);P.rings=ring.slice(0,n);P.heart=ring.slice(n);
   for(let i=0;i<5;i++)P.hand.push(P.deck.shift());return P}
-const startRings=k=>KEEPERS[k].p>=4?5:6;
+const startRings=k=>(KEEPERS[k].p>=4?5:6)+RULES.ringDelta;
 function newGame(a,b,seed,human){const G={rs:seed>>>0||1,uid:1,turn:0,first:0,turnNo:0,phase:'work',aura:{C:0,T:0},over:false,winner:-1,reason:'',log:[]};
   G.p=[newPlayer(G,a),newPlayer(G,b)];
   /* coin flip: winner goes first, the other keeps the coin */
@@ -34,11 +34,21 @@ function power(G,P,x){const d=C(x.id);let v=d.p+x.tmp+x.sh;for(const t of x.tool
   if(G.p[G.turn]===P)v+=units(P).filter(y=>y!==x&&C(y.id).kw.rally).length;
   if(d.kw.crew)v+=units(P).filter(y=>y!==x&&y.id===x.id).length;
   return Math.max(0,v)}
-function kPower(G,P){return KEEPERS[P.k.id].p}
+/* wear test: each hit a Keeper takes lowers its power by 1 for the rest of the game (never below 1) */
+function kPower(G,P){return Math.max(1,KEEPERS[P.k.id].p-(RULES.wear?(P.k.wear||0):0))}
 /* any ready unit in your Clearing can block; Guard units can block from either row and get +2 power while blocking */
-const blockPower=(G,P,x)=>power(G,P,x)+(kwOf(x,'guard')?2:0);
+const blockPower=(G,P,x)=>power(G,P,x)+(kwOf(x,'guard')?RULES.guardBonus:0);
 const blockers=(G,P,d)=>units(P).filter(x=>!x.exh&&x.u!==d&&(x.row==='C'||kwOf(x,'guard')));
-function draw(G,i){const P=G.p[i];if(!P.deck.length){end(G,1-i,'deck-out');return false}P.hand.push(P.deck.shift());return true}
+/* rule switches for testing (all off = the live rules) */
+const RULES={fatigue:0,guardBonus:2,clock:0,wear:0,ringDelta:0};const setRule=(k,v)=>{RULES[k]=v};
+function draw(G,i){const P=G.p[i];
+  if(!P.deck.length){
+    /* 'reshuffle': the first time your deck runs out, shuffle your discard pile in as a new deck */
+    if(RULES.fatigue==='reshuffle'&&!P.reshuf&&P.grave.length){P.reshuf=1;P.deck=shuffle(G,P.grave.splice(0));lg(G,P.name+' reshuffles the discard pile')}
+    /* 'wither': drawing from an empty deck burns a Ring instead (no card); with no Rings left you lose */
+    else if(RULES.fatigue==='wither'){if(P.rings.length){P.grave.push(P.rings.pop());lg(G,P.name+' withers: a Ring is lost');return false}end(G,1-i,'withered');return false}
+    else{end(G,1-i,'deck-out');return false}}
+  P.hand.push(P.deck.shift());return true}
 const lg=(G,txt)=>{G.log.push(txt);if(G.log.length>80)G.log.shift()};
 const nm=id=>C(id).n;
 const vb=(P,v)=>P.name==='You'?({plays:'play',ends:'end',spends:'spend'}[v]||v):v;
@@ -55,7 +65,7 @@ function toGrave(G,P,x){for(const r of ['C','T'])P.rows[r]=P.rows[r].filter(y=>y
 /* Regrow: the Heartwood card first; after that, a random card from your discard pile (never your deck) */
 function regrow(G,P){if(P.rings.length>=RINGCAP)return;if(P.heart.length){P.rings.push(P.heart.pop())}else if(P.grave.length){const j=Math.floor(rnd(G)*P.grave.length);P.rings.push(P.grave.splice(j,1)[0])}}
 function bestUnitIn(list,maxCost){let b=null;for(const id of list){const d=C(id);if(d.type==='unit'&&!d.kw.ancient&&d.cost<=maxCost&&(!b||d.p>C(b).p))b=id}return b}
-function abilityText(op,v){return {buff:'+'+v+' power this turn',shield:'+'+v+' power until your next turn',ready:'ready a unit',draw:'draw '+v,buffRow:'your Clearing +'+v+' this turn',readyAll:'ready everything',hush:'Hush their Keeper',daze:'Daze their Keeper',regrow:'Regrow',regrowDraw:'Regrow and draw 1',fell:'fell a unit with '+v+' or less power',fellExhausted:'fell an exhausted unit',bounce:'return a unit with '+v+' or less power to hand',reviveHand:'take a unit back from your discard pile',revivePlay:'play a unit from your discard pile'}[op]||op}
+function abilityText(op,v){return {buff:'+'+v+' power this turn',shield:'+'+v+' power until your next turn',ready:'ready a unit',draw:'draw '+v,buffRow:'your Clearing +'+v+' this turn',readyAll:'ready everything',hush:'Hush their Keeper',daze:'Daze their Keeper',regrow:'Regrow',regrowDraw:'Regrow and draw 1',cycleDraw:'put a card from your discard pile under your deck, then draw '+v,fell:'fell a unit with '+v+' or less power',fellExhausted:'fell an exhausted unit',bounce:'return a unit with '+v+' or less power to hand',reviveHand:'take a unit back from your discard pile',revivePlay:'play a unit from your discard pile'}[op]||op}
 /* ---------- legal moves ---------- */
 function rowsFor(P,d){const r=d.row==='W'?['C','T']:[d.row];return r.filter(x=>P.rows[x].length<ROWCAP)}
 function enemyTargets(G,i,pred){const O=G.p[1-i];return units(O).filter(x=>!C(x.id).kw.ancient&&pred(x,O))}
@@ -130,6 +140,7 @@ function effect(G,i,op,v,target){const P=G.p[i],O=G.p[1-i];
   else if(op==='shield'){const x=findU(P,target);if(x)x.sh+=v}
   else if(op==='ready'){const x=findU(P,target);if(x){x.exh=false;x.sick=false}}
   else if(op==='draw'){for(let k=0;k<v;k++)draw(G,i)}
+  else if(op==='cycleDraw'){if(P.grave.length){const b=bestUnitIn(P.grave,10)||P.grave[0];P.grave.splice(P.grave.indexOf(b),1);P.deck.push(b)}for(let k=0;k<v;k++)draw(G,i)}
   else if(op==='buffRow'){for(const x of P.rows.C)x.tmp+=v}
   else if(op==='readyAll'){for(const x of units(P)){x.exh=false;x.sick=false}P.k.exh=false}
   else if(op==='hush')O.k.hush=1;
@@ -172,7 +183,8 @@ function attack(G,i,a,d,def){const P=G.p[i],O=G.p[1-i];let att,ap;
   if(tgt&&att&&ap===dp){lg(G,aN+' ('+ap+') attacks '+nm(tgt.id)+' ('+dp+'): both felled'+how);G.lastAttack.trade=true;toGrave(G,O,tgt);toGrave(G,P,att);return}
   if(tgt){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): felled'+how);TS.kills++;G.kills=(G.kills||0)+1;toGrave(G,O,tgt);return}
   lg(G,aN+' ('+ap+') hits '+dN+' ('+dp+')'+how);
-  const n=(att&&kwOf(att,'double'))?2:1;P.stats.hits++;
+  /* clock test: from total turn RULES.clock on, every Keeper hit cracks one extra Ring */
+  const n=((att&&kwOf(att,'double'))?2:1)+(RULES.clock&&G.turnNo>=RULES.clock?1:0);P.stats.hits++;O.k.wear=(O.k.wear||0)+1;
   for(let k=0;k<n&&!G.over;k++){if(!O.rings.length){end(G,i,'rings');return}
     const id=O.rings.pop();const c=C(id);G.lastAttack.crack=id;lg(G,'  A Ring cracks: '+c.n+(c.kw.sprout&&c.type==='unit'?' Sprouts onto '+own(O)+' board':' goes to '+own(O)+' hand'));
     if(c.kw.sprout&&c.type==='unit'){const rs=rowsFor(O,c);if(rs.length){enter(G,1-i,id,rs[0]);continue}}
@@ -233,5 +245,5 @@ function preview(G,m){const i=G.turn,P=G.p[i],O=G.p[1-i];const ap=m.a==='K'?kPow
 function play(a,b,seed,maxTurns){const G=newGame(a,b,seed);maxTurns=maxTurns||80;
   while(!G.over&&G.turnNo<maxTurns){aiWork(G);if(!G.over&&G.phase==='fell')aiFell(G)}
   if(!G.over)end(G,-1,'timeout');return G}
-const API={DEFENDERS,setTrample,setTargets,TS,blockPower,blockers,newGame,moves,apply,play,value,power,kPower,units,findU,aiWork,aiFell,aiNext,aiDefend,preview,redraw,clone,abilityText,startRings,canAttack};
+const API={RULES,setRule,DEFENDERS,setTrample,setTargets,TS,blockPower,blockers,newGame,moves,apply,play,value,power,kPower,units,findU,aiWork,aiFell,aiNext,aiDefend,preview,redraw,clone,abilityText,startRings,canAttack};
 if(typeof module!=='undefined')module.exports=API;

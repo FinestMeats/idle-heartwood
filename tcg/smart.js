@@ -77,6 +77,8 @@ function pick(G,i,ms){if(ms.length===1)return ms[0];
 function smartTurn(G){const i=G.turn;let n=0;
   while(!G.over&&G.turn===i&&n++<40){let ms=E.moves(G);
     /* the coin only when it unlocks a play this turn, same as the quick AI */
+    /* never make an attack that can't land: the defender can only add power, so it just tires the unit */
+    if(G.phase==='fell'){const P=G.p[i],O=G.p[1-i];ms=ms.filter(m=>m.t!=='attack'||(m.a==='K'?E.kPower(G,P):E.power(G,P,E.findU(P,m.a)))>=(m.d==='K'?E.kPower(G,O):E.power(G,O,E.findU(O,m.d))))}
     if(G.phase==='work'){const P=G.p[i];ms=ms.filter(m=>m.t!=='coin'||P.hand.some(id=>C(id).cost>P.sap&&C(id).cost<=P.sap+2))}
     E.apply(G,pick(G,i,ms))}}
 /* smarter mulligan: want 2+ cards you can play by turn 3 and at least one unit costing 1-2 */
