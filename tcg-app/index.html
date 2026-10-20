@@ -1,0 +1,1655 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f1512"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Heartwood TCG"><title>Heartwood TCG</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IM+Fell+English:ital@0;1&display=swap"><style>html,body{margin:0;overscroll-behavior:none}</style><style>
+/* Layout: one-screen game — boxed counters, top-down forest canvas, tabbed workbench panel. Single committed mossy-night look, pixel UI in the style of Idle Obelisk Miner. */
+:root{
+  --bg:#0f1714; --panel:#1a2622; --panel2:#0c1216; --line:#34505a; --edge:#08100d;
+  --fg:#e8f4ee; --muted:#8fb0a6; --ember:#2fb0a0; --go:#1f8f7f; --goD:#0b4a42; --no:#5a1a1f; --noD:#2a0a0d;
+  --sap:#7ff0d0; --danger:#e5484d; --gold:#f2c94c;
+  --display:"VT323","Courier New",monospace;
+  --book:"IM Fell English", Georgia, "Times New Roman", serif;
+  --ui:"VT323","Courier New",monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:19px;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+#app{height:100%;display:flex;flex-direction:column;max-width:560px;margin:0 auto}
+header{display:flex;align-items:center;gap:8px;padding-block:8px 6px;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));background:var(--panel);border-bottom:3px solid var(--edge)}
+.grove{flex:1;display:flex;align-items:center;gap:6px;min-width:0}
+.gbox{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;height:32px;padding:0 8px;background:var(--panel2);border:2px solid var(--line);border-radius:5px;font-size:20px;white-space:nowrap}
+.gbox .fname{color:var(--muted);overflow:hidden;text-overflow:ellipsis;min-width:0}
+.gbox b{font-weight:400;color:var(--fg);font-variant-numeric:tabular-nums}
+.gbox b.done{color:var(--sap)}
+.step{font-family:var(--ui);font-size:26px;line-height:1;width:34px;height:32px;border-radius:5px;border:2px solid var(--goD);background:var(--go);color:#fff;cursor:pointer;padding:0;flex:none}
+.step:disabled{background:var(--panel2);border-color:var(--line);color:var(--muted);cursor:default}
+#xp{display:flex;align-items:center;padding-block:6px 4px;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));background:var(--panel)}
+.lvtag{height:26px;min-width:34px;padding:0 8px;display:flex;align-items:center;justify-content:center;background:var(--go);border:2px solid var(--goD);border-radius:5px 0 0 5px;font-size:21px;box-sizing:border-box}
+.xpbox{flex:1;position:relative;height:26px;box-sizing:border-box;background:var(--panel2);border:2px solid var(--line);border-left:0;border-radius:0 5px 5px 0;overflow:hidden;min-width:0}
+.xpbox i{position:absolute;left:0;top:0;bottom:0;width:0;background:#164a44}
+.xpbox .xt{position:relative;display:block;padding-left:8px;line-height:22px;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+#res{display:flex;gap:6px;overflow-x:auto;padding-block:4px 8px;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));scrollbar-width:none;background:var(--panel);border-bottom:3px solid var(--edge)}
+#res::-webkit-scrollbar{display:none}
+.chip{flex:none;display:flex;align-items:center;gap:6px;background:var(--panel2);border:2px solid var(--line);border-radius:5px;padding:1px 8px;font-size:19px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dot{width:12px;height:12px;flex:none;display:inline-block;border:2px solid #000;box-sizing:border-box}
+.chip .pl{color:var(--muted)}
+.chip.gold{color:var(--gold)}
+.coin.ic{width:13px;height:13px;vertical-align:-1px;margin:0 3px 0 2px;outline:2px solid #000}
+.coin{width:14px;height:14px;flex:none;display:inline-block;background:var(--gold);border:2px solid #8a6410;box-shadow:inset -2px -2px 0 #d9a520,inset 2px 2px 0 #fff2b0;box-sizing:border-box}
+.row.best{box-shadow:0 0 0 2px var(--gold);animation:bestGlow 2.4s ease-in-out infinite}
+@keyframes bestGlow{0%,100%{box-shadow:0 0 0 2px var(--gold),0 0 10px 1px rgba(242,201,76,.45)}50%{box-shadow:0 0 0 2px var(--gold),0 0 2px 0 rgba(242,201,76,0)}}
+.guide{display:flex;align-items:center;gap:8px;border:2px solid var(--sap);background:color-mix(in srgb,var(--sap) 14%,var(--panel2));border-radius:6px;padding:6px 10px;margin:6px 0 4px;font-size:18px;line-height:1.2}
+.guide b{color:var(--sap)}.guide small{margin-left:auto;opacity:.7;font-size:14px;white-space:nowrap}
+.tab.guide-t{outline:2px solid var(--sap);outline-offset:-2px;animation:glow 2.4s ease-in-out infinite;color:inherit}
+@media (prefers-reduced-motion:reduce){.row.best,.tab.guide-t{animation:none}}
+.sec{font-family:var(--display);font-weight:400;font-size:22px;color:var(--sap);margin:6px 0 0}
+#list .sec{cursor:pointer;user-select:none;-webkit-user-select:none;display:flex;align-items:center;gap:8px;padding:2px 0}
+#list .sec::after{content:'';margin-left:auto;width:8px;height:8px;border-right:3px solid currentColor;border-bottom:3px solid currentColor;transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s;flex:none}
+#list .sec.shut::after{transform:rotate(-45deg)}
+#list .sec.shut{opacity:.7}
+#list .fold{display:none!important}
+.pair{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pair .buy{min-width:74px}
+#stage{position:relative;flex:1 1 auto;min-height:220px;background:var(--panel2)}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:pointer;image-rendering:pixelated}
+#hint{position:absolute;left:0;right:0;bottom:84px;text-align:center;font-size:20px;color:#fff;text-shadow:2px 0 #000,-2px 0 #000,0 2px #000,0 -2px #000;pointer-events:none;transition:opacity .4s}
+#odds{position:absolute;left:max(8px,env(safe-area-inset-left,0px));bottom:42px;display:flex;flex-wrap:wrap;gap:4px;max-width:62%;pointer-events:none}
+#floorTag{position:absolute;right:max(8px,env(safe-area-inset-right,0px));bottom:42px;font-size:18px;color:var(--gold);background:var(--panel2);border:2px solid var(--line);border-radius:4px;padding:0 6px;pointer-events:none;max-width:36%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#odds span{display:flex;align-items:center;gap:4px;font-size:17px;background:var(--panel2);border:2px solid var(--line);border-radius:4px;padding:0 6px;font-variant-numeric:tabular-nums}
+.float-btns{position:absolute;right:max(8px,env(safe-area-inset-right,0px));top:44px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.fbtn{font-family:var(--ui);font-size:19px;color:#fff;background:var(--panel2);border:2px solid var(--line);border-radius:5px;padding:2px 10px;cursor:pointer;position:relative;overflow:hidden;min-width:96px;text-align:center}
+.fbtn:focus-visible,.tab:focus-visible,.buy:focus-visible,.step:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.fbtn .cd{position:absolute;left:0;bottom:0;height:3px;background:var(--sap)}
+.fbtn.on{background:var(--go);border-color:var(--goD)}
+#stayBtn:not(.on){background:#6a2a8a;border-color:#34104a}
+.fbtn:disabled{color:var(--muted);cursor:default}
+#sfxBtn{position:absolute;right:max(8px,env(safe-area-inset-right,0px));top:8px;width:34px;height:32px;padding:0;min-width:0;display:flex;align-items:center;justify-content:center}
+#chestSlot{position:absolute;left:max(8px,env(safe-area-inset-left,0px));top:8px;width:34px;height:32px;padding:0;min-width:0;display:flex;align-items:center;justify-content:center;border-color:var(--cc,var(--gold));box-shadow:0 0 8px var(--cc,var(--gold));animation:slotGlow 1.6s ease-in-out infinite alternate;z-index:4}
+#chestSlot .pi{width:22px;height:22px}
+@keyframes slotGlow{from{box-shadow:0 0 2px var(--cc,var(--gold))}to{box-shadow:0 0 12px var(--cc,var(--gold))}}
+#sfxBtn svg{width:20px;height:20px;display:block}
+#sfxBtn .x{display:none}#sfxBtn.off .x{display:inline}#sfxBtn.off .w{display:none}
+.chip.bump{animation:bump .28s ease-out}
+@keyframes bump{40%{transform:scale(1.14);border-color:var(--gold)}}
+#bossbar{position:absolute;left:max(8px,env(safe-area-inset-left,0px));top:44px;font-size:20px;color:#fff;background:#9e1b24;border:2px solid #5a0d12;border-radius:5px;padding:0 10px;font-variant-numeric:tabular-nums}
+header,#xp,#res{flex:none}
+#res .chip{height:26px;box-sizing:border-box}
+#app.open #stage{flex:0 0 128px;min-height:0}
+#panel{min-height:0}
+#app.open #panel{flex:1 1 auto}
+#app.open #hint,#app.open #odds,#app.open .float-btns,#app.open #bossbar,#app.open #sfxBtn{display:none}
+#jobs.hi{animation:jobHi .8s ease-in-out 4 alternate;border-color:var(--gold)}
+@keyframes jobHi{to{box-shadow:0 0 0 3px var(--gold)}}
+#jobs{position:absolute;left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));bottom:8px;height:28px;display:flex;align-items:center;gap:6px;background:var(--panel2);border:2px solid var(--line);border-radius:5px;padding:0 8px;font-size:17px;cursor:pointer;overflow:hidden;font-family:var(--ui);color:var(--fg);box-sizing:border-box}
+#jobs .jl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:1}
+#jobs .jr{flex:none;color:var(--muted);position:relative;z-index:1;display:flex;align-items:center;gap:2px;font-variant-numeric:tabular-nums}
+#jobs .jf{position:absolute;left:0;top:0;bottom:0;background:#164a44;width:0;transition:width .3s}
+#jobs.done{border-color:var(--gold)}
+#jobs .jn{flex:none;color:var(--line);position:relative;z-index:1;letter-spacing:-2px}
+#jobs .jn b{font-weight:400;color:var(--sap)}
+#jobs .jc{color:var(--sap)}
+#jobs .pi{position:relative;z-index:1}
+.chip.amber{color:#f0a030}
+.ms{color:var(--gold)}
+.bn{display:flex;gap:4px;align-items:center;margin-bottom:2px}
+.bn button{font-family:var(--ui);font-size:17px;background:var(--panel2);color:var(--fg);border:2px solid var(--line);border-radius:5px;padding:1px 10px;cursor:pointer}
+.bn button[aria-pressed="true"]{background:var(--go);border-color:var(--goD);color:#fff}
+#grip{display:flex;align-items:center;justify-content:center;gap:8px;height:22px;flex:none;background:var(--panel);border:0;border-bottom:2px solid var(--edge);color:var(--muted);font-family:var(--ui);font-size:16px;cursor:pointer;padding:0}
+#grip span{width:36px;height:4px;background:var(--line);border-radius:2px}
+#grip b{font-weight:400}
+#grip:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+#panel{flex:0 0 42%;display:flex;flex-direction:column;background:var(--panel);border-top:3px solid var(--edge);min-height:0}
+nav{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;padding:6px max(6px,env(safe-area-inset-right,0px)) 6px max(6px,env(safe-area-inset-left,0px));border-bottom:3px solid var(--edge)}
+nav::-webkit-scrollbar{display:none}
+nav .tab{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:14px;line-height:1;padding:4px 1px 3px;position:relative;white-space:nowrap;letter-spacing:-.02em}
+nav .tab span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+nav .tab .pi{width:20px;height:20px}
+.tab .bdg{position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--sap);color:var(--sap);display:none}
+.tab.can .bdg{display:block;animation:glow 2.4s ease-in-out infinite}
+.tab.new .bdg{display:block;background:var(--gold);color:var(--gold);animation:glow 2.4s ease-in-out infinite}
+@keyframes glow{0%,100%{background:currentColor;box-shadow:0 0 0 2px #4a6a74,0 0 5px 3px currentColor}50%{background:color-mix(in srgb,currentColor 28%,#0a0d08);box-shadow:0 0 0 2px #4a6a74,0 0 0 2px transparent}}
+@media (prefers-reduced-motion:reduce){.tab .bdg{animation:none!important}}
+.pi{width:16px;height:16px;flex:none;display:inline-block;vertical-align:-3px;image-rendering:pixelated}
+.row .n .pi{width:20px;height:20px}
+.ar{color:var(--sap)}
+.d .k{color:var(--muted)}
+.ib{font-family:var(--ui);font-size:15px;line-height:1;background:none;border:1px solid var(--line);color:var(--muted);border-radius:50%;width:20px;height:20px;padding:0;cursor:pointer;vertical-align:1px;margin-left:4px}
+.more{color:var(--muted)}
+#banners{z-index:36!important;position:absolute;left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));top:40px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;z-index:6}
+.ban{pointer-events:auto;max-width:min(100%,360px);background:var(--panel2);border:2px solid var(--gold);box-shadow:0 0 0 2px #000,0 6px 16px rgba(0,0,0,.5);border-radius:6px;padding:4px 12px 5px;text-align:center;line-height:1.1;animation:banIn .25s ease-out;cursor:pointer}
+.ban h3{margin:0;font-family:var(--display);font-weight:400;font-size:21px;color:var(--gold);display:flex;align-items:center;justify-content:center;gap:6px}
+.ban div{font-size:17px;color:var(--fg)}
+.ban.out{animation:banOut .3s ease-in forwards}
+@keyframes banIn{from{transform:translateY(-14px);opacity:0}}
+@keyframes banOut{to{transform:translateY(-14px);opacity:0}}
+.away{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;text-align:left;margin:8px auto 0;width:max-content;font-size:22px;font-variant-numeric:tabular-nums}
+.away .pi{width:22px;height:22px}
+.away b{font-weight:400;color:var(--sap)}
+.tab{font-family:var(--ui);font-size:16px;background:var(--panel2);border:2px solid var(--line);border-radius:5px;color:var(--fg);padding:5px 6px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--go);border-color:var(--goD);color:#fff}
+#list{flex:1;overflow-y:auto;padding-block:8px calc(10px + env(safe-area-inset-bottom,0px));padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:6px}
+.row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--panel2);border:2px solid var(--line);border-radius:5px;padding:5px 6px 5px 8px}
+.row .t{min-width:0}
+.row .n{font-size:21px;line-height:1.1;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.row .n small{color:var(--muted);font-size:18px;font-variant-numeric:tabular-nums}
+.row .d{font-size:17px;line-height:1.15;color:#9ad0b8;font-variant-numeric:tabular-nums}
+.buy{font-family:var(--ui);font-size:19px;background:var(--go);color:#fff;border:2px solid var(--goD);border-radius:5px;padding:4px 10px;min-width:92px;min-height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-variant-numeric:tabular-nums}
+.buy:disabled{background:var(--no);border-color:var(--noD);color:#d8a8ac;cursor:default}
+.note{font-size:17px;color:var(--muted);line-height:1.25;margin:0}
+.note b{color:var(--fg);font-weight:400}
+.big{font-family:var(--display);font-size:34px;color:var(--gold)}
+.sel{display:flex;flex-wrap:wrap;gap:5px}
+.sel button{font-family:var(--ui);font-size:18px;background:var(--panel2);color:var(--fg);border:2px solid var(--line);border-radius:5px;padding:2px 8px;cursor:pointer;display:flex;gap:6px;align-items:center}
+.sel button:disabled{opacity:.45;filter:grayscale(1);cursor:not-allowed;border-style:dashed}
+.sel button[aria-pressed="true"]{background:var(--go);border-color:var(--goD);color:#fff}
+.odds-row{display:flex;flex-wrap:wrap;gap:6px}
+.bar{height:12px;background:var(--panel2);border:2px solid var(--line);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ember);width:0}
+#toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--panel);border:3px solid var(--edge);box-shadow:inset 0 0 0 2px var(--line);border-radius:6px;padding:12px 16px;width:min(84%,330px);text-align:center;font-size:20px;line-height:1.2;z-index:40}
+#toast h2{font-family:var(--display);font-weight:400;font-size:26px;margin:0 0 4px;color:var(--gold)}
+#toast button{margin:10px auto 0}
+
+.btns{display:flex;flex-direction:column;gap:6px}
+.info{font-family:var(--ui);font-size:18px;background:var(--panel);color:var(--fg);border:2px solid var(--line);border-radius:5px;padding:3px 8px;cursor:pointer}
+.info:focus-visible,.bk-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+#dex{position:fixed;inset:0;z-index:30;background:rgba(6,8,5,.7);display:flex;align-items:center;justify-content:center;padding-block:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.book{width:min(100%,380px);max-height:100%;overflow-y:auto;background:linear-gradient(160deg,#3b4a2c,#232f1a);border-radius:5px 14px 14px 5px;padding:10px 12px 10px 20px;box-shadow:0 20px 44px rgba(0,0,0,.6),inset 8px 0 0 #18200f,inset 9px 0 0 #8a7a45,inset 0 0 0 2px #6e6236}
+.bk-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;color:#d9c48a;font-family:var(--book);font-size:16px;letter-spacing:.14em;text-transform:uppercase}
+.bk-btn{font-family:var(--book);font-size:18px;line-height:1;background:none;color:#d9c48a;border:1px solid #8a7a45;border-radius:4px;padding:6px 10px;cursor:pointer;min-width:38px}
+.bk-btn:disabled{opacity:.35;cursor:default}
+.pages{position:relative;perspective:1400px}
+.page{position:relative;background:#efe4c8;background-image:repeating-linear-gradient(to bottom,transparent 0 25px,rgba(120,96,60,.12) 25px 26px);color:#2b2116;border-radius:2px 6px 6px 2px;padding:14px 14px 10px 18px;box-shadow:inset 12px 0 14px -10px rgba(60,40,10,.45),2px 2px 0 #d8cba8,4px 4px 0 #c4b58c;font-family:var(--book)}
+.page.turn{position:absolute;inset:0;transform-origin:left center;backface-visibility:hidden;-webkit-backface-visibility:hidden;transition:transform .65s cubic-bezier(.35,.1,.3,1),box-shadow .65s;z-index:2;box-shadow:inset 12px 0 14px -10px rgba(60,40,10,.45),-12px 6px 24px rgba(0,0,0,.35)}
+.pg-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:15px;color:#7a5a32;letter-spacing:.06em}
+.pg-no{font-variant-numeric:tabular-nums}
+.pg-type{font-style:italic}
+.pg-name{font-family:var(--book);font-weight:400;font-size:28px;line-height:1.1;margin:2px 0 8px;text-wrap:balance}
+.plate{border:1px solid #7a5a32;padding:4px;background:#e6d9b6;box-shadow:inset 0 0 0 3px #efe4c8,inset 0 0 0 4px #b49a6a}
+.plate canvas{display:block;width:100%;height:140px;max-width:100%}
+.pg-desc{font-style:italic;font-size:17px;line-height:1.4;margin:10px 0}
+.pg-stats{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;row-gap:2px;margin:0;font-size:15px}
+.pg-stats div{display:flex;justify-content:space-between;gap:6px;border-bottom:1px dotted #a98f62;padding:3px 0;min-width:0}
+.pg-stats dt{color:#6b5434}
+.pg-stats dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}
+.pg-var{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:8px;font-size:14px;color:#6b5434}.pg-var span{margin-right:2px}.pg-var i{font-style:normal;border:1px dashed #a98f62;border-radius:3px;padding:1px 6px;color:#a98f62;min-width:16px;text-align:center}.pg-var i.on{border:1px solid #2b2116;color:#2b2116;background:color-mix(in srgb,var(--c) 55%,#efe4c8)}
+.jr-txt{font-size:19px;line-height:1.5;min-height:180px}
+.cgrid{display:flex;flex-wrap:wrap;gap:5px}
+.cd{position:relative;width:52px;height:72px;border:2px solid var(--rc);border-radius:6px;background:linear-gradient(180deg,color-mix(in srgb,var(--fc) 38%,#0c1216),#0c1216 72%);box-shadow:inset 0 0 0 1px #000;flex:none;cursor:pointer;overflow:hidden;transition:transform .12s}
+.cd img{position:absolute;left:50%;top:9px;transform:translateX(-50%);width:40px;height:40px;image-rendering:pixelated}
+.cd .pw{position:absolute;left:1px;top:1px;min-width:17px;height:17px;padding:0 2px;box-sizing:border-box;border-radius:9px;background:#e8f4ee;color:#0a0d08;font-size:15px;line-height:16px;text-align:center;border:1px solid #000}
+.cd.hero .pw{background:var(--gold)}.cd .pw.up{background:#7ff0d0}.cd .pw.dn{background:#ff9a9a}
+.cd .cm{position:absolute;left:2px;right:3px;bottom:1px;display:flex;justify-content:space-between;align-items:center;font-size:14px;color:#fff;line-height:1}
+.cd .cm .pi{width:12px;height:12px}
+.cd .cn{position:absolute;right:2px;top:0;font-size:14px;color:var(--fg);text-shadow:1px 1px 0 #000,-1px 0 0 #000}
+.cd.sm{width:34px;height:46px}.cd.sm img{width:26px;height:26px;top:10px}.cd.sm .pw{min-width:14px;height:14px;font-size:13px;line-height:13px}.cd.sm .cm{display:none}
+.cd.big{width:96px;height:132px}.cd.big img{width:76px;height:76px;top:16px}.cd.big .pw{min-width:24px;height:24px;font-size:20px;line-height:22px;border-radius:12px}.cd.big .cm{font-size:18px}.cd.big .cm .pi{width:18px;height:18px}
+.cd.unk{display:flex;align-items:center;justify-content:center;color:var(--muted);background:#0c1216;opacity:.45;border-style:dashed;font-size:20px}
+.cd.big.unk{font-size:44px;opacity:.6}
+.cd.bad{opacity:.55;outline:2px solid var(--danger)}
+.cd.sel{transform:translateY(-8px);box-shadow:0 0 0 2px var(--gold),0 6px 12px rgba(0,0,0,.5)}
+.cd.tgt{box-shadow:0 0 0 2px var(--sap)}
+.cd.decoy{display:flex;align-items:center;justify-content:center;border-color:#777;background:#1a1a14}
+.reveal .cd{animation:ltIn .5s ease-out}
+.cd{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.cd img{pointer-events:none;-webkit-user-drag:none}
+#cardZoom{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center}#cardZoom[hidden]{display:none}
+#cardZoom .czp{background:var(--panel);border:3px solid var(--edge);box-shadow:inset 0 0 0 2px var(--line);border-radius:6px;padding:12px 16px;width:min(84%,330px);text-align:center;font-size:20px;line-height:1.2}
+#cardZoom h2{font-family:var(--display);font-weight:400;font-size:26px;margin:0 0 4px}#cardZoom button{margin:10px auto 0}
+#tcg{position:fixed;inset:0;z-index:30;background:#0b1210;display:flex;flex-direction:column;max-width:560px;margin:0 auto;padding-top:env(safe-area-inset-top,0px);font-family:var(--ui);color:var(--fg)}
+#tcg[hidden]{display:none}
+#peekBack{position:fixed;inset:0;z-index:45;display:flex;align-items:flex-start;justify-content:center;padding-top:calc(env(safe-area-inset-top,0px) + 58px);background:transparent;pointer-events:none}#peekBack .buy{pointer-events:auto}#peekBack[hidden]{display:none}#peekBack .buy{min-width:140px;min-height:48px;font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,.6)}
+#toast .peekb{display:flex;align-items:center;gap:6px;margin:10px auto 0;font-size:15px}
+.tbar{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--panel);flex:none;min-height:40px}
+.tbar.me{justify-content:flex-start}.tbar .dquit{margin-left:auto}
+.tcamp{display:flex;align-items:center;gap:7px;font-size:15px}.tbar.me .tcamp{margin-left:auto}
+.tkp{display:flex;align-items:center;gap:4px;font-family:var(--ui);font-size:14px;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;max-width:150px;min-height:32px}
+.tkp span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tkp b{background:#e8f4ee;color:#0a0d08;border-radius:9px;padding:0 5px;font-size:15px}
+.tkp.tgt{box-shadow:0 0 0 2px var(--sap);background:rgba(127,240,208,.14)}.tkp.hush,.tkp.dz{opacity:.6}
+.trg{display:flex;gap:2px}.trg i{width:10px;height:10px;border-radius:50%;border:2px solid var(--gold);box-sizing:border-box;background:rgba(242,201,76,.25)}.trg i.hw{border-style:dotted;background:none}
+.tsp{display:flex;align-items:center;gap:2px;color:#7fd0f0}
+.tr{flex:1 1 0;min-height:64px;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:2px 8px;border-bottom:1px solid #1f2e2a}
+.tr .tlab{font-size:12px;color:var(--muted);letter-spacing:.5px}.tr .tlab b.up{color:#7ff0d0}.tr .tlab b.dn{color:#ff9a9a}
+.tr .cs{display:flex;gap:4px;min-height:72px;align-items:center}
+.tr.tgt{background:rgba(127,240,208,.14);box-shadow:inset 0 0 0 2px var(--sap);cursor:pointer}
+.tmid{display:flex;align-items:center;gap:8px;padding:4px 8px;background:#101a16;border-top:2px solid var(--edge);border-bottom:2px solid var(--edge);font-size:14px;flex:none}
+.tmid .tph{color:var(--gold);white-space:nowrap}.tmid .tlog{flex:1;min-width:0;color:var(--muted);font-size:12.5px;line-height:1.25;cursor:pointer}.tmid .tlog div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cd.tc .sap{position:absolute;right:1px;top:1px;min-width:15px;height:15px;border-radius:8px;background:#7fd0f0;color:#0a0d08;font-size:12px;line-height:15px;text-align:center;border:1px solid #000}
+.cd.tc .tl{position:absolute;right:1px;bottom:1px;display:flex;align-items:center;font-size:12px}.cd.tc .tl .pi{width:11px;height:11px}
+.cd.tc .tic{position:absolute;left:50%;top:14px;transform:translateX(-50%)}.cd.tc .tic .pi{width:28px;height:28px}
+.cd.big.tc .sap{min-width:22px;height:22px;font-size:17px;line-height:22px;border-radius:11px}.cd.big.tc .tic .pi{width:56px;height:56px}
+.cd.ex{transform:rotate(12deg);opacity:.85}.cd.ex::after{content:'TIRED';position:absolute;left:0;right:0;bottom:3px;text-align:center;font-size:10px;letter-spacing:.5px;color:#0a0d08;background:#f2c94c;line-height:12px}
+#duel{position:fixed;inset:0;z-index:30;background:#0b1210;display:flex;flex-direction:column;max-width:560px;margin:0 auto;padding-top:env(safe-area-inset-top,0px);font-family:var(--ui);color:var(--fg)}
+.dbar{display:flex;align-items:center;gap:7px;padding:5px 8px;background:var(--panel);font-size:17px;flex:none}
+.dbar .dn{display:flex;align-items:center;gap:5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dbar .tot{font-weight:400;font-size:26px;color:var(--gold);min-width:30px;text-align:right}
+.dbar .dl{font-family:var(--ui);font-size:14px;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;display:flex;align-items:center;gap:3px;max-width:32%;white-space:nowrap;overflow:hidden}
+.dbar .dl.used,.dbar .dl:disabled{opacity:.45}
+.dbar .buy{min-width:64px;min-height:30px;padding:0 8px;font-size:17px}
+.gems{display:flex;gap:3px}.gems i{width:11px;height:11px;border-radius:50%;border:2px solid var(--line);box-sizing:border-box}.gems i.on{background:var(--danger);border-color:#000;box-shadow:0 0 5px var(--danger)}
+.hc{display:flex;align-items:center;gap:2px;color:var(--muted);font-size:15px}
+.pz{color:var(--muted);font-size:14px}
+.dr{flex:1 1 0;min-height:50px;display:flex;align-items:center;gap:4px;padding:2px 6px;border-bottom:1px solid #1f2e2a}
+.dr .rs{width:28px;height:28px;flex:none;text-align:center;font-size:19px;line-height:26px;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:50%;box-sizing:border-box}
+.dr .hs{width:16px;flex:none}.dr .ri{opacity:.3;flex:none;display:flex}
+.dr .cs{flex:1;display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;min-width:0}
+.dr.wx0{background:rgba(140,200,255,.13)}.dr.wx1{background:rgba(200,210,210,.12)}.dr.wx2{background:rgba(110,110,210,.18)}
+.dr.tgt{background:rgba(127,240,208,.14);box-shadow:inset 0 0 0 2px var(--sap);cursor:pointer}
+.dmid{display:flex;align-items:center;gap:8px;padding:3px 8px;background:#101a16;border-top:2px solid var(--edge);border-bottom:2px solid var(--edge);font-size:15px;flex:none}
+.dmid .rd{margin-left:auto;color:var(--gold)}.dmid .who{color:var(--sap)}
+.dquit{font-family:var(--ui);background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:4px;width:26px;height:24px;padding:0;cursor:pointer}
+.wxb{display:flex;align-items:center;gap:3px;color:#bfe6ff}
+.dlog{display:flex;align-items:center;gap:6px;padding:2px 8px;background:#0e1714;border-bottom:1px solid #1f2e2a;font-size:14px;flex:none;min-height:24px}
+.dlog .lt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);cursor:pointer;text-align:center}
+.dlog .dg{font-family:var(--ui);font-size:13px;background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;height:20px;cursor:pointer;white-space:nowrap}
+.dspd{width:auto;padding:0 5px}
+.logl{text-align:left;font-size:16px;line-height:1.35;max-height:52vh;overflow-y:auto;margin:6px 0}.logl .me{color:var(--sap)}.logl .rnd{color:var(--gold);text-align:center;margin:3px 0}
+.cd.big:not(.fa) img{width:72px;height:101px;top:8px;box-shadow:0 0 0 1px #000}
+.cd.big.zoom{width:160px;height:224px;border-width:3px;border-radius:9px}.cd.big.zoom:not(.fa) img{width:140px;height:196px;top:7px}
+.cd.big.zoom .pw{min-width:32px;height:32px;font-size:26px;line-height:30px;border-radius:16px;left:3px;top:3px}.cd.big.zoom .cm{font-size:22px;bottom:2px}.cd.big.zoom .cm .pi{width:22px;height:22px}
+.cd.fa{background:#000;border-width:2px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),0 0 6px color-mix(in srgb,var(--rc) 55%,transparent)}
+.cd.fa img{left:0;top:0;transform:none;width:100%;height:100%;object-fit:cover}
+.cd.fa::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.32) 47%,transparent 58%);background-size:300% 100%;animation:holo 5s linear infinite}
+.cd.fa.r5::before{background-image:linear-gradient(115deg,transparent 35%,rgba(255,150,130,.4) 47%,transparent 58%)}
+.cd.fa.r6::before{background-image:linear-gradient(115deg,transparent 25%,rgba(255,90,90,.3) 36%,rgba(255,230,90,.3) 42%,rgba(90,255,160,.3) 48%,rgba(90,180,255,.3) 54%,rgba(200,110,255,.3) 60%,transparent 70%)}
+.cd.fa .pw,.cd.fa .cm,.cd.fa .cn,.cd.fa .bd{z-index:2}.cd.fa .cm{left:0;right:0;bottom:0;padding:1px 3px;background:linear-gradient(transparent,rgba(0,0,0,.75))}
+@keyframes holo{from{background-position:120% 0}to{background-position:-120% 0}}
+@media (prefers-reduced-motion:reduce){.cd.fa::before{animation:none;background-position:50% 0}}
+.cd .bd{position:absolute;left:0;right:0;bottom:15px;font-size:12px;line-height:13px;text-align:center;color:#0a0d08;background:var(--bc);opacity:.92;white-space:nowrap;overflow:hidden}.cd.sm .bd{display:none}
+.cd.nw::after{content:'New';position:absolute;right:-1px;bottom:-1px;background:var(--gold);color:#0a0d08;font-size:11px;line-height:12px;padding:0 3px;border-radius:4px 0 4px 0}
+.dsum{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:15px;color:var(--muted);margin:2px 0 6px}.dsum b{color:var(--fg);font-weight:400}
+.dinfo{padding:4px 8px;font-size:15px;line-height:1.2;min-height:40px;color:var(--fg);background:var(--panel);flex:none}
+.dinfo .buy{display:inline-flex;min-height:26px;min-width:0;padding:0 10px;font-size:16px;vertical-align:middle;margin-left:6px}
+.dinfo.coach{font-size:17px;line-height:1.3;border-top:2px solid var(--gold);min-height:64px}
+.cd.hint,.buy.hint{animation:hintGlow 1s ease-in-out infinite alternate}
+@keyframes hintGlow{from{box-shadow:0 0 0 2px var(--gold)}to{box-shadow:0 0 0 2px var(--gold),0 0 14px 4px var(--gold)}}
+.dhand{display:flex;gap:4px;overflow-x:auto;padding:12px 8px calc(8px + env(safe-area-inset-bottom,0px));background:var(--panel);flex:none;scrollbar-width:none;min-height:84px}
+.loot{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0 2px}
+.lt{--rc:#b8c4bc;border:2px solid var(--rc);background:#0c1216;border-radius:6px;padding:5px 3px;font-size:15px;line-height:1.05;text-align:center;animation:ltIn .35s ease-out backwards;box-shadow:0 0 8px -2px var(--rc)}
+.lt .pi{width:22px;height:22px;display:block;margin:0 auto 3px}
+.lt b{display:block;font-weight:400;color:var(--rc);font-size:13px;margin-top:2px}
+.lt.r6{animation:ltIn .35s ease-out backwards,hue 2.5s linear infinite}
+.lt.bonus{outline:2px dashed var(--gold);outline-offset:2px}
+@keyframes ltIn{from{transform:rotateY(90deg) scale(.8);opacity:0}}
+@keyframes hue{to{filter:hue-rotate(360deg)}}
+.odds{width:100%;border-collapse:collapse;font-size:16px;margin-top:6px}.odds td,.odds th{border-bottom:1px solid var(--line);padding:2px 4px;text-align:right;font-weight:400}.odds td:first-child,.odds th:first-child{text-align:left}
+#toast.wide{width:min(94%,420px);max-height:86vh;overflow-y:auto}
+input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+#fbov{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.55);display:flex;justify-content:center;align-items:flex-start;padding:calc(env(safe-area-inset-top,0px) + 10px) 8px 8px;box-sizing:border-box;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#fbov[hidden]{display:none}
+#fbov .card{background:var(--panel);border:3px solid var(--edge);box-shadow:inset 0 0 0 2px var(--line);border-radius:6px;padding:12px 14px;width:min(100%,420px);box-sizing:border-box;text-align:center;font-size:19px}
+#fbov h2{font-family:var(--display);font-weight:400;font-size:26px;margin:0 0 4px;color:var(--gold)}
+#fbMsg{min-height:1.2em;color:var(--gold);font-size:17px;margin-top:4px}
+#toast.top{top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);max-height:calc(var(--vvh,100vh) - 20px)}
+.pg-foot{text-align:center;margin-top:8px;color:#7a5a32;font-size:14px;font-variant-numeric:tabular-nums}
+.bk-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;color:#d9c48a;font-family:var(--book);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Portrait only: phones turned sideways get a "turn upright" screen (a web page can't fully lock rotation; the store app will). */
+#rotate{display:none}
+html.sideways #rotate{display:flex;position:fixed;inset:0;z-index:100;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;font-size:22px;color:var(--fg)}html.sideways #app{visibility:hidden}
+#rotate .ph{width:34px;height:58px;border:4px solid var(--sap);border-radius:7px;animation:rot 1.6s ease-in-out infinite}
+@keyframes rot{0%,30%{transform:rotate(-90deg)}60%,100%{transform:rotate(0)}}
+
+
+html,body{height:100%;overflow:hidden}
+#app2{position:fixed;top:0;bottom:0;left:0;right:0;display:flex;flex-direction:column;max-width:560px;margin:0 auto;padding-top:env(safe-area-inset-top,0px)}
+#main{flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 12px 24px;-webkit-overflow-scrolling:touch}
+#nav{flex:0 0 auto;display:flex;gap:4px;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));background:var(--panel);border-top:3px solid var(--edge)}
+#nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:2px solid transparent;color:var(--muted);font:inherit;font-size:17px;padding:4px 0;border-radius:6px}
+#nav button[aria-pressed="true"]{color:var(--fg);border-color:var(--line);background:var(--panel2)}
+.hero{text-align:center;margin:8px 0 4px}.hero h1{font-family:var(--display);font-weight:400;color:var(--gold);font-size:44px;margin:0;letter-spacing:1px}
+.buy.big{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:56px;font-size:24px;margin:10px 0}
+.cw{position:relative;display:inline-block}.cw .cnt{position:absolute;right:-2px;bottom:-4px;background:rgba(0,0,0,.85);color:var(--gold);font-size:13px;line-height:1;padding:2px 4px;border-radius:3px;pointer-events:none;white-space:nowrap}
+.kp{font-size:15px;line-height:1.1}
+.cw.dim .cd{opacity:.32;filter:grayscale(.8)}
+.dot{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:middle}
+#banners{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 8px)!important}
+#main .sel{flex-wrap:wrap}
+</style></head><body><div id="app2"><main id="main"></main><nav id="nav" aria-label="Sections"></nav></div>
+<div id="banners" aria-live="polite"></div><div id="toast" hidden></div><div id="cardZoom" hidden role="dialog" aria-label="Card details"></div>
+<div id="duel" hidden></div><div id="tcg" hidden role="dialog" aria-label="Match"></div><div id="peekBack" hidden><button class="buy" type="button">Back</button></div>
+<canvas id="cv" width="4" height="4" hidden></canvas><script>(function(){
+const FB_CONFIG={"apiKey":"AIzaSyAXnoCR11sMF948L3xQw0hgCY3Q-nEL8Rg","authDomain":"idle-heartwood.firebaseapp.com","projectId":"idle-heartwood","storageBucket":"idle-heartwood.firebasestorage.app","messagingSenderId":"133958206981","appId":"1:133958206981:web:2150623bfc32c623353e6c"};
+const PAL={k:'#0a0d08',s:'#d8dce2',S:'#8a9099',b:'#a07a4a',B:'#5e4226',g:'#f2c94c',G:'#a8781a',r:'#d0533a',R:'#7a2a1a',w:'#ffffff',l:'#7cc456',L:'#3f7a2e',t:'#2fb0a0',T:'#165a52',a:'#f0a030',A:'#9a4a10',p:'#c08aff',n:'#3a3a5a',y:'#efe4c8',Y:'#b49a6a',c:'#8ad8ff'};
+const ICONS={
+ axe:['...kkkk.','..ksssSk','..kssSSk','..kbkkk.','.kbk....','.kbk....','kbk.....','kk......'],
+ bag:['...kk...','..kBBk..','...kk...','.kggggk.','kggGggGk','kgGgggGk','kggggggk','.kkkkkk.'],
+ hammer:['.kkkk...','kssSSk..','kssSSkk.','.kkbkk..','...kbk..','....kbk.','.....kbk','......kk'],
+ blade:['..kkkk..','.kSssSk.','kSskkSsk','kskBBksk','kskBBksk','kSskkSsk','.kSssSk.','..kkkk..'],
+ house:['...kk...','..krrk..','.krrrrk.','krrrrrrk','.kyyyyk.','.kyBkyk.','.kyBkyk.','.kkkkkk.'],
+ map:['kkkkkkk.','kyyYyyk.','kyrYyyk.','kyYyyrk.','kyyYyyk.','kYyyrYk.','kyyyyYk.','kkkkkkk.'],
+ clock:['..kkkk..','.kwwwwk.','kwwkwwwk','kwwkwwwk','kwwkkkwk','kwwwwwwk','.kwwwwk.','..kkkk..'],
+ star:['...kk...','..kggk..','kkkggkkk','kgggggGk','.kgggGk.','.kggGGk.','kgGkkGGk','kkk..kkk'],
+ clover:['.kk.kk..','kllklLk.','kllklLk.','.kkLkk..','kllkLlk.','kllkllk.','.kk.kbk.','.....kk.'],
+ book:['kkkkkkk.','kttwwwTk','kttwkkTk','kttwwwTk','kttwkkTk','kttwwwTk','kTTTTTTk','kkkkkkk.'],
+ logs:['.kkkkkk.','kbbbbbyk','kBBBBBYk','.kkkkkk.','.kkkkkk.','kbbbbbyk','kBBBBBYk','.kkkkkk.'],
+ crew:['..kkkk..','.kllllk.','.kyyyyk.','..kyyk..','.krrrrk.','krrrrrrk','krrrrrrk','.kBkkBk.'],
+ medal:['kRk.kRk.','.kRkRk..','..kRk...','.kkggk..','kgggGgk.','kggwgGk.','kgGggGk.','.kkkkk..'],
+ glove:['.k.k.k..','kakakak.','kaaaaak.','kaaaaakk','kaaaaaak','kAaaaaak','.kAAAAk.','..kkkk..'],
+ hat:['........','..kkkk..','.kllLLk.','.kllLLk.','kkkkkkkk','kLLLLLLk','.kkkkkk.','........'],
+ cloak:['..kkkk..','.knnnnk.','.knkknk.','knnnnnnk','knpnnnnk','knnnnpnk','knnnnnnk','kkkkkkkk'],
+ chain:['........','kkkk....','krrkkkkk','krrrsSsk','krrkkkkk','kBBk....','kkkk....','........'],
+ drop:['...k....','..kak...','..kak...','.kaaak..','kaawaak.','kaaaaAk.','.kaaAk..','..kkk...'],
+ tent:['...k....','..kgk...','..kGgk..','.kgkGgk.','.kgkGgk.','kgk.kGgk','kkk.kkkk','........'],
+ amber:['..kkkk..','.kaaaak.','kawaaAAk','kaaaaAAk','kaaaAAAk','.kaAAAk.','..kAAk..','...kk...'],
+ scroll:['kkkkkkk.','kyyyyyk.','.kYYYyk.','.kyyyyk.','.kYYyyk.','.kyyyyk.','kyyyyyk.','kkkkkkk.'],
+ journal:['.kkkkkk.','kRrrrrkk','kRrggrkk','kRrrrrkk','kRrrrrkk','kRrrrrkk','kRrrrrkk','.kkkkkk.'],
+ bolt:['....kkk.','...kgk..','..kgk...','.kgggk..','..kgk...','.kgk....','kgk.....','kk......'],
+ leaf:['....kkk.','..kkllk.','.kllllk.','klllLlk.','kllLllk.','kLLllk..','kbkkk...','kk......'],
+ chest:['.kkkkkk.','kbbbbbbk','kBBBBBBk','kkkggkkk','kbbgGbbk','kbbbbbbk','kBBBBBBk','kkkkkkkk'],
+ key:['.kkk....','kg.gk...','kg.gk...','.kgkkkkk','..kgggGk','.....kGk','.....kgk','......k.'],
+ sack:['..kkk...','.kBBk...','..kk....','.kbbbk..','kbbbbbk.','kbbbbBk.','kbBbbBk.','.kkkkk..'],
+ card:['.kkkkkk.','kyyyyyyk','kyrrryYk','kyrgrYyk','kyrrryYk','kyyyyyyk','kYYYYYYk','.kkkkkk.'],
+ junk:['..kkk...','..kBk...','..kBk...','..kBkkk.','.kBBBBBk','kBBBBBBk','kkkkkkkk','........'],
+ swords:['k......k','.k....k.','..k..k..','...kk...','...kk...','..k..k..','.bk..kb.','b......b'],
+ paw:['.k..k...','kak.kak.','.k..k...','..kk....','.kaak...','kaaaak..','kaaaak..','.kkkk...'],
+ snow:['...c....','.c.c.c..','..ccc...','cccwccc.','..ccc...','.c.c.c..','...c....','........'],
+ cloud:['........','..kkk...','.kwwwkk.','kwwwwwwk','kwwwwwwk','.kkkkkk.','.S.S.S..','S.S.S...'],
+ sun:['...g....','.g.g.g..','..ggg...','gggwggg.','..ggg...','.g.g.g..','...g....','........'],
+ horn:['......kk','.....kgk','....kggk','kkkkgggk','kgggggk.','kGGGGk..','.kkkk...','........'],
+ fire:['...r....','..rr....','..rar.r.','.raar.r.','.raaarr.','raagaar.','raggaar.','.rrrrr..'],
+ scare:['..kkkk..','.kyyyyk.','.kykyk..','..kyyk..','kbbbbbbk','..kbbk..','..kbbk..','..k..k..'],
+ scale:['...k....','.kkkkkk.','k.k..k.k','k.k..k.k','kgk..kgk','kkk..kkk','...kk...','.kkkkkk.']};
+const ICO={};
+function ico(n,cls){const pat=ICONS[n];if(!pat)return '';if(!ICO[n]){let h='';pat.forEach((row,y)=>{let x=0;while(x<8){const c=row[x];if(c==='.'){x++;continue}let e=x;while(e<8&&row[e]===c)e++;h+=`<rect x="${x}" y="${y}" width="${e-x}" height="1" fill="${PAL[c]}"/>`;x=e}});ICO[n]=h}
+  return `<svg class="pi${cls?' '+cls:''}" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true">${ICO[n]}</svg>`}
+const RAR=[{n:'Common',c:'#b8c4bc'},{n:'Uncommon',c:'#6ad46a'},{n:'Rare',c:'#4aa8ff'},{n:'Epic',c:'#b06aff'},{n:'Legendary',c:'#f2c94c'},{n:'Mythic',c:'#ff5a5a'},{n:'Secret',c:'#7ff0d0'}];
+const cv=document.getElementById('cv');
+let ctx=cv.getContext('2d');
+let quake=0,drops=[];
+function addQuake(n){if(!reduceMotion())quake=Math.max(quake,n)}
+function box(x,y,w,h,fill,line){ctx.fillStyle=line;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));ctx.fillStyle=fill;ctx.fillRect(Math.round(x)+2,Math.round(y)+2,Math.round(w)-4,Math.round(h)-4)}
+const $=id=>document.getElementById(id);
+const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+let AC=null,sfxBus=null,noiseBuf=null,sfxOn=true;
+const sfxLast={};
+function sNoise(t0,dur,freq,q,vol,type){const s=AC.createBufferSource();s.buffer=noiseBuf;const f=AC.createBiquadFilter();f.type=type||'bandpass';f.frequency.value=freq;f.Q.value=q;const g=AC.createGain();g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+dur);s.connect(f);f.connect(g);g.connect(sfxBus);s.start(t0,Math.random()*0.5);s.stop(t0+dur+0.03)}
+function sTone(t0,dur,f0,f1,vol,type,lp){const o=AC.createOscillator();o.type=type||'sine';o.frequency.setValueAtTime(f0,t0);if(f1)o.frequency.exponentialRampToValueAtTime(f1,t0+dur);const g=AC.createGain();g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol,t0+0.006);g.gain.exponentialRampToValueAtTime(0.001,t0+dur);
+  if(lp){const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=lp;o.connect(f);f.connect(g)}else o.connect(g);g.connect(sfxBus);o.start(t0);o.stop(t0+dur+0.03)}
+const SFX={
+  chop(t,crit){const p=0.88+Math.random()*0.24;sNoise(t,0.07,950*p,1.4,0.55);sTone(t,0.09,190*p,85,0.4,'triangle');if(crit){sNoise(t,0.06,2600,0.8,0.3,'highpass');sTone(t,0.14,440*p,210,0.18,'square',1800)}},
+  crew(t){const p=0.85+Math.random()*0.3;sNoise(t,0.05,800*p,1.6,0.16);sTone(t,0.06,170*p,90,0.12,'triangle')},
+  fell(t,boss){const k=boss?0.7:1;sTone(t,0.42,150*k,70*k,0.12,'sawtooth',700);sTone(t+0.05,0.36,163*k,74*k,0.08,'sawtooth',600);sNoise(t+0.08,0.35,3800,0.7,0.07,'highpass');
+    const h=t+(boss?0.52:0.47);sTone(h,boss?0.6:0.38,95*k,38*k,boss?0.95:0.75);sNoise(h,boss?0.5:0.3,420,0.8,boss?0.7:0.5,'lowpass');sNoise(h+0.04,0.45,3200,0.6,0.1,'highpass')},
+  log(t,i){const f=620*Math.pow(2,Math.min(i,9)*2/12);sTone(t,0.09,f,f*1.02,0.13,'triangle');sTone(t+0.01,0.05,f*2,0,0.04,'square',3000)},
+  coin(t){sTone(t,0.07,1320,0,0.07,'square',4000);sTone(t+0.06,0.16,1980,0,0.07,'square',4000)},
+  buy(t){sTone(t,0.08,520,0,0.1,'triangle');sTone(t+0.06,0.14,780,0,0.1,'triangle')},
+  craft(t){sNoise(t,0.05,1400,2,0.2);sTone(t+0.04,0.12,880,0,0.08,'triangle')},
+  chain(t){sTone(t,0.55,90,140,0.12,'sawtooth',1400);sTone(t,0.55,93,146,0.08,'square',900);sNoise(t,0.5,2200,0.9,0.16)},
+  shimmer(t){[1568,2093,2637].forEach((f,k)=>sTone(t+k*0.07,0.5,f,0,0.035,'sine'))},
+  spirit(t){[1175,1568,1760,2349].forEach((f,k)=>sTone(t+k*0.12,0.7,f,f*1.01,0.05,'sine'))},
+  catch(t){[784,988,1175,1568,1976,2349].forEach((f,k)=>sTone(t+k*0.05,0.25,f,0,0.12,'triangle'));sNoise(t,0.4,6000,0.7,0.06,'highpass')},
+  rare(t){sTone(t,0.5,1047,0,0.12,'triangle');sTone(t+0.08,0.6,1319,0,0.1,'triangle');sTone(t+0.16,0.7,1568,0,0.08,'triangle')},
+  zap(t){sNoise(t,0.3,3000,0.5,0.4,'highpass');sTone(t,0.3,900,90,0.15,'sawtooth',3000)},
+  level(t){[523,659,784,1047].forEach((f,k)=>sTone(t+k*0.085,0.22,f,0,0.16,'triangle'));sTone(t+0.34,0.4,1568,0,0.06,'square',3000)}};
+const SFX_GAP={chop:45,crew:110,log:35,coin:60,buy:60,craft:80};
+function sfx(name,a){if(!sfxOn||document.hidden||!AC||AC.state!=='running')return;const now=performance.now(),g=SFX_GAP[name]||0;if(g&&sfxLast[name]&&now-sfxLast[name]<g)return;sfxLast[name]=now;try{SFX[name](AC.currentTime+0.005,a)}catch(_){}}
+function buzz(p){if(sfxOn&&navigator.vibrate)try{navigator.vibrate(p)}catch(_){}}
+const toastQ=[];
+function nextToast(){const t=$('toast');t.hidden=true;t.dataset.keep='';$('peekBack').hidden=true;t.classList.remove('top');t.style.top='';t.dataset.wish='';if(S.wishPend>0){showWish();return}const h=toastQ.shift();if(h){t.innerHTML=h;t.hidden=false}}
+const holdInfo=du=>{let ht=null,hx=0,hy=0,held=0;const stop=()=>{clearTimeout(ht);ht=null};
+ du.addEventListener('pointerdown',e=>{const c=e.target.closest('[data-cid]');if(!c||e.button>0||c.closest('#cardZoom'))return;hx=e.clientX;hy=e.clientY;stop();held=0;
+  ht=setTimeout(()=>{ht=null;held=Date.now();if(navigator.vibrate)try{navigator.vibrate(12)}catch(_){}(c.classList.contains('tc')?tcgPopup:cardPopup)(c.dataset.cid)},450)});
+ du.addEventListener('pointermove',e=>{if(ht&&Math.hypot(e.clientX-hx,e.clientY-hy)>10)stop()});
+ ['pointerup','pointercancel','pointerleave'].forEach(n=>du.addEventListener(n,stop));
+ du.addEventListener('click',e=>{if(held&&Date.now()-held<1500){held=0;e.stopImmediatePropagation();e.preventDefault()}},true);
+ du.addEventListener('contextmenu',e=>{const c=e.target.closest('[data-cid]');if(!c||c.closest('#cardZoom'))return;e.preventDefault();stop();(c.classList.contains('tc')?tcgPopup:cardPopup)(c.dataset.cid)})};
+holdInfo(document);
+function inMatch(){return (DG&&!$('duel').hidden)||(typeof TG!=='undefined'&&TG&&!$('tcg').hidden)}
+function peekBoard(on){const t=$('toast'),pb=$('peekBack');if(on){t.hidden=true;pb.hidden=false}else{pb.hidden=true;t.hidden=false}}
+function showModal(html,keep){const t=$('toast');if(inMatch()&&!/data-peek/.test(html))html+=`<button class="info peekb" type="button" data-peek="1">${ico('map')} View battlefield</button>`;
+  if(!keep&&t.dataset.keep==='1'&&t.innerHTML){toastQ.push(html);return}
+  t.classList.remove('wide','top');t.style.top='';if(!t.hidden&&t.dataset.wish==='1'){toastQ.push(html);return}t.dataset.keep=keep?'1':'';t.innerHTML=html;t.hidden=false}
+const banQ=[];
+function showToast(h,body,icon){banQ.push({h,body,icon});pumpBanners()}
+function pumpBanners(){const box=$('banners');while(banQ.length&&box.children.length<2){const b=banQ.shift(),el=document.createElement('div');el.className='ban';el.innerHTML=`<h3>${b.icon?ico(b.icon):''}${b.h}</h3>${b.body?`<div>${b.body}</div>`:''}`;
+    const life=2600+Math.min(2600,(b.body||'').replace(/<[^>]+>/g,'').length*45);let gone=false;const kill=()=>{if(gone)return;gone=true;el.classList.add('out');setTimeout(()=>{el.remove();pumpBanners()},300)};el.addEventListener('click',kill);setTimeout(kill,life);box.appendChild(el)}}
+const FACTIONS=[
+ {id:'L',n:'Lumberjacks',perk:'Overtime: when you pass, your weakest unit in each row gets +2',col:'#b5352a'},
+ {id:'W',n:'Wardens',perk:'Deep Roots: weather doesn\'t affect your units',col:'#3f7a2e'},
+ {id:'S',n:'Forest Spirits',perk:'Drift: once per duel, take one of your units back into your hand',col:'#7fd0f0'},
+ {id:'B',n:'Beasts',perk:'Scavenge: after a round you don\'t win, a random unit from your discard pile returns to your hand',col:'#a07a4a'},
+ {id:'N',n:'Neutral',perk:'',col:'#8a9099'}];
+const CARDSRC={
+ L:[['Greenhand Logger',0,2,'',0],['Bucker',0,3,'',0],['Tree Faller',0,4,'',0],['Log Roller',0,5,'',0],['Bark Peeler',1,2,'',0],['Hand Sawyer',1,3,'',0],['Crosscut Sawyers',1,4,'bond',0],['Camp Cook',2,1,'morale',0],['Ox Team',2,6,'',0],['Log Wagon',2,5,'',0],['Choker Setter',0,3,'bond',0],['Axe Thrower',1,5,'',0],
+    ['Climbing Topper',1,6,'',1],['Rigging Slinger',0,5,'agile',1],['Camp Medic',2,5,'medic',1],['Steam Donkey',2,8,'',1],['Foreman Bray',0,6,'morale',1],['Spar Tree Rigger',2,6,'bond',1],['Rival Scout',0,4,'spy',1],['Riverman',1,6,'agile',1],
+    ['High Climber',1,8,'',2],['Bullcook Mags',2,0,'horn',2],['Saw Filer',1,5,'morale',2],['Log Driver',0,5,'muster:drive',2],['Steam Skidder',2,10,'',2],['Peavey Brothers',0,6,'bond',2],
+    ['Champion Faller',0,10,'',3],['Iron Topper',1,10,'',3],['Guild Master',2,8,'medic',3],
+    ['Old Bjorn',0,15,'hero',4],['The Twins',1,10,'hero',4],['Golden Gus',2,12,'hero',5],['Spectral Woodcutter',0,16,'hero',6]],
+ W:[['Sapling Guard',0,2,'',0],['Rootling',0,3,'',0],['Thornshield',0,4,'',0],['Barkskin',0,5,'',0],['Briar Archer',1,3,'',0],['Sap Slinger',1,4,'',0],['Knot Watcher',1,5,'',0],['Stonewood',2,6,'',0],['Bough Catapult',2,5,'',0],['Mossback',2,4,'',0],['Burl Sentinel',0,6,'',0],['Acorn Sling',1,3,'bond',0],
+    ['Root Spy',0,5,'spy',1],['Grove Healer',1,5,'medic',1],['Ironbark',0,7,'',1],['Thorn Volley',1,6,'',1],['Pollen Spy',1,4,'spy',1],['Antler Ram',2,8,'',1],['Rootwalker',0,6,'agile',1],['Ringkeeper',2,7,'',1],
+    ['Gnarlbark',0,8,'',2],['Sapwood',1,9,'',2],['Whispering Willow',1,7,'spy',2],['Heartroot Medic',2,6,'medic',2],['Thornwall',0,9,'',2],['Storm Oak',2,10,'',2],
+    ['Grimwood',0,10,'scorch0',3],['Ashen Warden',1,11,'',3],['Pale Elder',2,10,'medic',3],
+    ['Elder Moss',0,12,'hero',4],['Saplimb',2,14,'hero',4],['The Old Grove',1,15,'hero',5],['The First Warden',2,16,'hero',6]],
+ S:[['Wisp',1,3,'muster:wisp',0],['Firefly',1,4,'muster:fly',0],['Fox Kit',0,4,'agile',0],['Hare Spirit',0,4,'agile',0],['Dew Sprite',1,4,'',0],['Moss Imp',0,4,'bond',0],['Fern Dancer',1,5,'agile',0],['Glimmer',1,5,'',0],['Stag Calf',0,5,'',0],['Mist Wraith',2,5,'',0],['Rain Caller',2,5,'',0],['Owl Shade',1,5,'agile',0],
+    ['White Hart',0,6,'agile',1],['Mosslight Healer',1,5,'medic',1],['Thorn Sprite',0,4,'muster:thorn',1],['Breeze',1,6,'agile',1],['Echo',0,5,'spy',1],['Bramble Fae',2,7,'',1],['Silver Fox',0,6,'morale',1],['Pondmother',2,6,'medic',1],
+    ['Stag of Dawn',0,8,'agile',2],['Starlit Wisp',1,8,'',2],['Grove Song',2,0,'horn',2],['Twin Hares',0,6,'bond',2],['Ghost Lantern',1,7,'scorch1',2],['Moon Stag',0,9,'',2],
+    ['Great White Stag',0,10,'agile',3],['Aurora',1,10,'',3],['Spirit of Rain',2,9,'medic',3],
+    ['The Wandering Spirit',0,12,'hero',4],['Lantern Mother',1,10,'hero',4],['Heart of the Forest',1,15,'hero',5],['Aurora Stag',0,16,'hero',6]],
+ B:[['Squirrel',0,1,'muster:squirrel',0],['Badger',0,3,'',0],['Boar',0,4,'',0],['Crow',1,2,'muster:crow',0],['Owl',1,4,'',0],['Hawk',1,5,'',0],['Wolf',0,3,'muster:wolf',0],['Beaver',2,3,'bond',0],['Elk',2,6,'',0],['Bear Cub',0,3,'bond',0],['Lynx',0,5,'',0],['Raven',1,3,'',0],
+    ['Packleader',0,6,'muster:wolf',1],['Brown Bear',0,7,'',1],['Great Horned Owl',1,6,'',1],['Moose',2,8,'',1],['Boar Sounder',0,5,'bond',1],['Old Badger',2,4,'morale',1],['Golden Eagle',1,6,'agile',1],['Stormcrow',1,5,'muster:crow',1],
+    ['Cave Bear',0,9,'',2],['Dire Wolf',0,8,'muster:wolf',2],['Thunder Moose',2,10,'',2],['Night Owl',1,7,'scorch1',2],['Hive Queen',2,0,'horn',2],['Bramble Boar',0,7,'bond',2],
+    ['Great Bear',0,11,'',3],['Elder Elk',2,11,'',3],['Raven King',1,10,'',3],
+    ['Ursa the Old',0,14,'hero',4],['The Grey Mother',1,12,'hero',4],['Thunderhoof',2,15,'hero',5],['Golden Squirrel',0,15,'hero',6]],
+ N:[['Wandering Tinker',0,5,'',1],['Travelling Bard',1,4,'morale',1],['Hermit',2,6,'',1],['Lost Lumberjack',0,3,'muster:lost',0],['Pedlar',1,3,'',0],
+    ['Ferryman',0,6,'spy',2],['Herbalist',1,5,'medic',2],['Hedge Witch',1,8,'',3],['Mountain Giant',2,12,'',3],['Edda Thorne',0,12,'hero',4],['Grandmother Thorne',1,13,'hero',5],['The Heartwood',2,18,'hero',6]]};
+const SPECIALS_SRC=[['frost','Snowdrift','w0',0],['mist','Sawdust','w1',0],['storm','Mudslide','w2',0],['sun','Sunbreak','clear',1],['scare','Scarecrow','decoy',1],['horn','Camp Bell','horn',2],['fire','Wildfire','scorch',3]];
+const CARDS=[],CARD={};
+for(const f in CARDSRC)CARDSRC[f].forEach((c,i)=>{const id=f+String(i+1).padStart(2,'0');const d={id,n:c[0],f,row:c[1],p:c[2],ab:c[3],r:c[4],unit:1,hero:c[3]==='hero'};if(c[3].startsWith('muster:'))d.mus=c[3].slice(7);CARDS.push(d);CARD[id]=d});
+SPECIALS_SRC.forEach(s=>{const d={id:'X'+s[0],n:s[1],f:'N',row:-1,p:0,ab:s[2],r:s[3],unit:0,sp:s[2]};CARDS.push(d);CARD[d.id]=d});
+const LEADERS={
+ L:[{id:'L_a',n:'Foreman Hale',ab:'horn1',d:'Camp Bell on your Saw row'},{id:'L_b',n:'Guild Mistress Ada',ab:'draw',d:'Draw a card'},{id:'L_c',n:'Tally Clerk Wen',ab:'clear',d:'Clear all weather'}],
+ W:[{id:'W_a',n:'Elder of Roots',ab:'scorch2',d:'Burn the strongest enemy Beast-row unit if that row holds 3+ units'},{id:'W_b',n:'Seer of Rings',ab:'peek',d:'See 2 random cards in the enemy hand'},{id:'W_c',n:'Grove Judge',ab:'weather',d:'Play a weather card from your deck'}],
+ S:[{id:'S_a',n:'Moon Doe',ab:'draw',d:'Draw a card'},{id:'S_b',n:'Lantern Keeper',ab:'horn0',d:'Camp Bell on your Axe row'},{id:'S_c',n:'Mist Mother',ab:'weather',d:'Play a weather card from your deck'}],
+ B:[{id:'B_a',n:'Den Mother',ab:'medic',d:'Return a unit from your discard pile to your hand'},{id:'B_b',n:'The Alpha',ab:'horn2',d:'Camp Bell on your Beast row'},{id:'B_c',n:'Old Raven',ab:'scorch1',d:'Burn the strongest enemy Saw-row unit if that row holds 3+ units'}]};
+function hwRng(seed){let a=seed>>>0||1;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+const ART={
+ person:['....kkkk....','...kaaaak...','..kkaaaakk..','...kssssk...','...ksksk....','...kssssk...','....kcck....','..kbbbbbbk..','.kbbbbbbbbk.','.kbkbbbbkbk.','.kbkbbbbkbk.','..kkkkkkkk..'],
+ tree:['...kkkkkk...','..kaaaaaak..','.kaaabaaaak.','kaabaaaaabak','kaaakkaakkak','kaaagkaagkak','kaaaaaaaaaak','.kaakkkkaak.','..kaaaaaak..','...kkbbkk...','....kbbk....','...kkbbkk...'],
+ stag:['k..k....k..k','kk.k....k.kk','.kkk....kkk.','...kkkkkk...','..kaaaaaak..','..kagaagak..','..kaaaaaak..','...kaaaak...','...kaaaak...','....kbbk....','....kbbk....','.....kk.....'],
+ wisp:['............','....kkkk....','...kaaaak...','..kaabbaak..','..kabggbak..','..kabggbak..','..kaabbaak..','...kaaaak...','....kaak....','.....kak....','......kk....','............'],
+ squirrel:['......kkk...','.....kaaak..','..kk.kaaaak.','.kaak.kaaak.','.kgaak.kaak.','kaaaaak.kak.','kaaaaaakkak.','.kaabaaaaak.','..kaabbaak..','..kaaaaaak..','..kk.kk.kk..','............'],
+ bird:['............','...kkkk.....','..kaaaak....','.kagaaaakk..','kbkaaaaaaak.','.kkaaaaaaaak','...kaaaaaak.','...kaabbbak.','....kaabak..','.....kkkk...','......k.k...','.....kk.kk..'],
+ head:['.kk......kk.','kaak....kaak','kaaakkkkaaak','.kaaaaaaaak.','.kagaaaagak.','.kaaaaaaaak.','..kaabbaak..','..kaabkbak..','...kabbak...','....kaak....','.....kk.....','............']};
+const ARTC={k:'#0a0d08',s:'#e8c4a0',g:'#f2e05a',c:'#c8a070'};
+function artKind(d){const n=d.n.toLowerCase();if(!d.unit)return null;
+  if(d.f==='W')return 'tree';if(d.f==='L')return 'person';
+  if(/squirrel|beaver|badger|fox|hare|imp/.test(n))return 'squirrel';if(/owl|crow|raven|hawk|eagle|firefly|moth/.test(n))return 'bird';
+  if(/stag|hart|elk|moose|calf|doe|hoof/.test(n))return 'stag';if(/wisp|sprite|glimmer|wraith|lantern|aurora|echo|breeze|spirit|song|heart|rain|mist|dew|fae|shade|mother|pond|dancer|mosslight|thorn/.test(n))return 'wisp';
+  if(d.f==='B')return 'head';if(/giant|grove|heartwood/.test(n))return 'tree';return 'person'}
+const ART_CACHE={};
+function cardArt(id){if(ART_CACHE[id])return ART_CACHE[id];const d=CARD[id],cv=document.createElement('canvas'),k=4;cv.width=cv.height=12*k;const g=cv.getContext('2d');
+  const h=[...d.id].reduce((a,ch)=>a*31+ch.charCodeAt(0)>>>0,7),hue=d.f==='L'?[0,25,200,120,35][h%5]:d.f==='W'?[95,110,80,45,130][h%5]:d.f==='S'?[180,200,260,160,300][h%5]:d.f==='B'?[25,30,20,40,0][h%5]:[h%360];
+  const a=`hsl(${hue},${d.f==='B'?45:60}%,${d.f==='S'?72:d.f==='B'?40:45}%)`,b=`hsl(${(hue+40)%360},45%,${d.f==='S'?88:30}%)`;
+  g.fillStyle=d.hero?'#3a2e10':'#101a16';g.fillRect(0,0,12*k,12*k);
+  if(!d.unit){const icn=d.ic||{w0:'snow',w1:'cloud',w2:'bolt',clear:'sun',decoy:'scare',horn:'horn',scorch:'fire'}[d.sp],pat=ICONS[icn]||ICONS.star;pat.forEach((row,y)=>{[...row].forEach((ch,x)=>{if(ch!=='.'){g.fillStyle=PAL[ch]||'#fff';g.fillRect((x+2)*k,(y+2)*k,k,k)}})})}
+  else{const pat=ART[artKind(d)];pat.forEach((row,y)=>{[...row].forEach((ch,x)=>{if(ch==='.')return;g.fillStyle=ch==='a'?a:ch==='b'?b:ARTC[ch]||'#fff';g.fillRect(x*k,y*k,k,k)})})}
+  return ART_CACHE[id]=cv.toDataURL()}
+const HDW=40,HDH=56,HD_CACHE={};
+const hdHsl=(h,s,l)=>{h=((h%360)+360)%360/360;s=Math.max(0,Math.min(100,s))/100;l=Math.max(0,Math.min(100,l))/100;
+  if(!s){const v=Math.round(l*255);return [v,v,v]}const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=t=>{t<0&&(t+=1);t>1&&(t-=1);return t<1/6?p+(q-p)*6*t:t<.5?q:t<2/3?p+(q-p)*(2/3-t)*6:p};
+  return [Math.round(f(h+1/3)*255),Math.round(f(h)*255),Math.round(f(h-1/3)*255)]};
+const hdTone=(h,s,l)=>({h:hdHsl(h,s,l+13),m:hdHsl(h,s,l),d:hdHsl(h,s,l-14),dd:hdHsl(h,s-6,l-26),hh:hdHsl(h,s-10,l+26)});
+const hdMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t|0,a[1]+(b[1]-a[1])*t|0,a[2]+(b[2]-a[2])*t|0];
+const HD_INK=[20,14,12];
+function hdLayer(){return new Array(HDW*HDH).fill(null)}
+function hdP(L,x,y,c){x=Math.round(x);y=Math.round(y);if(c&&x>=0&&y>=0&&x<HDW&&y<HDH)L[y*HDW+x]=c}
+function hdG(L,x,y){x=Math.round(x);y=Math.round(y);return x>=0&&y>=0&&x<HDW&&y<HDH?L[y*HDW+x]:null}
+function hdR(L,x,y,w,h,c){for(let j=0;j<h;j++)for(let i=0;i<w;i++)hdP(L,x+i,y+j,typeof c==='function'?c(i,j,w,h):c)}
+function hdBox(L,x,y,w,h,t){hdR(L,x,y,w,h,(i,j)=>i===0&&w>2?t.h:i>=w-Math.max(1,w/4|0)?t.d:t.m)}
+function hdE(L,cx,cy,rx,ry,t){for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+  const nx=(x-cx)/(rx||.5),ny=(y-cy)/(ry||.5);if(nx*nx+ny*ny>1.05)continue;if(Array.isArray(t)){hdP(L,x,y,t);continue}
+  const v=nx*.55+ny*.8;hdP(L,x,y,v<-.62?t.h:v>.5?t.d:t.m)}}
+function hdLn(L,x0,y0,x1,y1,c,w){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1);for(let i=0;i<=n;i++){const x=x0+(x1-x0)*i/n,y=y0+(y1-y0)*i/n;hdP(L,x,y,c);if(w>1){hdP(L,x+1,y,c)}if(w>2){hdP(L,x,y+1,c)}}}
+function hdTri(L,ax,ay,bx,by,cx,cy,c){const minx=Math.floor(Math.min(ax,bx,cx)),maxx=Math.ceil(Math.max(ax,bx,cx)),miny=Math.floor(Math.min(ay,by,cy)),maxy=Math.ceil(Math.max(ay,by,cy));
+  const s=(px,py,qx,qy,rx,ry)=>(px-rx)*(qy-ry)-(qx-rx)*(py-ry);for(let y=miny;y<=maxy;y++)for(let x=minx;x<=maxx;x++){const d1=s(x+.5,y+.5,ax,ay,bx,by),d2=s(x+.5,y+.5,bx,by,cx,cy),d3=s(x+.5,y+.5,cx,cy,ax,ay);
+  if(!((d1<0||d2<0||d3<0)&&(d1>0||d2>0||d3>0)))hdP(L,x,y,typeof c==='function'?c(x,y):c)}}
+function hdOutline(L,col){const out=L.slice();for(let y=0;y<HDH;y++)for(let x=0;x<HDW;x++){if(L[y*HDW+x])continue;
+  if(hdG(L,x-1,y)||hdG(L,x+1,y)||hdG(L,x,y-1)||hdG(L,x,y+1))out[y*HDW+x]=col||HD_INK}return out}
+function hdGlow(BG,FG,col,rad,str){for(let y=0;y<HDH;y++)for(let x=0;x<HDW;x++){if(FG[y*HDW+x])continue;let best=99;
+  for(let j=-rad;j<=rad;j++)for(let i=-rad;i<=rad;i++)if(hdG(FG,x+i,y+j)){const d=Math.hypot(i,j);if(d<best)best=d}
+  if(best<=rad&&BG[y*HDW+x])BG[y*HDW+x]=hdMix(BG[y*HDW+x],col,str*(1-(best-1)/rad))}}
+function hdOver(A,B){for(let i=0;i<A.length;i++)if(B[i])A[i]=B[i];return A}
+const hdDither=(x,y)=>((x+y)&1)===0;
+function hdSky(L,top,bot,y0,y1){for(let y=y0;y<y1;y++){const t=(y-y0)/Math.max(1,y1-y0-1);for(let x=0;x<HDW;x++){const tt=t+(hdDither(x,y)?.04:-.04);hdP(L,x,y,hdMix(top,bot,Math.max(0,Math.min(1,tt))))}}}
+function hdPines(L,R,base,col,n,hmin,hmax){for(let k=0;k<n;k++){const cx=R()*HDW,h=hmin+R()*(hmax-hmin),w=h*.42;
+  hdTri(L,cx,base-h,cx-w,base,cx+w,base,col);hdR(L,cx,base,1,2,col)}}
+function hdHills(L,R,base,col,amp){const ph=R()*6,fr=.12+R()*.1;for(let x=0;x<HDW;x++){const top=base-amp*(.5+.5*Math.sin(x*fr+ph))-amp*.4*Math.sin(x*.31+ph*2);for(let y=Math.floor(top);y<HDH;y++)hdP(L,x,y,col)}}
+function hdGround(L,R,y0,t,tufts){for(let y=y0;y<HDH;y++)for(let x=0;x<HDW;x++)hdP(L,x,y,y===y0?t.h:(hdDither(x,y)&&R()<.25)?t.d:t.m);
+  if(tufts)for(let k=0;k<7;k++){const x=R()*HDW|0,y=y0+1+(R()*(HDH-y0-2)|0);hdP(L,x,y,tufts);hdP(L,x,y-1,tufts)}}
+function hdStars(L,R,n,y1,col){for(let k=0;k<n;k++){const x=R()*HDW|0,y=R()*y1|0;hdP(L,x,y,col);if(R()<.15){hdP(L,x-1,y,hdMix(col,[0,0,0],.5));hdP(L,x+1,y,hdMix(col,[0,0,0],.5))}}}
+function hdScene(L,R,d,sp){
+  const f=d.f,k=sp.scene||f;
+  if(k==='night'||f==='S'){const h=sp.skyHue!=null?sp.skyHue:230+R()*60;hdSky(L,hdHsl(h,45,8),hdHsl(h+20,40,24),0,HDH);hdStars(L,R,26,40,[230,240,255]);
+    if(sp.moon){hdE(L,29,9,5,5,hdHsl(50,30,86));hdE(L,31,8,4,4,hdHsl(h,45,10))}
+    if(sp.aurora)for(let b=0;b<3;b++){const ph=R()*6;for(let x=0;x<HDW;x++){const y=8+b*5+Math.sin(x*.25+ph)*3;for(let j=0;j<3;j++)hdP(L,x,y+j,hdMix(hdG(L,x,y+j)||[0,0,0],hdHsl(140+b*50,70,60),.45-j*.12))}}
+    hdHills(L,R,44,hdHsl(h,30,12),4);hdPines(L,R,46,hdHsl(h,30,9),6,8,16);hdGround(L,R,47,hdTone(h,25,12),hdHsl(h,30,20));return}
+  if(k==='river'){hdSky(L,hdHsl(200,50,70),hdHsl(190,45,82),0,30);hdPines(L,R,32,hdHsl(150,25,38),8,6,12);
+    for(let y=32;y<HDH;y++)for(let x=0;x<HDW;x++)hdP(L,x,y,(y+((x/5|0)%2))%4===0?hdHsl(200,55,62):hdHsl(205,50,44));return}
+  if(k==='storm'){hdSky(L,hdHsl(230,25,16),hdHsl(220,20,34),0,HDH);hdHills(L,R,44,hdHsl(140,15,16),3);hdGround(L,R,47,hdTone(120,15,18));return}
+  if(k==='camp'||f==='L'||f==='N'){const tod=R(),top=tod<.6?hdHsl(205,60,62):tod<.85?hdHsl(25,70,62):hdHsl(250,35,30),bot=tod<.6?hdHsl(195,55,84):tod<.85?hdHsl(45,80,78):hdHsl(20,50,55);
+    hdSky(L,top,bot,0,40);hdHills(L,R,30,hdHsl(160,18,48),4);hdPines(L,R,38,hdHsl(150,30,30),9,10,20);hdPines(L,R,42,hdHsl(140,35,22),6,8,14);
+    hdGround(L,R,44,hdTone(32,32,34),hdHsl(90,30,30));for(let k2=0;k2<2;k2++){const x=R()<.5?2+R()*6:30+R()*6;hdE(L,x,46,3,1.2,hdTone(30,35,40));hdP(L,x,46,hdHsl(40,40,60))}return}
+  if(f==='W'){hdSky(L,hdHsl(110,35,22),hdHsl(90,30,40),0,HDH);for(let k2=0;k2<4;k2++){const x=R()*HDW|0,w=3+R()*3|0;hdR(L,x,0,w,46,hdHsl(30,25,18+k2*3))}
+    for(let k2=0;k2<3;k2++){const x=4+R()*30|0;for(let y=0;y<46;y++)if((x+y)%2===0)hdP(L,x+(y/6|0),y,hdMix(hdG(L,x+(y/6|0),y)||[0,0,0],[255,250,200],.18))}
+    hdGround(L,R,46,hdTone(100,35,22),hdHsl(100,45,36));return}
+  /* beasts: open country, varied weather */
+  const h=R();const top=h<.5?hdHsl(200,45,66):h<.8?hdHsl(30,55,62):hdHsl(210,20,58);hdSky(L,top,hdMix(top,[255,255,240],.5),0,40);
+  hdHills(L,R,24,hdHsl(220,15,58),6);hdHills(L,R,34,hdHsl(150,22,42),4);hdPines(L,R,40,hdHsl(150,28,30),5,6,12);hdGround(L,R,43,hdTone(80,30,36),hdHsl(70,40,48))}
+const HD_SKIN=[[28,55,78],[26,50,68],[24,42,56],[22,40,44],[20,38,34],[30,35,82]];
+const HD_HAIR=[[30,40,18],[25,50,30],[35,60,45],[15,60,35],[45,70,62],[0,0,80],[0,0,55],[20,25,12]];
+function hdPerson(L,R,o){
+  const x=o.x,base=o.base,sc=o.sc||1,sk=hdTone(...o.skin),hr=hdTone(...o.hair),sh=hdTone(...o.shirt),pt=hdTone(...o.pants),bt=hdTone(30,30,16);
+  const bw=Math.round((o.build==='slim'?9:o.build==='broad'?13:o.build==='round'?13:11)*sc),legH=Math.round(10*sc),torH=Math.round(11*sc),hd=Math.round(10*sc);
+  const legY=base-legH,torY=legY-torH,headY=torY-hd+1,tl=Math.round(x-bw/2);
+  /* back gear */
+  if(o.pack){hdBox(L,tl+bw-2,torY+1,6,9,hdTone(30,40,32));hdR(L,tl+bw-1,torY+2,4,1,hdHsl(30,40,20));if(o.pots){hdE(L,tl+bw+3,torY,2,2,hdTone(0,0,60));hdE(L,tl+bw+4,torY+10,2,1.5,hdTone(25,50,45))}}
+  if(o.cape)hdTri(L,tl-1,torY,tl+bw+1,torY,x,base,hdTone(...o.cape).d);
+  /* legs or robe */
+  if(o.robe){hdTri(L,tl-2,base,tl+bw+2,base,x,torY,c=>sh.m);hdBox(L,tl-1,torY+torH-2,bw+2,legH+2,sh);hdR(L,tl-2,base-1,bw+4,1,sh.d)}
+  else{const lw=Math.max(3,Math.round(4*sc));hdBox(L,x-lw-(o.build==='slim'?0:1),legY,lw,legH,pt);hdBox(L,x+(o.build==='slim'?0:1),legY,lw,legH,pt);
+    hdR(L,x-lw-2,base-2,lw+1,2,bt.m);hdR(L,x+1,base-2,lw+1,2,bt.m);hdR(L,x-lw-2,base-2,lw+1,1,bt.h)}
+  /* torso */
+  hdBox(L,tl,torY,bw,torH,sh);if(o.build==='round')hdE(L,x,torY+torH-4,bw/2+1,4,sh);
+  if(o.plaid)for(let j=0;j<torH;j++)for(let i=0;i<bw;i++)if(i%3===1||j%3===1){const c=hdG(L,tl+i,torY+j);if(c)hdP(L,tl+i,torY+j,hdMix(c,(i%3===1&&j%3===1)?sh.dd:sh.d,.6))}
+  if(o.overalls){hdBox(L,tl+2,torY+3,bw-4,torH-3,pt);hdR(L,tl+2,torY,1,3,pt.d);hdR(L,tl+bw-3,torY,1,3,pt.d)}
+  if(o.suspenders){hdR(L,tl+2,torY,1,torH,hdHsl(0,55,35));hdR(L,tl+bw-3,torY,1,torH,hdHsl(0,55,35))}
+  if(o.apron)hdBox(L,tl+2,torY+4,bw-4,torH+3,hdTone(40,15,88));
+  if(o.vest){hdR(L,tl,torY,3,torH,hdTone(...o.vest).m);hdR(L,tl+bw-3,torY,3,torH,hdTone(...o.vest).d)}
+  if(o.belt){hdR(L,tl,torY+torH-2,bw,1,hdHsl(30,40,18));hdP(L,x,torY+torH-2,hdHsl(45,80,60))}
+  if(o.cross){hdR(L,tl+2,torY+2,3,1,[220,40,40]);hdR(L,tl+3,torY+1,1,3,[220,40,40])}
+  if(o.medal){hdE(L,x,torY+4,1.5,1.5,hdTone(45,85,55))}
+  if(o.scarf){hdR(L,tl,torY,bw,2,hdTone(...o.scarf).m);hdR(L,tl+bw-3,torY+2,2,4,hdTone(...o.scarf).d)}
+  /* arms */
+  const aw=Math.max(2,Math.round(3*sc)),ay=torY+1,al=torH-1;
+  hdBox(L,tl-aw,ay,aw,al,sh);hdBox(L,tl+bw,ay,aw,al,sh);hdR(L,tl-aw,ay+al,aw,2,sk.m);hdR(L,tl+bw,ay+al,aw,2,sk.m);
+  o.lh=[tl-aw+1,ay+al+1];o.rh=[tl+bw+1,ay+al+1];
+  /* head */
+  const hw=Math.round((o.build==='round'?10:9)*sc),hx=Math.round(x-hw/2);
+  hdBox(L,x-1,headY+hd-2,3,2,sk);hdR(L,hx,headY,hw,hd-1,(i,j)=>i===0?sk.h:i>=hw-2?sk.d:sk.m);hdP(L,hx-1,headY+4,sk.d);hdP(L,hx+hw,headY+4,sk.d);
+  hdP(L,hx,headY,null);hdP(L,hx+hw-1,headY,null);
+  const ey=headY+Math.round(4*sc),e1=hx+2,e2=hx+hw-3,eye=o.eye||HD_INK;
+  hdP(L,e1,ey,eye);hdP(L,e2,ey,eye);if(sc>=1&&!o.squint){hdP(L,e1,ey-1,hdMix(sk.m,[255,255,255],.6));hdP(L,e2,ey-1,hdMix(sk.m,[255,255,255],.6))}
+  const brow=o.brow||'flat',bc=hdTone(...o.hair).d;if(brow==='angry'){hdP(L,e1-1,ey-2,bc);hdP(L,e1,ey-1,bc);hdP(L,e2+1,ey-2,bc);hdP(L,e2,ey-1,bc)}
+  else if(brow==='up'){hdP(L,e1,ey-2,bc);hdP(L,e2,ey-2,bc);hdP(L,e1-1,ey-1,bc);hdP(L,e2+1,ey-1,bc)}else{hdR(L,e1-1,ey-2,2,1,bc);hdR(L,e2,ey-2,2,1,bc)}
+  hdP(L,x,ey+2,sk.d);const my=ey+4;
+  if(o.mouth==='smile'){hdP(L,x-2,my-1,HD_INK);hdR(L,x-1,my,3,1,HD_INK);hdP(L,x+2,my-1,HD_INK)}else if(o.mouth==='open'){hdR(L,x-1,my,2,2,[90,20,20])}else if(o.mouth==='frown'){hdR(L,x-1,my,3,1,HD_INK);hdP(L,x-2,my+1,HD_INK);hdP(L,x+2,my+1,HD_INK)}else hdR(L,x-1,my,2,1,HD_INK);
+  if(o.blush){hdP(L,e1-1,ey+2,[230,120,110]);hdP(L,e2+1,ey+2,[230,120,110])}
+  if(o.glasses){hdR(L,e1-1,ey-1,3,3,[200,230,240]);hdR(L,e2-1,ey-1,3,3,[200,230,240]);hdP(L,e1,ey,HD_INK);hdP(L,e2,ey,HD_INK);hdR(L,e1+2,ey,e2-e1-3,1,HD_INK)}
+  if(o.patch){hdR(L,e2-1,ey-1,3,2,HD_INK);hdLn(L,hx,ey-3,hx+hw,ey-1,HD_INK)}
+  if(o.wrinkles){hdP(L,e1-1,ey+1,sk.d);hdP(L,e2+1,ey+1,sk.d);hdP(L,x-2,my-2,sk.d);hdP(L,x+2,my-2,sk.d)}
+  /* facial hair */
+  const bd=o.beard;if(bd==='stubble'){for(let j=my-1;j<headY+hd-1;j++)for(let i=hx+1;i<hx+hw-1;i++)if(hdDither(i,j)&&!(j===my&&Math.abs(i-x)<2))hdP(L,i,j,hdMix(sk.m,hr.d,.5))}
+  else if(bd==='mustache'){hdR(L,x-2,my-1,5,1,hr.m);hdP(L,x-3,my,hr.m);hdP(L,x+3,my,hr.m)}
+  else if(bd==='full'||bd==='long'||bd==='braid'){const len=bd==='full'?3:bd==='long'?9:7;for(let j=my-1;j<headY+hd+len;j++){const w=j<headY+hd?hw:Math.max(2,hw-(j-headY-hd)*(bd==='long'?.7:1.1));for(let i=0;i<w;i++){const px=Math.round(x-w/2+i);hdP(L,px,j,i===0?hr.h:i>w-2?hr.d:hr.m)}}
+    hdR(L,x-1,my,3,1,[90,30,25]);hdR(L,x-2,my-1,5,1,hr.h);if(bd==='braid'){hdP(L,x,headY+hd+len,hdHsl(0,60,45));hdP(L,x,headY+hd+len+1,hr.d)}}
+  /* hair */
+  const hs=o.hairStyle;const ht=headY-1;
+  if(hs!=='bald'&&!o.hood){hdR(L,hx,ht,hw,2,(i)=>i<2?hr.h:hr.m);hdP(L,hx-1,ht+1,hr.m);hdP(L,hx+hw,ht+1,hr.m);
+    if(hs==='long'||hs==='braids'){hdR(L,hx-1,ht+1,2,hd+2,hr.m);hdR(L,hx+hw-1,ht+1,2,hd+2,hr.d);if(hs==='braids'){hdR(L,hx-1,ht+hd+3,2,4,hr.d);hdR(L,hx+hw-1,ht+hd+3,2,4,hr.d);hdP(L,hx-1,ht+hd+7,hdHsl(0,60,50));hdP(L,hx+hw,ht+hd+7,hdHsl(0,60,50))}}
+    if(hs==='curly')for(let i=-1;i<=hw;i+=2)hdE(L,hx+i,ht,1.4,1.4,hr);
+    if(hs==='bun')hdE(L,x,ht-2,2.5,2,hr);if(hs==='pony'){hdR(L,hx+hw,ht+2,2,7,hr.d)}if(hs==='mohawk'){hdR(L,x-1,ht-3,3,3,hr.m)}
+    if(hs==='side')hdR(L,hx,ht+2,3,2,hr.m)}
+  else if(hs==='bald')hdP(L,hx+2,headY+1,hdMix(sk.m,[255,255,255],.5));
+  /* headwear */
+  const hat=o.hat,hc=o.hatCol?hdTone(...o.hatCol):hdTone(0,60,40);
+  if(hat==='beanie'){hdE(L,x,ht+1,hw/2+1,3.5,hc);hdR(L,hx-1,ht+2,hw+2,2,hc.d);hdE(L,x,ht-3,1.5,1.5,hdTone(40,20,90))}
+  else if(hat==='cap'){hdR(L,hx,ht-1,hw,3,hc.m);hdR(L,hx-3,ht+1,4,1,hc.d)}
+  else if(hat==='brim'){hdR(L,hx-3,ht+1,hw+6,1,hc.d);hdBox(L,hx+1,ht-3,hw-2,4,hc);hdR(L,hx+1,ht,hw-2,1,hdHsl(0,50,30))}
+  else if(hat==='bandana'){hdR(L,hx,ht,hw,2,hc.m);hdP(L,hx+hw,ht+2,hc.d);hdP(L,hx+hw+1,ht+3,hc.d)}
+  else if(hat==='chef'){hdE(L,x,ht-4,hw/2+1,4,hdTone(0,0,92));hdR(L,hx,ht-1,hw,3,hdTone(0,0,86).m)}
+  else if(hat==='crown'){hdR(L,hx,ht-1,hw,2,hdTone(45,85,55).m);for(let i=0;i<hw;i+=3)hdP(L,hx+i,ht-2,hdHsl(45,85,65));hdP(L,x,ht-1,[220,40,60])}
+  else if(hat==='helm'){hdE(L,x,ht+1,hw/2+1,3.5,hdTone(210,10,62));hdR(L,hx-2,ht+3,hw+4,1,hdHsl(210,10,45))}
+  else if(hat==='witch'){hdR(L,hx-3,ht+1,hw+6,1,hc.d);hdTri(L,hx,ht+1,hx+hw,ht+1,x+4,ht-11,hc.m);hdR(L,hx+1,ht-1,hw-2,1,hdHsl(45,80,55))}
+  else if(hat==='feather'){hdR(L,hx-2,ht+1,hw+4,1,hc.d);hdBox(L,hx+1,ht-2,hw-2,3,hc);hdLn(L,hx+hw-2,ht-1,hx+hw+3,ht-6,hdHsl(0,70,55),2)}
+  if(o.hood){const c=hdTone(...o.hood);hdE(L,x,headY+3,hw/2+2,hd/2+2,c);hdR(L,hx-2,headY+5,2,hd,c.d);hdR(L,hx+hw,headY+5,2,hd,c.d);
+    hdR(L,hx,headY+1,hw,hd-1,(i)=>i===0?sk.d:sk.m);hdP(L,e1,ey,o.eye||HD_INK);hdP(L,e2,ey,o.eye||HD_INK);if(o.beard==='long'||o.beard==='full'){for(let j=my-1;j<headY+hd+5;j++)hdR(L,hx+1,j,hw-2,1,hr.m)}else hdR(L,x-1,my,2,1,HD_INK)}
+  return o}
+function hdItem(L,o,it,R){const [lx,ly]=o.lh,[rx,ry]=o.rh,wood=hdTone(30,45,38),steel=hdTone(210,8,72);
+  if(it==='axe'||it==='bigaxe'||it==='dblaxe'){const top=ry-(it==='bigaxe'?20:16);hdLn(L,rx,ry+2,rx,top,wood.m);hdLn(L,rx+1,ry+2,rx+1,top,wood.d);
+    hdR(L,rx+2,top,it==='bigaxe'?5:4,it==='bigaxe'?6:5,(i)=>i===0?steel.h:steel.m);hdR(L,rx+(it==='bigaxe'?6:5),top,1,it==='bigaxe'?6:5,[240,245,250]);if(it==='dblaxe')hdR(L,rx-4,top,4,5,(i)=>i===0?[240,245,250]:steel.m)}
+  else if(it==='throw'){hdLn(L,rx,ry,rx+4,ry-14,wood.m);hdR(L,rx+3,ry-17,4,4,steel.m);hdLn(L,lx-2,ly-14,lx+3,ly-18,wood.m);hdR(L,lx-4,ly-17,3,3,steel.h);hdP(L,lx-6,ly-15,[255,255,255])}
+  else if(it==='saw'){hdR(L,lx-1,ly-1,rx-lx+8,3,(i,j)=>j===2&&i%2===0?steel.d:steel.m);hdR(L,rx+5,ly-3,2,6,wood.m)}
+  else if(it==='bucksaw'){hdLn(L,rx,ry,rx+6,ry-10,wood.m);hdLn(L,rx+6,ry-10,rx+10,ry-4,wood.m);hdLn(L,rx,ry,rx+10,ry-4,steel.m)}
+  else if(it==='pole'||it==='peavey'||it==='oar'){hdLn(L,rx+1,ry+6,rx-5,ry-26,wood.m);hdLn(L,rx+2,ry+6,rx-4,ry-26,wood.d);if(it==='peavey'){hdR(L,rx-6,ry-28,2,3,steel.m);hdLn(L,rx-4,ry-22,rx-1,ry-20,steel.d)}if(it==='pole')hdR(L,rx-6,ry-29,2,3,steel.h);if(it==='oar')hdE(L,rx+2,ry+8,2,3,wood)}
+  else if(it==='rope'){for(let a=0;a<6.3;a+=.3)hdP(L,lx-1+Math.cos(a)*3,ly+1+Math.sin(a)*3,hdHsl(40,45,60));hdE(L,lx-1,ly+1,1.5,1.5,hdTone(40,45,50))}
+  else if(it==='hook'){hdLn(L,rx,ry,rx+2,ry-12,hdHsl(40,45,60));hdR(L,rx+1,ry-15,3,3,steel.m);hdP(L,rx+3,ry-12,steel.d)}
+  else if(it==='spud'){hdLn(L,rx,ry+2,rx+3,ry-12,steel.m);hdR(L,rx+2,ry-14,3,2,steel.h)}
+  else if(it==='ladle'){hdLn(L,rx,ry+2,rx,ry-10,steel.m);hdE(L,rx,ry-11,2,1.5,steel)}
+  else if(it==='bag'){hdBox(L,lx-4,ly-2,6,5,hdTone(20,50,40));hdR(L,lx-2,ly-1,2,1,[240,240,240]);hdR(L,lx-1,ly-2,0+1,3,[240,240,240])}
+  else if(it==='lute'){hdE(L,x0(o)-1,o.rh[1]-6,4,3,hdTone(30,55,45));hdLn(L,x0(o)+2,o.rh[1]-8,x0(o)+8,o.rh[1]-14,wood.d);hdP(L,x0(o)-1,o.rh[1]-6,HD_INK)}
+  else if(it==='lantern'){hdLn(L,rx,ry,rx,ry+2,HD_INK);hdBox(L,rx-1,ry+2,4,5,hdTone(40,20,30));hdR(L,rx,ry+3,2,3,[255,220,90])}
+  else if(it==='staff'){hdLn(L,rx+1,ry+6,rx+1,ry-24,wood.m);hdE(L,rx+1,ry-25,2,2,hdTone(150,70,55));hdP(L,rx+1,ry-26,[220,255,230])}
+  else if(it==='file'){hdLn(L,rx,ry,rx+3,ry-8,steel.m);hdLn(L,rx+1,ry,rx+4,ry-8,steel.d)}
+  else if(it==='herbs'){hdBox(L,lx-4,ly-2,6,4,hdTone(35,45,45));for(let i=0;i<5;i++)hdLn(L,lx-3+i,ly-2,lx-4+i*1.2,ly-6,hdHsl(110,55,40))}
+  else if(it==='spyglass'){hdLn(L,rx,ry,rx+5,ry-6,hdHsl(40,70,45),2);hdP(L,rx+6,ry-7,[200,230,255])}
+  else if(it==='horn'){hdLn(L,lx,ly,lx-3,ly-6,hdHsl(40,60,70),2);hdE(L,lx-4,ly-8,2,2,hdTone(40,60,70))}
+  else if(it==='cane'){hdLn(L,rx+1,ry,rx+1,ry+8,HD_INK);hdP(L,rx,ry-1,hdHsl(45,80,60))}
+  else if(it==='spear'){hdLn(L,rx+1,ry+6,rx+1,ry-26,wood.m);hdTri(L,rx-1,ry-26,rx+3,ry-26,rx+1,ry-31,steel.m);for(let j=0;j<20;j+=4)hdP(L,rx+2,ry-j,hdHsl(110,50,40))}
+  else if(it==='boulder'){hdE(L,rx+2,ry-14,5,4,hdTone(30,8,52))}
+  function x0(o){return (o.lh[0]+o.rh[0])/2}}
+function hdTreant(L,R,o){const x=o.x,base=o.base,sc=o.sc||1,bk=hdTone(...o.bark),lf=hdTone(...o.leaf);
+  const tw=Math.round((o.tw||12)*sc),th=Math.round(24*sc),top=base-th,tl=Math.round(x-tw/2);
+  /* roots / legs */
+  for(let k=-1;k<=1;k+=2){hdLn(L,x+k*2,base-5,x+k*6,base,bk.d,2);hdLn(L,x+k*3,base-3,x+k*9,base,bk.m)}
+  hdBox(L,x-4,base-7,3,7,bk);hdBox(L,x+1,base-7,3,7,bk);
+  /* trunk body */
+  for(let j=0;j<th-4;j++){const w=tw+(j>th-10?2:0);hdR(L,Math.round(x-w/2),top+j,w,1,i=>i===0?bk.h:i>=w-3?bk.d:bk.m)}
+  if(o.birch)for(let j=1;j<th-4;j+=3){const i=(R()*(tw-3))|0;hdR(L,tl+i,top+j,2+(R()*2|0),1,HD_INK)}
+  else for(let i=2;i<tw-1;i+=3)for(let j=1;j<th-5;j++)if(R()<.55)hdP(L,tl+i,top+j,bk.dd);
+  if(o.rings){for(let r=1;r<5;r+=1.3)for(let a=0;a<6.3;a+=.25)hdP(L,x+Math.cos(a)*r,top+th/2+Math.sin(a)*r*0.8,r%2.6<1.3?bk.h:bk.dd)}
+  if(o.stone)for(let k=0;k<4;k++)hdE(L,tl+2+R()*(tw-4),top+4+R()*(th-10),2.2,1.6,hdTone(210,8,55));
+  if(o.iron)for(let j=top+13;j<base-8;j+=6){hdR(L,tl-1,j,tw+2,2,(i,jj)=>jj?hdHsl(210,10,40):hdHsl(210,12,66));hdP(L,x,j,hdHsl(40,30,70))}
+  if(o.moss){for(let i=-1;i<tw+1;i++)for(let j=0;j<3+((i*7)%4);j++)hdP(L,tl+i,top+j,j>1&&hdDither(i,j)?lf.d:lf.m)}
+  /* arms: branches */
+  const ay=top+7;for(const s of [-1,1]){const ex=x+s*(tw/2+7),ey=ay+(o.armsUp?-8:4);hdLn(L,x+s*(tw/2-1),ay,ex,ey,bk.m,2);hdLn(L,ex,ey,ex+s*2,ey-3,bk.d);hdLn(L,ex,ey,ex+s*3,ey+1,bk.d);
+    if(o.armLeaves)hdE(L,ex+s,ey-2,2,1.5,lf);if(s===1)o.rh=[ex,ey];else o.lh=[ex,ey]}
+  /* crown */
+  const cy=top-2,ct=o.canopy;
+  if(ct==='pine'){for(let k=0;k<4;k++){const w=12-k*2.6,y=cy-k*5;hdTri(L,x-w,y+4,x+w,y+4,x,y-4,(px,py)=>((px-x)*.5+(py-y))<0?lf.h:(px>x+2?lf.d:lf.m))}}
+  else if(ct==='willow'){hdE(L,x,cy-3,11,6,lf);for(let i=-11;i<=11;i+=2)if(Math.abs(i)>=6)hdLn(L,x+i,cy,x+i*1.2,cy+12+((i*3)&3),i%4?lf.m:lf.d);else hdLn(L,x+i,cy,x+i,cy+3,lf.d)}
+  else if(ct==='bare'){for(let k=0;k<7;k++){const a=-Math.PI/2+(k-3)*.42,l=8+R()*5;const ex=x+Math.cos(a)*l,ey=cy+3+Math.sin(a)*l;hdLn(L,x,cy+3,ex,ey,bk.d);hdLn(L,ex,ey,ex+(R()-.5)*5,ey-3,bk.d)}}
+  else if(ct==='sapling'){hdLn(L,x,cy+3,x,cy-5,bk.m);hdE(L,x-3,cy-5,3,2,lf);hdE(L,x+3,cy-7,3,2,lf);hdE(L,x,cy-9,2.5,2,lf)}
+  else{const blobs=[[0,-5,9,6],[-7,-1,6,5],[7,-1,6,5],[-4,-9,5,4],[5,-9,5,4]];blobs.forEach(([dx,dy,rx,ry])=>hdE(L,x+dx,cy+dy,rx*sc,ry*sc,lf));
+    for(let k=0;k<14;k++){const px=x+(R()-.5)*22*sc,py=cy-5+(R()-.5)*12*sc;if(hdG(L,px,py))hdP(L,px,py,R()<.5?lf.h:lf.d)}}
+  if(o.blossom)for(let k=0;k<12;k++){const px=x+(R()-.5)*22,py=cy-6+(R()-.5)*12;if(hdG(L,px,py))hdP(L,px,py,o.blossom)}
+  if(o.antlers)for(const s of [-1,1]){const ac=hdHsl(40,30,72),y0=cy-9;hdLn(L,x+s*3,y0,x+s*8,y0-8,ac,2);hdLn(L,x+s*6,y0-5,x+s*11,y0-6,ac);hdLn(L,x+s*8,y0-8,x+s*12,y0-12,ac);hdLn(L,x+s*7,y0-7,x+s*7,y0-12,ac)}
+  /* face */
+  const fy=top+8;const eye=o.eye||[250,210,90];hdR(L,x-4,fy,3,2,HD_INK);hdR(L,x+1,fy,3,2,HD_INK);hdP(L,x-3,fy,eye);hdP(L,x+2,fy,eye);
+  if(o.brow){hdLn(L,x-5,fy-2,x-2,fy-1,bk.dd);hdLn(L,x+4,fy-2,x+1,fy-1,bk.dd)}
+  if(o.mouth==='grim'){hdR(L,x-3,fy+5,6,1,HD_INK);hdP(L,x-4,fy+6,HD_INK);hdP(L,x+3,fy+6,HD_INK)}else if(o.mouth==='o')hdE(L,x,fy+5,1.4,1.6,HD_INK);else{hdR(L,x-2,fy+5,4,1,HD_INK);hdP(L,x-3,fy+4,HD_INK);hdP(L,x+2,fy+4,HD_INK)}
+  hdP(L,x-1,fy+3,bk.dd);hdP(L,x,fy+3,bk.dd);
+
+  if(o.mush)for(let k=0;k<3;k++){const px=tl+(k===1?tw:0)+(k===2?4:0),py=base-9-k*5;hdE(L,px,py,2,1.2,hdTone(0,65,50));hdP(L,px,py-1,[255,255,255])}
+  return o}
+function hdTreeItem(L,o,it){const [rx,ry]=o.rh||[0,0],[lx,ly]=o.lh||[0,0],wood=hdTone(30,40,36);
+  if(it==='shield'){hdE(L,lx+1,ly+2,5,6,hdTone(30,45,34));hdE(L,lx+1,ly+2,2,2,hdTone(45,30,55));for(let a=0;a<6.3;a+=1.05)hdP(L,lx+1+Math.cos(a)*6,ly+2+Math.sin(a)*7,hdHsl(80,40,30))}
+  else if(it==='bow'){for(let a=-1.2;a<=1.2;a+=.12)hdP(L,rx+2+Math.cos(a)*5,ry-3+Math.sin(a)*8,wood.m);hdLn(L,rx+4,ry-11,rx+4,ry+5,[230,230,210]);hdLn(L,rx-4,ry-3,rx+6,ry-3,hdHsl(40,30,70))}
+  else if(it==='sling'){hdLn(L,rx,ry,rx+3,ry-9,hdHsl(30,30,55));hdE(L,rx+3,ry-10,2,2,hdTone(o.ammo||30,45,40))}
+  else if(it==='catapult'){hdBox(L,24,40,13,4,wood);hdE(L,26,45,2,2,wood);hdE(L,35,45,2,2,wood);hdLn(L,30,40,22,26,wood.d,2);hdE(L,21,25,3,2.5,hdTone(30,15,45))}
+  else if(it==='lightning'){hdLn(L,rx+2,ry-18,rx-1,ry-11,[255,250,170],2);hdLn(L,rx-1,ry-11,rx+3,ry-9,[255,250,170],2);hdLn(L,rx+3,ry-9,rx,ry-2,[255,250,170],2)}
+  else if(it==='heal'){for(let k=0;k<5;k++)hdP(L,rx+1+((k*3)%5)-2,ry-3-k*2,[180,255,170]);hdR(L,rx,ry-6,3,1,[255,255,255]);hdR(L,rx+1,ry-7,1,3,[255,255,255])}
+  else if(it==='acorns'){for(let k=0;k<3;k++){hdE(L,rx+k*2,ry-2-k*2,1.4,1.6,hdTone(30,55,40));hdR(L,rx+k*2-1,ry-4-k*2,3,1,hdHsl(30,30,25))}}
+  else if(it==='thorns'){for(let k=0;k<6;k++){const px=rx-6+k*2,py=ry-8-((k*5)%7);hdLn(L,px,py,px+2,py-3,hdHsl(100,40,30))}}}
+function hdBeast(L,R,o){const x=o.x,base=o.base,sc=o.sc||1,fu=hdTone(...o.fur),be=o.belly?hdTone(...o.belly):fu,K=o.kind;
+  const bw=(o.bw||10)*sc,bh=(o.bh||6)*sc,legH=(o.legH||6)*sc,by=base-legH-bh+1;
+  /* tail (behind) */
+  if(o.tail==='bushy'){hdE(L,x+bw+2,by-2*sc,4*sc,7*sc,fu);hdE(L,x+bw+3,by-6*sc,3*sc,4*sc,fu)}
+  else if(o.tail==='long')hdLn(L,x+bw,by,x+bw+6*sc,by-4*sc,fu.m,2);else if(o.tail==='flat')hdE(L,x+bw+3,base-2,4,1.5,hdTone(30,30,25));else if(o.tail==='short')hdE(L,x+bw,by,1.5,1.5,be);
+  else if(o.tail==='fluff')hdE(L,x+bw+1,by,2.5*sc,2*sc,hdTone(0,0,92));
+  /* far legs */
+  const lw=Math.max(2,Math.round((o.legW||2)*sc));
+  hdR(L,x-bw*.55,base-legH,lw,legH,fu.d);hdR(L,x+bw*.55,base-legH,lw,legH,fu.d);
+  /* body */
+  hdE(L,x,by+bh/2,bw,bh,fu);if(o.hump)hdE(L,x-bw*.35,by,bw*.5,bh*.6,fu);if(o.belly)hdE(L,x,by+bh*.95,bw*.7,bh*.35,be);
+  if(o.stripes)for(let i=-bw+3;i<bw-2;i+=3)hdLn(L,x+i,by-bh*.3,x+i-1,by+bh*.6,fu.d);
+  if(o.spots)for(let k=0;k<6;k++)hdP(L,x+(R()-.5)*bw*1.6,by+R()*bh,fu.dd);
+  if(o.mane)hdE(L,x-bw*.7,by+bh*.2,bw*.38,bh*.95,hdTone(o.fur[0],o.fur[1],o.fur[2]-6));
+  /* near legs */
+  hdBox(L,x-bw*.7,base-legH,lw+1,legH,fu);hdBox(L,x+bw*.4,base-legH,lw+1,legH,fu);if(o.hooves){hdR(L,x-bw*.7,base-1,lw+1,1,HD_INK);hdR(L,x+bw*.4,base-1,lw+1,1,HD_INK)}
+  /* neck + head */
+  const hx=x-bw-(o.neck||2)*sc,hy=by-(o.headUp||2)*sc,hr=(o.head||4)*sc;
+  if(o.neck)hdLn(L,x-bw*.6,by+bh*.4,hx+1,hy+1,fu.m,Math.max(2,o.neckW||3));
+  hdE(L,hx,hy,hr*1.05,hr*.95,fu);
+  const sn=o.snout||0;if(sn)hdE(L,hx-hr*.9-sn*.4,hy+hr*.35,sn*.75*sc+1,hr*.48,o.snoutCol?hdTone(...o.snoutCol):fu);
+  if(o.face==='badger'){hdLn(L,hx-hr-sn*.8,hy+hr*.2,hx+hr,hy-hr*.7,[245,245,240],2);hdLn(L,hx-hr*.6,hy+hr*.5,hx+hr*.8,hy-hr*.1,[30,30,30])}
+  /* nose, eye, ear */
+  hdP(L,hx-hr*.9-sn*.9-1,hy+hr*.25,HD_INK);
+  const ex=hx-hr*.35,ey=hy-hr*.25;hdP(L,ex,ey,o.eye||HD_INK);if(o.bigEye)hdP(L,ex,ey-1,[255,255,255]);
+  const ear=o.ear||'point',ec=fu.d;
+  if(ear==='point'){hdTri(L,hx+hr*.2,hy-hr*.6,hx+hr*.9,hy-hr*.4,hx+hr*.5,hy-hr*1.9,ec);hdP(L,hx+hr*.5,hy-hr*.9,hdHsl(0,40,70))}
+  else if(ear==='round')hdE(L,hx+hr*.5,hy-hr*.9,1.6*sc,1.6*sc,fu);
+  else if(ear==='long'){hdE(L,hx+hr*.4,hy-hr*2,1.3*sc,hr*1.3,fu);hdE(L,hx+hr*1.1,hy-hr*1.8,1.2*sc,hr*1.2,fu)}
+  else if(ear==='tuft'){hdTri(L,hx+hr*.1,hy-hr*.5,hx+hr*.9,hy-hr*.3,hx+hr*.5,hy-hr*2,ec);hdLn(L,hx+hr*.5,hy-hr*2,hx+hr*.5,hy-hr*2.7,HD_INK)}
+  if(o.tusk){hdLn(L,hx-hr*1.1,hy+hr*.6,hx-hr*1.5,hy-hr*.1,[245,240,220],1)}
+  if(o.horns){hdLn(L,hx,hy-hr*.8,hx-3,hy-hr*1.6,[230,225,200]);hdLn(L,hx+2,hy-hr*.8,hx+5,hy-hr*1.6,[230,225,200])}
+  if(o.antlers){const ac=o.antlerCol||[225,210,175],n=o.antlers;for(const s of [0,3]){const ax=hx+s-1,ay=hy-hr*.8;
+    const c2=s?ac:hdMix(ac,[0,0,0],.25);
+    if(o.palmate){hdLn(L,ax,ay,ax+2,ay-2,c2,2);hdE(L,ax+4+s,ay-3,4.5,2,s?hdTone(40,25,70):hdTone(40,25,58));for(let i=0;i<5;i++)hdP(L,ax+1+i*2+s,ay-5.5,c2)}
+    else{const pts=[[ax,ay],[ax+2,ay-n*.3],[ax+4,ay-n*.6],[ax+3,ay-n]];for(let i=0;i<3;i++){hdLn(L,pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1],c2,i?1:2);hdLn(L,pts[i+1][0],pts[i+1][1],pts[i+1][0]-3,pts[i+1][1]-3,c2)}}}}
+  if(o.crown){hdR(L,hx-2,hy-hr-2,4,2,hdTone(45,85,55).m);hdP(L,hx-2,hy-hr-3,hdHsl(45,85,65));hdP(L,hx+1,hy-hr-3,hdHsl(45,85,65))}
+  return o}
+function hdBird(L,R,o){const x=o.x,y=o.y,sc=o.sc||1,fu=hdTone(...o.fur),be=o.belly?hdTone(...o.belly):fu;
+  if(o.front){/* owl, facing us */hdE(L,x,y,7*sc,9*sc,fu);hdE(L,x,y+3*sc,4.5*sc,5.5*sc,be);for(let j=0;j<4;j++)for(let i=-3;i<=3;i+=2)hdP(L,x+i,y+1+j*2*sc,fu.d);
+    const hy=y-9*sc;hdE(L,x,hy,6.5*sc,5.5*sc,fu);hdE(L,x-3*sc,hy,2.6*sc,2.6*sc,hdTone(40,20,85));hdE(L,x+3*sc,hy,2.6*sc,2.6*sc,hdTone(40,20,85));
+    hdE(L,x-3*sc,hy,1.4*sc,1.4*sc,o.eye||[250,190,40]);hdE(L,x+3*sc,hy,1.4*sc,1.4*sc,o.eye||[250,190,40]);hdP(L,x-3*sc,hy,HD_INK);hdP(L,x+3*sc,hy,HD_INK);
+    hdTri(L,x-1,hy+2,x+1,hy+2,x,hy+4,[230,180,60]);if(o.tufts){hdTri(L,x-6*sc,hy-3,x-3*sc,hy-4,x-6*sc,hy-9*sc,fu.d);hdTri(L,x+6*sc,hy-3,x+3*sc,hy-4,x+6*sc,hy-9*sc,fu.d)}
+    hdR(L,x-3,y+9*sc,2,2,[230,180,60]);hdR(L,x+2,y+9*sc,2,2,[230,180,60]);return o}
+  /* perched, side view facing left */
+  hdE(L,x,y,6*sc,4.5*sc,fu);hdE(L,x-1,y+1.5*sc,4*sc,3*sc,be);hdTri(L,x+4*sc,y-2,x+5*sc,y+3,x+13*sc,y+6*sc,fu.d);
+  hdE(L,x+1,y-1,5*sc,3*sc,hdTone(o.fur[0],o.fur[1],o.fur[2]-5));for(let i=0;i<4;i++)hdLn(L,x-2+i*2,y-2,x+3+i*2,y+1,fu.dd);
+  const hx=x-5*sc,hy=y-4*sc;hdE(L,hx,hy,3.4*sc,3.2*sc,fu);hdP(L,hx-1,hy-1,o.eye||[250,240,220]);hdP(L,hx-1,hy-1+0,o.eye||HD_INK);hdP(L,hx-1,hy-2,[255,255,255]);
+  const bc=o.beak||[60,55,50];if(o.hook){hdTri(L,hx-3*sc,hy-1,hx-3*sc,hy+2,hx-7*sc,hy+1,bc);hdP(L,hx-7*sc,hy+2,bc)}else hdTri(L,hx-3*sc,hy-1,hx-3*sc,hy+1.5,hx-8*sc,hy+.5,bc);
+  if(o.crest)hdLn(L,hx+1,hy-3,hx+4,hy-6,fu.d,2);if(o.crown){hdR(L,hx-2,hy-5,5,2,hdTone(45,85,55).m);hdP(L,hx-2,hy-6,hdHsl(45,85,65));hdP(L,hx+2,hy-6,hdHsl(45,85,65))}
+  hdLn(L,x-1,y+5*sc,x-2,y+8*sc,[60,50,40]);hdLn(L,x+2,y+5*sc,x+1,y+8*sc,[60,50,40]);
+  if(o.spread){hdTri(L,x-2,y-2,x+6,y-2,x+16,y-14,fu.m);hdTri(L,x-2,y-2,x+3,y-2,x-12,y-14,fu.d)}
+  return o}
+function hdBee(L,x,y,crown){hdE(L,x+3,y+2,5,4,hdTone(45,85,55));for(let i=0;i<3;i++)hdR(L,x+i*3,y-1,1,7,HD_INK);hdE(L,x-4,y,3,3,hdTone(30,30,20));
+  hdE(L,x+2,y-5,4,2.5,hdTone(200,40,90));hdE(L,x+6,y-5,3,2,hdTone(200,40,88));hdP(L,x-5,y-1,[255,255,255]);if(crown){hdR(L,x-6,y-5,4,1,hdTone(45,85,55).m);hdP(L,x-6,y-6,hdHsl(45,85,65));hdP(L,x-3,y-6,hdHsl(45,85,65))}}
+function hdWisp(L,x,y,r,t,tail){if(tail){hdTri(L,x-r*.95,y-r*.1,x+r*.95,y-r*.1,x+r*.5,y-r*2.7,t.m);hdTri(L,x-r*.5,y-r*.2,x+r*.4,y-r*.2,x+r*.2,y-r*1.8,t.h)}hdE(L,x,y,r,r*1.05,t);hdE(L,x-r*.25,y-r*.15,r*.5,r*.5,t.hh);
+  hdP(L,x-r*.3,y-r*.1,HD_INK);hdP(L,x+r*.3,y-r*.1,HD_INK)}
+function hdFae(L,R,o){const x=o.x,base=o.base,sk=hdTone(...o.skin),dr=hdTone(...o.dress),hr=hdTone(...o.hair),wc=o.wing?hdTone(...o.wing):null;
+  if(wc){hdE(L,x-6,base-24,5,7,wc);hdE(L,x+6,base-24,5,7,wc);hdE(L,x-5,base-16,3,4,wc);hdE(L,x+5,base-16,3,4,wc);for(const s of [-1,1])hdLn(L,x+s*2,base-22,x+s*9,base-29,wc.hh)}
+  hdTri(L,x-7,base,x+7,base,x,base-20,dr.m);hdTri(L,x-7,base,x,base,x-1,base-16,dr.h);hdBox(L,x-3,base-21,6,8,dr);
+  if(o.leafy)for(let k=0;k<8;k++){const px=x-6+k*1.7;hdTri(L,px-1,base,px+1.5,base,px,base-4,hdHsl(110,50,40))}
+  if(o.thorny)for(let k=0;k<6;k++)hdP(L,x-5+k*2,base-3-(k%3)*5,hdHsl(100,40,25));
+  hdLn(L,x-3,base-19,x-8,base-(o.armsUp?28:12),sk.m,2);hdLn(L,x+3,base-19,x+8,base-(o.armsUp?28:12),sk.m,2);o.lh=[x-8,base-(o.armsUp?28:12)];o.rh=[x+8,base-(o.armsUp?28:12)];
+  const hy=base-27;hdE(L,x,hy,4.2,4.5,sk);hdR(L,x-5,hy-4,10,3,hr.m);hdR(L,x-5,hy-2,2,9,hr.m);hdR(L,x+4,hy-2,2,9,hr.d);if(o.longHair){hdR(L,x-6,hy+4,2,6,hr.d);hdR(L,x+5,hy+4,2,6,hr.d)}
+  const ec=o.eye||[40,60,90];hdP(L,x-2,hy,ec);hdP(L,x+2,hy,ec);hdP(L,x,hy+3,[200,90,100]);
+  if(o.crown==='flowers')for(let i=-4;i<=4;i+=2)hdP(L,x+i,hy-5,[[255,180,200],[255,240,140],[200,220,255]][(i+4)/2%3]);
+  if(o.crown==='gold'){hdR(L,x-4,hy-6,8,2,hdTone(45,85,55).m);hdP(L,x-4,hy-7,hdHsl(45,85,65));hdP(L,x,hy-8,hdHsl(45,85,65));hdP(L,x+3,hy-7,hdHsl(45,85,65))}
+  if(o.horns){hdLn(L,x-3,hy-4,x-5,hy-8,hdHsl(100,30,30));hdLn(L,x+3,hy-4,x+5,hy-8,hdHsl(100,30,30))}
+  return o}
+function hdWraith(L,o){const x=o.x,base=o.base,c=hdTone(...o.col);hdTri(L,x-9,base-2,x+9,base-2,x,base-32,c.m);hdE(L,x,base-26,6,7,c);
+  for(let i=-9;i<9;i+=3)hdTri(L,x+i,base-2,x+i+3,base-2,x+i+1.5,base+2,c.d);hdE(L,x,base-25,3.5,4.5,[12,10,20]);hdP(L,x-1,base-25,o.eye||[180,240,255]);hdP(L,x+2,base-25,o.eye||[180,240,255]);
+  hdLn(L,x-6,base-18,x-11,base-12,c.d,2);hdLn(L,x+6,base-18,x+11,base-12,c.d,2);o.lh=[x-11,base-12];o.rh=[x+11,base-12];return o}
+function hdLanternSprite(L,x,y,s){const m=hdTone(40,25,28);hdR(L,x-1,y-8*s,3,2,m.d);hdBox(L,x-4*s,y-6*s,8*s,10*s,m);hdR(L,x-3*s+1,y-5*s+1,6*s-2,8*s-2,[255,214,90]);
+  hdE(L,x,y-1,2*s,2.5*s,[255,250,200]);hdP(L,x-1,y-2,HD_INK);hdP(L,x+1,y-2,HD_INK);hdR(L,x-1,y,3,1,[200,90,30]);hdR(L,x-4*s,y+4*s,8*s,1,m.d)}
+function hdEngine(L,R,o){const x=o.x,base=o.base,ir=hdTone(210,10,38),br=hdTone(15,55,38);
+  if(o.treads){hdR(L,x-15,base-5,30,5,(i,j)=>j===0||j===4?HD_INK:(i+j)%3===0?hdHsl(0,0,20):hdHsl(0,0,32));for(let i=-12;i<=12;i+=6)hdE(L,x+i,base-2.5,2,2,hdTone(0,0,45))}
+  else{hdR(L,x-15,base-3,30,3,hdTone(30,40,30).m);hdLn(L,x-17,base-1,x+17,base-1,hdHsl(30,40,22))}
+  hdBox(L,x-14,base-(o.treads?8:6),28,3,hdTone(30,45,34));
+  for(let j=0;j<10;j++)hdR(L,x-12,base-17+j,15,1,i=>i<2?br.h:i>11?br.d:br.m);for(let i=0;i<15;i+=4)hdR(L,x-12+i,base-17,1,10,br.dd);
+  hdE(L,x-12,base-12,2,5,br);hdR(L,x-10,base-24,4,8,ir.m);hdR(L,x-11,base-25,6,2,ir.d);
+  hdBox(L,x+4,base-22,9,14,hdTone(30,40,30));hdR(L,x+6,base-20,5,4,[255,230,150]);hdR(L,x+4,base-23,10,2,hdTone(0,50,32).m);
+  hdE(L,x+10,base-6,4,4,ir);hdE(L,x+10,base-6,1.5,1.5,hdTone(45,70,55));hdLn(L,x+10,base-6,x-2,base-8,hdHsl(210,10,60),2);
+  if(o.drum){hdE(L,x+2,base-10,3,3,hdTone(30,30,30));for(let a=0;a<6.3;a+=.5)hdP(L,x+2+Math.cos(a)*3,base-10+Math.sin(a)*3,hdHsl(40,40,60))}
+  for(let k=0;k<4;k++){const r=2+k*1.3;hdE(L,x-8+k*2.5+R()*2,base-28-k*4,r,r*.8,hdTone(0,0,86-k*6))}}
+function hdWagon(L,R,o){const x=o.x,base=o.base,w=hdTone(30,45,36);hdBox(L,x-14,base-12,28,4,w);for(const dx of [-9,9]){hdE(L,x+dx,base-4,4,4,hdTone(30,30,28));hdE(L,x+dx,base-4,1.4,1.4,hdTone(40,30,55));for(let a=0;a<6.3;a+=.8)hdLn(L,x+dx,base-4,x+dx+Math.cos(a)*3,base-4+Math.sin(a)*3,hdHsl(30,30,40))}
+  for(let r=0;r<3;r++)for(let k=0;k<4-r;k++){const lx=x-9+k*6+r*3,ly=base-15-r*5;hdR(L,lx-3,ly-2,6,5,hdTone(28,45,40).m);hdE(L,lx+3,ly,2,2.5,hdTone(40,50,62));hdP(L,lx+3,ly,hdHsl(30,45,40))}
+  hdLn(L,x-14,base-9,x-19,base-10,w.d,2)}
+function hdSpecial(L,BG,R,d){const k=d.sp;
+  if(k==='w0'){hdSky(BG,hdHsl(205,40,60),hdHsl(195,40,88),0,HDH);hdHills(BG,R,34,hdHsl(200,25,82),5);hdGround(BG,R,42,hdTone(200,30,90),hdHsl(200,30,70));
+    for(let i=0;i<6;i++){const x=3+i*7+R()*2,h=10+R()*8;for(let k=0;k<3;k++)hdTri(BG,x-5+k*1.2,42-k*4,x+5-k*1.2,42-k*4,x,42-k*4-h/2.2,k%2?hdHsl(200,25,92):hdHsl(190,30,80));hdR(BG,x,42,1,2,hdHsl(30,20,40))}
+    for(let n=0;n<5;n++){const cx=5+R()*30,cy=4+R()*24,r=2+R()*2.5|0;for(let a=0;a<6;a++){const ang=a*Math.PI/3;hdLn(BG,cx,cy,cx+Math.cos(ang)*r,cy+Math.sin(ang)*r,[255,255,255])}hdP(BG,cx,cy,[200,235,255])}
+    hdE(L,20,30,6,7,hdTone(195,60,80));hdTri(L,14,30,26,30,20,18,hdTone(195,60,86).m);hdTri(L,14,30,26,30,20,42,hdTone(200,60,70).m);hdLn(L,20,19,20,41,[255,255,255]);hdLn(L,15,30,25,30,[230,250,255]);return null}
+  if(k==='w1'){hdSky(BG,hdHsl(180,10,50),hdHsl(160,10,70),0,HDH);hdPines(BG,R,40,hdHsl(160,10,58),8,10,20);hdGround(BG,R,44,hdTone(140,12,52));
+    for(let b=0;b<5;b++){const y=10+b*8,ph=R()*6;for(let x=0;x<HDW;x++){const yy=y+Math.sin(x*.2+ph)*2;for(let j=0;j<4;j++)if(BG[(yy+j|0)*HDW+x])BG[(yy+j|0)*HDW+x]=hdMix(BG[(yy+j|0)*HDW+x],[235,240,240],.5-j*.1)}}return null}
+  if(k==='w2'){hdSky(BG,hdHsl(240,25,10),hdHsl(230,20,28),0,HDH);hdHills(BG,R,42,hdHsl(140,10,14),3);hdGround(BG,R,46,hdTone(120,10,16));
+    for(let c=0;c<4;c++)hdE(L,6+c*9,8+(c%2)*3,8,5,hdTone(230,12,36));let x=20,y=12;for(let s=0;s<7;s++){const nx=x+(R()-.5)*8,ny=y+5;hdLn(L,x,y,nx,ny,[255,250,190],2);x=nx;y=ny}
+    for(let k2=0;k2<26;k2++){const rx=R()*HDW,ry=14+R()*36;hdLn(BG,rx,ry,rx-1,ry+3,hdHsl(210,40,60))}return 'bolt'}
+  if(k==='clear'){hdSky(BG,hdHsl(40,70,62),hdHsl(200,55,82),0,HDH);hdHills(BG,R,38,hdHsl(110,35,46),4);hdGround(BG,R,44,hdTone(100,40,42),hdHsl(90,45,58));
+    for(let a=0;a<12;a++){const ang=a*Math.PI/6;hdLn(BG,20,16,20+Math.cos(ang)*30,16+Math.sin(ang)*30,hdHsl(48,90,80))}hdE(L,20,16,7,7,hdTone(46,95,62));hdE(L,20,16,4,4,[255,250,210]);
+    hdE(L,6,22,6,3,hdTone(0,0,92));hdE(L,34,26,7,3,hdTone(0,0,92));return 'sun'}
+  if(k==='decoy'){hdSky(BG,hdHsl(30,60,62),hdHsl(45,70,80),0,40);hdGround(BG,R,40,hdTone(42,55,52),hdHsl(45,70,40));for(let x=0;x<HDW;x+=3)hdLn(BG,x,40,x+1,36,hdHsl(45,70,45));
+    hdLn(L,20,52,20,14,hdTone(30,40,30).m,2);hdLn(L,8,24,32,24,hdTone(30,40,30).m,2);
+    const o={x:20,base:47,skin:[40,35,72],hair:[45,70,60],shirt:[0,45,42],pants:[220,25,38],build:'slim',hairStyle:'bald',hat:'brim',hatCol:[40,50,55],mouth:'flat',plaid:true,squint:true};hdPerson(L,R,o);
+    for(let k2=0;k2<6;k2++)hdLn(L,o.lh[0]-1,o.lh[1]-2,o.lh[0]-3+k2%3,o.lh[1]+2,hdHsl(45,70,62));hdP(L,30,10,HD_INK);hdP(L,31,9,HD_INK);hdP(L,32,10,HD_INK);return null}
+  if(k==='horn'){hdSky(BG,hdHsl(10,45,30),hdHsl(30,60,55),0,HDH);for(let b=0;b<3;b++)hdR(BG,0,40+b*5,HDW,2,hdHsl(20,40,30+b*4));
+    for(let i=0;i<26;i++){const t=i/25,cx=6+t*24,cy=36-Math.sin(t*2.6)*18,r=1.5+t*6;hdE(L,cx,cy,r*.7,r,hdTone(40,50,72-i*.6))}hdE(L,31,25,3.5,7,hdTone(35,30,30));
+    for(let i=0;i<26;i+=5){const t=i/25;hdLn(L,6+t*24,30-Math.sin(t*2.6)*18,6+t*24,42-Math.sin(t*2.6)*18,hdHsl(45,80,55))}
+    for(let k2=0;k2<4;k2++){const nx=33+(k2%2)*3,ny=8+k2*5;hdR(L,nx,ny,1,4,[255,240,200]);hdE(L,nx-1,ny+4,1.4,1,[255,240,200])}return null}
+  if(k==='scorch'){hdSky(BG,hdHsl(10,60,14),hdHsl(25,75,38),0,HDH);hdPines(BG,R,46,hdHsl(10,40,8),9,10,24);hdGround(BG,R,46,hdTone(15,30,10));
+    for(let k2=0;k2<8;k2++){const x=3+k2*4.6+R()*2,h=12+R()*18;hdTri(L,x-4,48,x+4,48,x,48-h,hdHsl(20,95,52));hdTri(L,x-2.5,48,x+2.5,48,x,48-h*.66,hdHsl(40,100,60));hdTri(L,x-1,48,x+1,48,x,48-h*.35,[255,250,200])}
+    for(let k2=0;k2<14;k2++)hdP(BG,R()*HDW,R()*30,hdHsl(30,100,70));return null}
+  return null}
+function hdSpec(d,R){const n=d.n.toLowerCase(),has=re=>re.test(n),pick=a=>a[R()*a.length|0];
+  const human=()=>{const fem=has(/mags|edda|grandmother|witch|herbalist|ada|mistress/),old=has(/old|grand|elder|hermit|master|bray/);
+    return {type:'person',fem,skin:pick(HD_SKIN),hair:old?pick([[0,0,82],[0,0,64],[30,10,70]]):pick(HD_HAIR),shirt:[pick([0,10,25,120,140,200,210,350]),45+R()*20,32+R()*14],pants:[pick([210,220,30,25]),25+R()*15,24+R()*10],
+      build:pick(['slim','normal','broad','normal']),hairStyle:fem?pick(['long','bun','braids','pony']):pick(['short','short','side','curly','bald','mohawk','long']),
+      beard:fem?null:old?pick(['full','long']):pick([null,null,'stubble','mustache','full']),hat:pick([null,'beanie','cap',null,'brim','bandana']),hatCol:[pick([0,25,45,120,210,280]),55,40],
+      mouth:pick(['flat','smile','frown','flat','open']),brow:pick(['flat','angry','up']),plaid:R()<.5,suspenders:R()<.35,blush:fem&&R()<.6,wrinkles:old,item:null}};
+  let s;
+  if(d.f==='L'||d.f==='N'){
+    if(has(/ox team/))s={type:'ox'};else if(has(/wagon/))s={type:'wagon'};else if(has(/steam/))s={type:'engine',treads:has(/skidder/),drum:has(/donkey/)};
+    else if(has(/heartwood/))s={type:'tree',huge:1};else if(has(/giant/))s=Object.assign(human(),{giant:1,item:'boulder',beard:'long',hat:null,hairStyle:'long',skin:[25,25,58],shirt:[30,30,36],build:'broad'});
+    else{s=human();
+      const T=[[/greenhand/,{item:'axe',beard:null,hat:'beanie',shirt:[120,40,35],plaid:true,mouth:'smile',hairStyle:'short'}],[/bucker/,{item:'bucksaw',build:'broad'}],[/tree faller|lost lumberjack/,{item:'axe',plaid:true,hat:'beanie'}],
+        [/log roller/,{item:'peavey',log:1}],[/bark peeler/,{item:'spud',apron:1}],[/hand sawyer/,{item:'saw'}],[/crosscut/,{item:'saw',pair:1}],[/camp cook/,{item:'ladle',hat:'chef',apron:1,build:'round',mouth:'smile'}],
+        [/choker/,{item:'rope',hat:'helm'}],[/axe thrower/,{item:'throw',brow:'angry'}],[/climbing|high climber|topper/,{item:'rope',belt:1,hat:'helm'}],[/rigging|rigger/,{item:'hook',hat:'cap'}],
+        [/medic/,{item:'bag',cross:1,hat:null}],[/foreman/,{item:'cane',hat:'brim',vest:[30,30,30],beard:'full',build:'broad'}],[/rival scout/,{item:'spyglass',hood:[280,30,24],eye:[200,60,60]}],
+        [/riverman|log driver/,{item:'pole',hat:'brim',scene:'river'}],[/bullcook/,{item:'horn',apron:1,hairStyle:'bun',build:'round'}],[/saw filer/,{item:'file',glasses:1,apron:1}],[/peavey/,{item:'peavey',pair:1}],
+        [/champion/,{item:'bigaxe',medal:1,build:'broad',belt:1}],[/iron topper/,{item:'axe',hat:'helm',vest:[210,8,50]}],[/guild master/,{item:'bag',hat:'crown',vest:[280,40,30],cape:[280,45,30],beard:'full'}],
+        [/old bjorn/,{item:'dblaxe',beard:'braid',hair:[0,0,90],build:'broad',hat:null,hairStyle:'long',plaid:true}],[/twins/,{item:'axe',pair:1,twin:1}],[/golden gus/,{item:'bigaxe',gold:1,beard:'full',hat:'beanie'}],
+        [/spectral/,{item:'axe',ghost:1,scene:'night',hat:'beanie',beard:'long'}],
+        [/tinker/,{pack:1,pots:1,glasses:1,item:null}],[/bard/,{item:'lute',hat:'feather',mouth:'open',scarf:[0,60,45]}],[/hermit/,{item:'lantern',robe:1,hood:[30,20,30],beard:'long'}],[/pedlar/,{pack:1,item:'cane',hat:'brim'}],
+        [/ferryman/,{item:'oar',hood:[220,20,22],scene:'river',eye:[150,220,255]}],[/herbalist/,{item:'herbs',robe:1,hat:null}],[/hedge witch/,{item:'staff',hat:'witch',hatCol:[270,30,22],robe:1,fem:1,hairStyle:'long'}],
+        [/edda/,{item:'spear',hairStyle:'braids',cape:[120,40,28],brow:'angry',fem:1,beard:null,hat:null}],[/grandmother/,{item:'staff',hairStyle:'bun',hair:[0,0,86],robe:1,scarf:[340,40,45],wrinkles:1,fem:1,beard:null,hat:null}]];
+      for(const [re,v] of T)if(re.test(n)){Object.assign(s,v);break}
+      if(!s.item&&!s.pack)s.item=pick(['axe','saw','pole']);if(s.fem)s.beard=null}}
+  else if(d.f==='W'){s={type:'treant',bark:pick([[28,35,30],[25,30,26],[20,40,28],[30,20,34]]),leaf:[pick([95,110,125,80]),45,34],canopy:pick(['oak','oak','pine','oak','willow']),mouth:pick(['flat','grim','o']),brow:R()<.5,eye:pick([[250,210,90],[150,255,170],[160,220,255]])};
+    const T=[[/sapling|rootling|saplimb/,{sc:.8,canopy:'sapling'}],[/thornshield|thornwall/,{item:'shield',brow:true}],[/barkskin/,{bark:[25,30,22],brow:true}],[/briar archer/,{item:'bow'}],[/sap slinger|acorn sling/,{item:'sling',ammo:/acorn/.test(n)?30:50}],
+      [/knot watcher/,{eye:[255,120,80],canopy:'pine',mouth:'o'}],[/stonewood/,{stone:1,bark:[30,10,40]}],[/catapult/,{item:'catapult'}],[/mossback|elder moss/,{moss:1,mush:1}],[/burl sentinel/,{brow:true,mouth:'grim',item:'shield'}],
+      [/spy|whispering/,{eye:[200,120,255],canopy:'willow'}],[/healer|medic/,{item:'heal',blossom:[255,190,210]}],[/ironbark/,{iron:1}],[/thorn volley/,{item:'thorns'}],[/antler ram/,{antlers:1,brow:true}],[/rootwalker/,{canopy:'pine'}],
+      [/ringkeeper/,{rings:1}],[/gnarlbark/,{canopy:'bare',mouth:'grim',brow:true}],[/sapwood/,{bark:[40,40,45],leaf:[60,60,45]}],[/storm oak/,{item:'lightning',scene:'storm',leaf:[140,20,30]}],
+      [/grimwood/,{bark:[0,10,16],eye:[255,60,40],canopy:'bare',mouth:'grim',brow:true}],[/ashen/,{bark:[0,0,40],leaf:[20,70,48],canopy:'bare',eye:[255,150,60]}],[/pale elder/,{birch:1,bark:[40,10,86],leaf:[50,50,60]}],
+      [/old grove|first warden/,{huge:1,moss:1,antlers:/first/.test(n),blossom:[255,240,150]}]];
+    for(const [re,v] of T)if(re.test(n)){Object.assign(s,v);break}if(/whispering|willow/.test(n))s.canopy='willow';s.tw=s.tw||10+(R()*5|0);if(s.armsUp==null)s.armsUp=R()<.3;if(/pollen/.test(n))s.blossom=[255,230,90]}
+  else if(d.f==='S'){const glow=[pick([170,190,200,260,140]),70,70];s={type:'spirit',glow,scene:'night'};
+    const T=[[/^wisp$|starlit|wandering/,{kind:'wisp'}],[/firefly/,{kind:'fireflies'}],[/fox/,{kind:'animal',animal:'fox'}],[/hare/,{kind:'animal',animal:'hare'}],[/stag|hart|calf/,{kind:'animal',animal:'stag'}],
+      [/owl/,{kind:'owl'}],[/wraith|rain/,{kind:'wraith'}],[/lantern/,{kind:'lantern'}],[/glimmer|breeze|echo/,{kind:'wisp'}],[/heart of/,{kind:'heart'}],[/aurora$/,{kind:'fae',aurora:1}],[/imp/,{kind:'imp'}],[/.*/,{kind:'fae'}]];
+    for(const [re,v] of T)if(re.test(n)){Object.assign(s,v);break}
+    if(/moon/.test(n))s.moon=1;if(/aurora/.test(n))s.aurora=1;if(/dawn/.test(n))s.skyHue=330;if(/silver|white|great white/.test(n))s.glow=[200,20,92];if(/twin/.test(n))s.pair=1;if(/calf|kit/.test(n))s.small=1;if(/rain/.test(n))s.rain=1}
+  else{s={type:'beast'};const T=[[/golden squirrel/,{a:'squirrel',gold:1}],[/squirrel/,{a:'squirrel'}],[/old badger|badger/,{a:'badger'}],[/bramble boar|boar sounder|boar/,{a:'boar'}],[/stormcrow|crow/,{a:'crow'}],[/raven/,{a:'raven'}],
+      [/great horned/,{a:'owl',tufts:1}],[/grey mother|night owl|owl/,{a:'owl'}],[/golden eagle|hawk|eagle/,{a:'hawk'}],[/dire wolf|packleader|wolf/,{a:'wolf'}],[/beaver/,{a:'beaver'}],[/thunderhoof|elder elk|elk/,{a:'elk'}],
+      [/thunder moose|moose/,{a:'moose'}],[/bear cub/,{a:'bear',cub:1}],[/ursa|cave bear|great bear|brown bear/,{a:'bear'}],[/lynx/,{a:'lynx'}],[/hive queen/,{a:'bee'}]];
+    for(const [re,v] of T)if(re.test(n)){Object.assign(s,v);break}if(/thunder|storm/.test(n))s.scene='storm';if(/night/.test(n))s.scene='night';if(/king/.test(n))s.crown=1;if(/old|grey|elder|ursa/.test(n))s.old=1;if(/dire|cave|great|ursa/.test(n))s.big=1}
+  return s}
+function hdArt(id){if(HD_CACHE[id])return HD_CACHE[id];const d=CARD[id],R=hwRng([...id+d.n].reduce((a,ch)=>Math.imul(a,31)+ch.charCodeAt(0)>>>0,9)),BG=hdLayer();let FG=hdLayer();
+  const sp=d.unit?hdSpec(d,R):{};let glow=null,gs=0;
+  if(!d.unit){hdSpecial(FG,BG,R,d)}
+  else{hdScene(BG,R,d,sp);const base=sp.scene==='river'?46:47;
+    if(sp.type==='person'){const one=(x,sc,extra)=>{const o=Object.assign({},sp,{x,base,sc},extra||{});if(o.ghost){o.skin=[200,30,80];o.shirt=[200,40,55];o.pants=[210,40,40];o.hair=[190,20,85]}
+        if(o.gold){o.shirt=[45,80,50];o.pants=[40,60,38];o.hatCol=[45,85,55]}if(o.giant){o.sc=1.35;o.base=HDH+6}hdPerson(FG,R,o);if(o.item)hdItem(FG,o,o.item,R);return o};
+      if(sp.log){hdE(FG,20,base-1,12,2.6,hdTone(28,45,40));hdE(FG,32,base-1,2,2.6,hdTone(40,50,62))}
+      if(sp.pair){const a=one(12,.85,{}),b=one(28,.85,sp.twin?{}:{hair:pick2(R,HD_HAIR),skin:pick2(R,HD_SKIN),hat:pick2(R,[null,'beanie','cap']),beard:pick2(R,[null,'full','mustache'])});
+        if(sp.item==='saw'){hdR(FG,a.rh[0],a.rh[1]-1,b.lh[0]-a.rh[0],2,(i,j)=>j&&i%2?hdHsl(210,8,50):hdHsl(210,8,72))}}
+      else one(20,1.15);if(sp.ghost){glow=[150,220,255];gs=.6}if(sp.gold){glow=[255,220,120];gs=.5}}
+    else if(sp.type==='ox'){hdBeast(FG,R,{x:20,base,kind:'ox',fur:[25,40,40],bw:11,bh:7,legH:7,head:4,snout:2,horns:1,ear:'round',tail:'long',hooves:1,neck:1});hdR(FG,6,base-17,6,2,hdTone(30,40,30).m);
+      hdPerson(FG,R,Object.assign(hdSpec({n:'Teamster',f:'L',unit:1},R),{x:33,base,sc:.7,item:null,hat:'brim'}))}
+    else if(sp.type==='wagon')hdWagon(FG,R,{x:20,base});else if(sp.type==='engine')hdEngine(FG,R,{x:20,base,treads:sp.treads,drum:sp.drum});
+    else if(sp.type==='tree'){hdTreant(FG,R,{x:20,base:HDH+2,sc:1.4,bark:[30,40,30],leaf:[100,55,40],canopy:'oak',blossom:[255,220,120],mouth:'o',eye:[255,240,170],moss:1,armsUp:1});glow=[255,230,150];gs=.55}
+    else if(sp.type==='treant'){const o=Object.assign({},sp,{x:20,base:sp.huge?HDH+3:base,sc:sp.huge?1.45:sp.sc||1});hdTreant(FG,R,o);if(sp.item)hdTreeItem(FG,o,sp.item);if(sp.huge){glow=[220,255,180];gs=.4}}
+    else if(sp.type==='spirit'){const t=hdTone(...sp.glow);glow=hdHsl(sp.glow[0],80,75);gs=.55;const sc=sp.small?.75:1;
+      if(sp.kind==='wisp'){const big=/wandering|starlit/.test(d.n.toLowerCase());hdWisp(FG,20,24,big?7:5,t,1);if(!big){hdWisp(FG,9,33,2.5,t,1);hdWisp(FG,31,14,2,t,1)}if(/echo/.test(d.n.toLowerCase()))for(let r=8;r<16;r+=3)for(let a=0;a<6.3;a+=.2)hdP(BG,20+Math.cos(a)*r,24+Math.sin(a)*r,hdMix(BG[0]||[0,0,0],t.h,.5))
+        if(/breeze/.test(d.n.toLowerCase()))for(let k=0;k<3;k++)for(let a=0;a<4.5;a+=.15)hdP(FG,20+Math.cos(a)*(4+a*2),24+Math.sin(a)*(4+a*2)+k,t.hh);if(/starlit/.test(d.n.toLowerCase()))hdStars(FG,R,10,40,[255,255,200])}
+      else if(sp.kind==='fireflies'){for(let k=0;k<7;k++){const x=6+R()*28,y=10+R()*30;hdE(FG,x,y,1.4,1,hdTone(80,20,30));hdP(FG,x+1,y+1,[230,255,120]);hdP(FG,x+2,y+1,[230,255,120]);hdP(FG,x,y-1,[220,240,255])}glow=[220,255,120]}
+      else if(sp.kind==='animal'){const A={fox:{fur:sp.glow,bw:7,bh:4,legH:5,head:3.5,snout:3,ear:'point',tail:'bushy'},hare:{fur:sp.glow,bw:6,bh:4.5,legH:4,head:3.2,snout:1,ear:'long',tail:'fluff'},
+          stag:{fur:sp.glow,bw:9,bh:5,legH:9,head:3.4,snout:2,ear:'point',tail:'short',antlers:sp.small?0:12,neck:3,neckW:3,headUp:5,hooves:1}}[sp.animal];
+        const o=Object.assign({},A,{x:sp.pair?14:22,base,sc,fur:sp.glow});hdBeast(FG,R,o);if(sp.pair)hdBeast(FG,R,Object.assign({},A,{x:30,base:base-3,sc:.8,fur:sp.glow}))}
+      else if(sp.kind==='owl')hdBird(FG,R,{x:20,y:28,front:1,fur:sp.glow,belly:[sp.glow[0],30,88],eye:[180,240,255]});
+      else if(sp.kind==='wraith'){const o=hdWraith(FG,{x:20,base:base-4,col:[sp.glow[0],25,60]});if(sp.rain)for(let k=0;k<22;k++){const x=R()*HDW,y=R()*40;hdLn(BG,x,y,x-1,y+3,hdHsl(200,60,70))}}
+      else if(sp.kind==='lantern'){if(/mother/.test(d.n.toLowerCase())){const o=hdFae(FG,R,{x:20,base,skin:[40,40,80],dress:[35,60,55],hair:[30,40,30],armsUp:1,longHair:1,crown:'gold'});hdLanternSprite(FG,o.lh[0],o.lh[1]+6,.6);hdLanternSprite(FG,o.rh[0],o.rh[1]+6,.6)}else hdLanternSprite(FG,20,30,1.4);glow=[255,210,100]}
+      else if(sp.kind==='heart'){hdTreant(FG,R,{x:20,base:HDH+2,sc:1.3,bark:[30,25,22],leaf:[150,40,45],canopy:'oak',mouth:'o',eye:[200,255,240]});hdE(FG,20,36,4,4,hdTone(340,80,62));hdE(FG,19,35,1.5,1.5,[255,230,240]);glow=[255,160,200];gs=.6}
+      else if(sp.kind==='imp'){hdFae(FG,R,{x:20,base:base,skin:[100,40,45],dress:[110,40,30],hair:[100,40,25],horns:1,leafy:1,eye:[255,240,120]})}
+      else{const nm=d.n.toLowerCase();const o=hdFae(FG,R,{x:20,base,skin:[sp.glow[0],30,85],dress:[sp.glow[0],50,55],hair:[sp.glow[0]+30,50,70],wing:/dancer|grove song|pondmother|healer|rain/.test(nm)?null:[sp.glow[0],50,82],
+          leafy:/fern|moss/.test(nm),thorny:/thorn|bramble/.test(nm),armsUp:/dancer|song|aurora|rain caller/.test(nm),crown:/mother|aurora/.test(nm)?'gold':'flowers',longHair:R()<.6,sc});
+        if(/song/.test(nm))for(let k=0;k<3;k++){hdR(FG,8+k*11,8+(k%2)*5,1,4,[255,255,220]);hdE(FG,7+k*11,12+(k%2)*5,1.3,1,[255,255,220])}
+        if(/pond/.test(nm))for(let k=0;k<3;k++)hdE(FG,8+k*12,base+2,3,1,hdTone(120,45,40));if(/rain caller/.test(nm))hdE(FG,20,6,8,3,hdTone(220,15,70))}}
+    else if(sp.type==='beast'){const a=sp.a,big=sp.big?1.15:1,brown=[25,40,30];let o=null;
+      if(a==='squirrel'){hdE(FG,22,base-1,9,2.5,hdTone(30,40,30));o={kind:a,x:20,base:base-3,fur:sp.gold?[45,85,52]:[20,60,42],belly:[35,40,80],bw:4,bh:4,legH:3,head:3.2,snout:1,ear:'tuft',tail:'bushy',bigEye:1,sc:1.3}}
+      else if(a==='badger')o={x:21,base,fur:[0,0,45],belly:[0,0,25],bw:9,bh:4.5,legH:3,head:3.4,snout:3,snoutCol:[0,0,90],ear:'round',tail:'short',face:'badger'};
+      else if(a==='boar')o={x:21,base,fur:[20,30,26],bw:10,bh:6,legH:4,head:4.3,snout:3,ear:'point',tail:'long',tusk:1,hump:1,hooves:1,spots:/bramble/.test(d.n.toLowerCase())};
+      else if(a==='wolf')o={x:20,base,fur:/dire/.test(d.n.toLowerCase())?[220,8,28]:[210,8,52],belly:[0,0,80],bw:9,bh:5,legH:7,head:3.6,snout:3,ear:'point',tail:'bushy',mane:1,neck:2,headUp:3,eye:[250,210,80]};
+      else if(a==='beaver'){hdE(FG,24,base-1,12,2,hdTone(205,50,50));o={x:20,base:base-2,fur:[25,45,28],belly:[25,35,40],bw:8,bh:5.5,legH:2,head:3.6,snout:1,ear:'round',tail:'flat',bigEye:1};hdR(FG,10,base-8,1,2,[250,250,240])}
+      else if(a==='elk')o={x:22,base,fur:/thunderhoof/.test(d.n.toLowerCase())?[20,30,20]:[28,45,40],belly:[35,30,70],bw:9,bh:5.5,legH:10,head:3.6,snout:2.5,ear:'point',tail:'short',antlers:14,neck:4,neckW:4,headUp:6,hooves:1,mane:1};
+      else if(a==='moose')o={x:22,base,fur:[22,35,22],bw:10,bh:6.5,legH:10,head:4,snout:3.5,ear:'point',tail:'short',antlers:10,palmate:1,neck:3,neckW:4,headUp:3,hooves:1,hump:1};
+      else if(a==='bear')o={x:20,base,fur:/cave|ursa/.test(d.n.toLowerCase())?[25,15,26]:/great/.test(d.n.toLowerCase())?[15,30,18]:brown,bw:sp.cub?7:11,bh:sp.cub?5:7.5,legH:sp.cub?4:6,legW:3,head:sp.cub?3.8:4.6,snout:2,snoutCol:[30,35,50],ear:'round',tail:'short',hump:!sp.cub,bigEye:sp.cub};
+      else if(a==='lynx')o={x:21,base,fur:[35,35,58],bw:8,bh:4.5,legH:6,head:3.6,snout:1,ear:'tuft',tail:'short',spots:1,eye:[150,220,90]};
+      if(o){o.sc=a==='squirrel'?1.5*big:Math.min(1.35*big,15/(o.bw||10));o.x=Math.max(o.x,21);if(sp.old&&o.fur)o.fur=[o.fur[0],o.fur[1]*.5,o.fur[2]+10];o.crown=sp.crown;hdBeast(FG,R,o)}
+      else if(a==='owl'){hdLn(FG,4,40,36,41,hdTone(30,40,30).m,2);hdBird(FG,R,{x:20,y:28,front:1,fur:/grey/.test(d.n.toLowerCase())?[0,0,62]:[30,35,42],belly:[35,30,78],tufts:sp.tufts||/grey|great/.test(d.n.toLowerCase())})}
+      else if(a==='crow'||a==='raven'||a==='hawk'){hdLn(FG,2,38,38,36,hdTone(30,40,30).m,2);hdLn(FG,30,37,35,32,hdTone(30,40,30).d);
+        hdBird(FG,R,a==='hawk'?{x:20,y:28,fur:/golden/.test(d.n.toLowerCase())?[38,60,38]:[25,40,40],belly:[35,40,82],beak:[230,190,60],hook:1,eye:[250,200,60],sc:1.2,spread:/eagle/.test(d.n.toLowerCase())}
+          :{x:20,y:28,fur:[240,15,16],belly:[240,15,22],beak:[30,30,40],eye:a==='raven'?[250,240,160]:null,sc:a==='raven'?1.3:1,crest:a==='raven',crown:sp.crown})}
+      else if(a==='bee'){for(let k=0;k<5;k++){const x=6+k*7,y=14+((k*13)%9);hdE(BG,x,y,1,1,[250,220,90])}hdR(FG,10,32,20,14,(i,j)=>(j%4===0)?hdHsl(40,60,40):hdHsl(42,80,58));hdBee(FG,22,22,1)}
+      if(sp.gold){glow=[255,225,120];gs=.55}}}
+  FG=hdOutline(FG);if(glow||d.r>=4)hdGlow(BG,FG,glow||RAR[d.r].c.match(/\w\w/g).map(h=>parseInt(h,16)),3,gs||.45);
+  if(d.r>=4&&d.unit)for(let k=0;k<8;k++){const x=R()*HDW|0,y=R()*40|0;if(!FG[y*HDW+x]){hdP(BG,x,y,[255,255,230]);hdP(BG,x-1,y,[255,240,180]);hdP(BG,x+1,y,[255,240,180]);hdP(BG,x,y-1,[255,240,180]);hdP(BG,x,y+1,[255,240,180])}}
+  const img=hdOver(BG,FG),cv=document.createElement('canvas');cv.width=HDW;cv.height=HDH;const g=cv.getContext('2d'),id2=g.createImageData(HDW,HDH);
+  for(let i=0;i<img.length;i++){const c=img[i]||[16,26,22];id2.data[i*4]=c[0];id2.data[i*4+1]=c[1];id2.data[i*4+2]=c[2];id2.data[i*4+3]=255}g.putImageData(id2,0,0);return HD_CACHE[id]=cv.toDataURL()}
+function pick2(R,a){return a[R()*a.length|0]}
+const __mods={'./src_classic.js':{CARDSRC,LEADERS}};const __req=n=>__mods[n];
+(function(){const module={exports:{}};const require=__req;
+/* Heartwood TCG card pool, converted from the Classic cards by fixed rules (rules doc: "Converting the existing cards").
+   Unit ids match Classic ids so one collection plays both formats. */
+const {CARDSRC,LEADERS}=require('./src_classic.js');
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const CARDS={},UNITS=[];
+const ROWF={L:'C',W:'T',S:'T',B:'C',N:'C'};
+function convertUnits(){
+  for(const f in CARDSRC)CARDSRC[f].forEach((c,i)=>{
+    const [n,oldRow,oldP,ab,r]=c,id=f+String(i+1).padStart(2,'0');
+    const kw={};let row=oldRow===0?'C':oldRow===1?'T':ROWF[f];
+    if(ab==='bond')kw.crew=1;else if(ab==='morale'||ab==='horn')kw.rally=1;else if(ab==='medic')kw.revive=1;
+    else if(ab==='spy')kw.scout=1;else if(ab==='agile'){kw.nimble=1;row='W'}else if(ab==='hero')kw.ancient=1;
+    else if(ab.startsWith('muster:')){kw.call=1}else if(ab.startsWith('scorch'))kw.fire=3;
+    let p=ab==='hero'?clamp(Math.round(oldP*0.6),6,8):clamp(Math.round(oldP*0.6),1,7);
+    if(ab==='horn')p=2;
+    /* faction flavour for plain cards (no ability), by position so it is stable */
+    const plain=!ab;
+    if(plain){
+      if(f==='L'&&row==='C'&&i%3===0)kw.eager=1;
+      else if(f==='L'&&row==='C'&&r>=2)kw.double=1;
+      else if(f==='W'&&row==='C')kw.guard=1;
+      else if(f==='W'&&row==='T'&&r>=1)kw.regrow=1;
+      else if(f==='W'&&row==='T')kw.guard=1;
+      else if(f==='S'&&r>=2)kw.sprout=1;
+      else if(f==='S'&&i%2===0)kw.eager=1;
+      else if(f==='B'&&row==='C'&&i%3===1)kw.eager=1;
+      else if(f==='N'&&row==='C')kw.guard=1;
+    }
+    const nk=Object.keys(kw).filter(k=>k!=='ancient').length;
+    const feral=f==='B'&&plain&&row==='C'&&!kw.eager&&i%3===0;
+    /* +1 for a keyword; plain Treeline units pay +1 for their safety instead */
+    const cost=clamp(p+(nk||(row==='T'&&!kw.rally)?1:0)+(kw.ancient?2:0),1,10);
+    if(cost<=2&&!kw.ancient)kw.brace=1;
+    /* Beasts: plain Clearing commons hit 1 harder for the same cost */
+    let pp=feral?p+1:p;
+    /* v91 balance (smart-AI tested): Warden Treeline units +1 power; Spirit units costing 3 or less +1 power */
+    if(f==='W'&&row==='T'&&!kw.ancient)pp+=1;
+    if(f==='S'&&cost<=3)pp+=1;
+    const d={id,n,f,type:'unit',r,p:pp,row,kw,cost,mus:ab.startsWith('muster:')?ab.slice(7):null};
+    CARDS[id]=d;UNITS.push(d)});
+}
+convertUnits();
+/* Non-unit cards. fx keys are read by the engine. */
+const EXTRA=[
+ ['Xhorn','Camp Bell','N','boon',2,{row:'C',v:1}],['Xlantern','Lantern Light','N','boon',2,{row:'T',v:1}],
+ ['Xfrost','Snowdrift','N','blight',2,{row:'C',v:-1}],['Xmist','Sawdust','N','blight',2,{row:'T',v:-1}],
+ ['Xstorm','Mudslide','N','reaction',1,{attackerMinus:2}],['Xsun','Sunbreak','N','event',2,{clearAuras:1,draw:1}],
+ ['Xscare','Scarecrow','N','reaction',2,{decoy:3}],['Xfire','Wildfire','N','event',5,{wipe:2}],
+ ['TL_axe','Sharp Axe','L','tool',2,{p:2}],['TL_hook','Peavey Hook','L','tool',1,{p:1,eager:1}],
+ ['TL_line','Hold the Line','L','reaction',2,{plus:3}],['TL_timber','Timber!','L','event',4,{fell:4}],
+ ['TW_bark','Bark Armour','W','tool',2,{p:1,guard:1}],['TW_rooted','Rooted','W','reaction',1,{plus:2}],
+ ['TW_roots','Return to the Roots','W','event',1,{fellOwn:1,regrow:1,draw:1}],['TW_moss','Mossbed','W','event',3,{regrow:1,draw:1}],
+ ['TS_charm','Wisp Charm','S','tool',1,{p:1,nimble:1}],['TS_fade','Fade','S','reaction',2,{negate:1}],
+ ['TS_path','Moonlit Path','S','event',2,{daze:1,draw:1}],['TS_gust','Gust','S','event',3,{bounce:4}],
+ ['TB_collar','Iron Collar','B','tool',2,{p:2}],['TB_pack','Pack Defence','B','reaction',2,{plusPerUnit:1}],
+ ['TB_stampede','Stampede','B','event',3,{clearingBuff:2}],['TB_howl','Howl','B','event',2,{reviveHand:1,draw:1}]];
+/* rarity (Common 0 … Epic 3): Classic specials keep their Classic rarity; TCG-only cards drop from sealed cards of this rarity */
+const XR={Xhorn:2,Xlantern:1,Xfrost:0,Xmist:0,Xstorm:0,Xsun:1,Xscare:1,Xfire:3,TL_axe:1,TL_hook:0,TL_line:1,TL_timber:2,TW_bark:1,TW_rooted:0,TW_roots:1,TW_moss:2,
+  TS_charm:0,TS_fade:2,TS_path:1,TS_gust:2,TB_collar:1,TB_pack:1,TB_stampede:2,TB_howl:1};
+for(const [id,n,f,type,cost,fx] of EXTRA)CARDS[id]={id,n,f,type,cost,fx,kw:{},p:0,r:XR[id]!=null?XR[id]:1};
+/* Keepers: power runs opposite to ability strength. Ability ops are read by the engine. */
+const KEEPERS={
+ L_a:{n:'Foreman Hale',f:'L',p:5,row:'C',ab:[[1,'buff',2],[3,'draw',1],[6,'buffRow',2]]},
+ L_b:{n:'Guild Mistress Ada',f:'L',p:3,row:'T',ab:[[1,'draw',1],[3,'fell',3],[6,'readyAll',1]]},
+ L_c:{n:'Tally Clerk Wen',f:'L',p:4,row:'C',ab:[[1,'buff',2],[3,'hush',1],[6,'draw',2]]},
+ W_a:{n:'Elder of Roots',f:'W',p:3,row:'T',ab:[[1,'shield',2],[3,'regrowDraw',1],[6,'fell',7]]},
+ W_b:{n:'Seer of Rings',f:'W',p:3,row:'T',ab:[[1,'shield',2],[3,'regrowDraw',1],[6,'fell',7]]},
+ W_c:{n:'Grove Judge',f:'W',p:4,row:'C',ab:[[1,'shield',1],[3,'daze',1],[6,'fell',5]]},
+ S_a:{n:'Moon Doe',f:'S',p:3,row:'W',ab:[[2,'draw',1],[3,'bounce',5],[6,'bounce',9]]},
+ S_b:{n:'Lantern Keeper',f:'S',p:3,row:'T',ab:[[2,'draw',1],[3,'bounce',5],[6,'readyAll',1]]},
+ S_c:{n:'Mist Mother',f:'S',p:4,row:'W',ab:[[1,'buff',2],[3,'daze',1],[6,'bounce',9]]},
+ B_a:{n:'Den Mother',f:'B',p:4,row:'C',ab:[[1,'buff',2],[2,'reviveHand',1],[6,'revivePlay',1]]},
+ B_b:{n:'The Alpha',f:'B',p:5,row:'C',ab:[[1,'buff',2],[3,'buffRow',2],[6,'readyAll',1]]},
+ B_c:{n:'Old Raven',f:'B',p:3,row:'T',ab:[[2,'draw',1],[3,'fell',3],[6,'fell',7]]}};
+for(const k in KEEPERS)KEEPERS[k].id=k;
+/* Starter decks: 30 main cards + 6 Ring cards, from one faction plus Neutral. */
+function starter(f){
+  /* a cost curve: 8 cheap (1-2), 8 mid (3-4), 4 big (5+) units, 2 copies each */
+  const pool=UNITS.filter(c=>c.f===f&&!c.kw.ancient&&c.r<=2);
+  const pick=(lo,hi,n)=>{const out=[];for(const c of pool.filter(c=>c.cost>=lo&&c.cost<=hi).sort((a,b)=>b.p-a.p)){if(out.length>=n)break;out.push(c.id,c.id)}return out.slice(0,n)};
+  const main=[...pick(1,2,8),...pick(3,4,8),...pick(5,7,4)];
+  for(const c of pool.slice().sort((a,b)=>a.cost-b.cost)){if(main.length>=20)break;if(main.filter(x=>x===c.id).length<2)main.push(c.id)}
+  const ex=Object.values(CARDS).filter(c=>c.type!=='unit'&&c.f===f).map(c=>c.id);
+  main.push(...ex,...ex.slice(0,2),'Xhorn','Xfrost','Xstorm','Xscare','Xsun','Xfire');
+  while(main.length>30)main.pop();
+  const ring=UNITS.filter(c=>c.f===f&&c.r>=2).sort((a,b)=>b.cost-a.cost).slice(0,6).map(c=>c.id);
+  return {main,ring};
+}
+module.exports={CARDS,UNITS,KEEPERS,starter};
+
+__mods['./cards.js']=module.exports})();
+(function(){const module={exports:{}};const require=__req;
+/* Heartwood TCG rules engine + computer opponent. No DOM: state is plain data (JSON-cloneable). */
+const {CARDS,KEEPERS}=require('./cards.js');
+const ROWCAP=3,SAPCAP=10,RINGCAP=6;
+const C=id=>CARDS[id];
+function rnd(G){G.rs=(G.rs+0x6D2B79F5)>>>0;let t=G.rs;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}
+function shuffle(G,a){for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd(G)*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+/* fast copy of the game state (the AI copies it a lot) */
+const cpU=x=>({u:x.u,id:x.id,exh:x.exh,sick:x.sick,tools:x.tools.slice(),tmp:x.tmp,sh:x.sh,moved:x.moved,row:x.row});
+const cpP=P=>({...P,k:{...P.k,used:{...P.k.used}},deck:P.deck.slice(),hand:P.hand.slice(),rings:P.rings.slice(),heart:P.heart.slice(),grave:P.grave.slice(),rows:{C:P.rows.C.map(cpU),T:P.rows.T.map(cpU)},stats:{...P.stats}});
+const clone=G=>({...G,aura:{...G.aura},log:G.log.slice(),p:G.p.map(cpP)});
+let UID=1;
+function inst(G,id){return {u:G.uid++,id,exh:false,sick:true,tools:[],tmp:0,sh:0,moved:false,row:null}}
+function newPlayer(G,cfg){const P={name:cfg.name,f:KEEPERS[cfg.keeper].f,k:{id:cfg.keeper,exh:false,dz:0,hush:0,used:{},row:KEEPERS[cfg.keeper].row==='W'?'C':KEEPERS[cfg.keeper].row},
+  deck:shuffle(G,cfg.main.slice()),hand:[],rings:[],heart:null,grave:[],rows:{C:[],T:[]},sapLvl:0,sap:0,coin:false,stats:{abil:0,hits:0,react:0}};
+  /* stronger Keeper, fewer starting Rings: power 5 → 4 Rings, 4 → 5, 3 or less → 6. The rest wait in the Heartwood. */
+  const ring=shuffle(G,cfg.ring.slice()),n=startRings(cfg.keeper);P.rings=ring.slice(0,n);P.heart=ring.slice(n);
+  for(let i=0;i<5;i++)P.hand.push(P.deck.shift());return P}
+const startRings=k=>(KEEPERS[k].p>=4?5:6)+RULES.ringDelta;
+function newGame(a,b,seed,human){const G={rs:seed>>>0||1,uid:1,turn:0,first:0,turnNo:0,phase:'work',aura:{C:0,T:0},over:false,winner:-1,reason:'',log:[]};
+  G.p=[newPlayer(G,a),newPlayer(G,b)];
+  /* coin flip: winner goes first, the other keeps the coin */
+  G.first=rnd(G)<0.5?0:1;G.turn=G.first;G.p[1-G.first].coin=!RULES.noCoin;
+  /* going second: keep the coin and draw one extra card */
+  if(!RULES.noExtra)draw(G,1-G.first);
+  for(let i=0;i<2;i++)if(i!==human)aiMulligan(G,i);
+  dawn(G,true);return G}
+function redraw(G,i){const P=G.p[i],n=P.hand.length;P.deck.push(...P.hand);P.hand=[];shuffle(G,P.deck);for(let k=0;k<n;k++)P.hand.push(P.deck.shift())}
+function aiMulligan(G,i){const P=G.p[i];if(P.hand.filter(id=>C(id).cost<=3).length>=2)return;P.deck.push(...P.hand);P.hand=[];shuffle(G,P.deck);for(let k=0;k<5;k++)P.hand.push(P.deck.shift())}
+const units=P=>P.rows.C.concat(P.rows.T);
+const findU=(P,u)=>units(P).find(x=>x.u===u);
+const kwOf=(x,k)=>C(x.id).kw[k]||x.tools.some(t=>C(t).fx[k]);
+function power(G,P,x){const d=C(x.id);let v=d.p+x.tmp+x.sh;for(const t of x.tools)v+=C(t).fx.p||0;
+  const row=x.row,au=G.aura[row];if(au&&!(au<0&&d.kw.ancient))v+=au;
+  if(G.p[G.turn]===P)v+=units(P).filter(y=>y!==x&&C(y.id).kw.rally).length;
+  if(d.kw.crew)v+=units(P).filter(y=>y!==x&&y.id===x.id).length;
+  return Math.max(0,v)}
+/* wear test: each hit a Keeper takes lowers its power by 1 for the rest of the game (never below 1) */
+function kPower(G,P){return Math.max(1,KEEPERS[P.k.id].p-(RULES.wear?(P.k.wear||0):0))}
+/* any ready unit in your Clearing can block; Guard units can block from either row and get +2 power while blocking */
+const blockPower=(G,P,x)=>power(G,P,x)+(kwOf(x,'guard')?RULES.guardBonus:0);
+const blockers=(G,P,d)=>units(P).filter(x=>!x.exh&&x.u!==d&&(x.row==='C'||kwOf(x,'guard')));
+/* rule switches for testing (all off = the live rules) */
+const RULES={fatigue:0,guardBonus:2,clock:0,wear:0,ringDelta:0,sapStep:2,sapCap:10,p1first:1,rampTo:0,noCoin:1,noExtra:1,regrowDiscard:0};
+/* v91 rules: +2 Sap a turn (first player starts on 1, second on 2), no coin, no extra card, Regrow only from the Heartwood */const setRule=(k,v)=>{RULES[k]=v};
+function draw(G,i){const P=G.p[i];
+  if(!P.deck.length){
+    /* 'reshuffle': the first time your deck runs out, shuffle your discard pile in as a new deck */
+    if(RULES.fatigue==='reshuffle'&&!P.reshuf&&P.grave.length){P.reshuf=1;P.deck=shuffle(G,P.grave.splice(0));lg(G,P.name+' reshuffles the discard pile')}
+    /* 'wither': drawing from an empty deck burns a Ring instead (no card); with no Rings left you lose */
+    else if(RULES.fatigue==='wither'){if(P.rings.length){P.grave.push(P.rings.pop());lg(G,P.name+' withers: a Ring is lost');return false}end(G,1-i,'withered');return false}
+    else{end(G,1-i,'deck-out');return false}}
+  P.hand.push(P.deck.shift());return true}
+const lg=(G,txt)=>{G.log.push(txt);if(G.log.length>80)G.log.shift()};
+const nm=id=>C(id).n;
+const vb=(P,v)=>P.name==='You'?({plays:'play',ends:'end',spends:'spend'}[v]||v):v;
+const own=P=>P.name==='You'?'your':P.name+"'s";
+function end(G,w,why){if(G.over)return;G.over=true;G.winner=w;G.reason=why}
+function dawn(G,firstTurn){const i=G.turn,P=G.p[i];G.turnNo++;G.phase='work';
+  for(const x of units(P)){x.exh=false;x.sick=false;x.moved=false;x.sh=0}
+  P.k.exh=P.k.dz>0;P.k.dz=0;P.k.used={};
+  if(KEEPERS[P.k.id].row==='W')P.k.row='C';
+  /* Sap growth (tests): sapStep a turn up to sapCap; rampTo = +sapStep only until that level, then +1;
+     p1first = what the first player gets on their very first turn */
+  let step=RULES.sapStep;if(RULES.rampTo&&P.sapLvl>=RULES.rampTo)step=1;
+  if(P.sapLvl===0&&i===G.first&&RULES.p1first!=null)step=RULES.p1first;
+  P.sapLvl=Math.min(RULES.sapCap,P.sapLvl+step);P.sap=P.sapLvl;
+  if(!(firstTurn&&i===G.first))draw(G,i)}
+function dusk(G){const P=G.p[G.turn];for(const x of units(P))x.tmp=0;P.k.hush=0;G.turn=1-G.turn;if(!G.over)dawn(G,false)}
+function toGrave(G,P,x){for(const r of ['C','T'])P.rows[r]=P.rows[r].filter(y=>y!==x);P.grave.push(x.id,...x.tools)}
+/* Regrow: the Heartwood card first; after that, a random card from your discard pile (never your deck) */
+function regrow(G,P){if(P.rings.length>=RINGCAP)return;if(P.heart.length){P.rings.push(P.heart.pop())}else if(RULES.regrowDiscard&&P.grave.length){const j=Math.floor(rnd(G)*P.grave.length);P.rings.push(P.grave.splice(j,1)[0])}}
+function bestUnitIn(list,maxCost){let b=null;for(const id of list){const d=C(id);if(d.type==='unit'&&!d.kw.ancient&&d.cost<=maxCost&&(!b||d.p>C(b).p))b=id}return b}
+function abilityText(op,v){return {buff:'+'+v+' power this turn',shield:'+'+v+' power until your next turn',ready:'ready a unit',draw:'draw '+v,buffRow:'your Clearing +'+v+' this turn',readyAll:'ready everything',hush:'Hush their Keeper',daze:'Daze their Keeper',regrow:'Regrow',regrowDraw:'Regrow and draw 1',cycleDraw:'put a card from your discard pile under your deck, then draw '+v,fell:'fell a unit with '+v+' or less power',fellExhausted:'fell an exhausted unit',bounce:'return a unit with '+v+' or less power to hand',reviveHand:'take a unit back from your discard pile',revivePlay:'play a unit from your discard pile'}[op]||op}
+/* ---------- legal moves ---------- */
+function rowsFor(P,d){const r=d.row==='W'?['C','T']:[d.row];return r.filter(x=>P.rows[x].length<ROWCAP)}
+function enemyTargets(G,i,pred){const O=G.p[1-i];return units(O).filter(x=>!C(x.id).kw.ancient&&pred(x,O))}
+function moves(G){const i=G.turn,P=G.p[i],O=G.p[1-i],out=[];
+  if(G.over)return out;
+  if(G.phase==='work'){
+    for(const id of new Set(P.hand)){const d=C(id);if(d.cost>P.sap)continue;
+      if(d.type==='unit'){for(const row of rowsFor(P,d))out.push({t:'play',id,row})}
+      else if(d.type==='tool'){for(const x of units(P))out.push({t:'play',id,target:x.u})}
+      else if(d.type==='boon'||d.type==='blight')out.push({t:'play',id});
+      else if(d.type==='event'){const fx=d.fx;
+        if(fx.fell)enemyTargets(G,i,(x,O)=>power(G,O,x)<=fx.fell).forEach(x=>out.push({t:'play',id,target:x.u}));
+        else if(fx.bounce)enemyTargets(G,i,(x,O)=>power(G,O,x)<=fx.bounce).forEach(x=>out.push({t:'play',id,target:x.u}));
+        else if(fx.fellOwn)units(P).forEach(x=>out.push({t:'play',id,target:x.u}));
+        else out.push({t:'play',id})}}
+    if(P.coin)out.push({t:'coin'});
+    if(!P.k.hush&&!P.k.exh)KEEPERS[P.k.id].ab.forEach(([cost,op,v],ai)=>{if(cost>P.sap||P.k.used[ai])return;
+      if(op==='buff'||op==='ready'||op==='shield')units(P).forEach(x=>out.push({t:'ability',ai,target:x.u}));
+      else if(op==='fell'||op==='bounce')enemyTargets(G,i,(x,O)=>power(G,O,x)<=v).forEach(x=>out.push({t:'ability',ai,target:x.u}));
+      else if(op==='fellExhausted')enemyTargets(G,i,x=>x.exh).forEach(x=>out.push({t:'ability',ai,target:x.u}));
+      else out.push({t:'ability',ai})});
+    for(const x of units(P))if(kwOf(x,'nimble')&&!x.moved){const to=x.row==='C'?'T':'C';if(P.rows[to].length<ROWCAP)out.push({t:'move',u:x.u})}
+    out.push({t:'tofell'})}
+  else{
+    for(const a of attackers(G,i))for(const d of targets(G,i))out.push({t:'attack',a,d});
+    out.push({t:'end'})}
+  return out}
+function canAttack(P,x){return !x.exh&&(!x.sick||kwOf(x,'eager'))}
+function attackers(G,i){const P=G.p[i],a=units(P).filter(x=>canAttack(P,x)).map(x=>x.u);return a}
+/* Target test switch: 0 = now (tired Clearing units; tired Treeline units once the Clearing is empty).
+   'tired' = any tired unit, either row. 'clearing' = any Clearing unit, ready or tired (Treeline once the Clearing is empty).
+   'all' = any unit anywhere. */
+let TARGETS=0;const setTargets=v=>{TARGETS=v};
+function targets(G,i){const O=G.p[1-i],t=[],clearEmpty=!O.rows.C.length;
+  t.push('K');
+  const ok=(x,row)=>TARGETS==='all'?true:TARGETS==='tired'?x.exh:TARGETS==='clearing'?(row==='C'||clearEmpty):x.exh&&(row==='C'||clearEmpty);
+  for(const r of ['C','T'])for(const x of O.rows[r])if(ok(x,r))t.push(x.u);
+  return t}
+/* ---------- applying moves ---------- */
+function apply(G,m,def){const i=G.turn,P=G.p[i],O=G.p[1-i];if(G.over)return;
+  if(m.t==='tofell'){G.phase='fell';return}
+  if(m.t==='end'){lg(G,P.name+' '+vb(P,'ends')+' the turn');dusk(G);return}
+  if(m.t==='coin'){P.coin=false;P.sap+=2;lg(G,P.name+' '+vb(P,'spends')+' the coin: +2 Sap');return}
+  if(m.t==='move'){const x=findU(P,m.u);P.rows[x.row]=P.rows[x.row].filter(y=>y!==x);x.row=x.row==='C'?'T':'C';P.rows[x.row].push(x);x.moved=true;return}
+  if(m.t==='ability'){const [cost,op,v]=KEEPERS[P.k.id].ab[m.ai];lg(G,P.name+': '+KEEPERS[P.k.id].n+' uses '+abilityText(op,v)+(m.target?' on '+nm(findU(P,m.target)?.id||findU(O,m.target)?.id||'Xhorn'):''));P.sap-=cost;P.k.used[m.ai]=1;P.stats.abil++;effect(G,i,op,v,m.target);return}
+  if(m.t==='play'){const d=C(m.id);P.hand.splice(P.hand.indexOf(m.id),1);P.sap-=d.cost;lg(G,P.name+' '+vb(P,'plays')+' '+d.n);
+    if(d.type==='unit')enter(G,i,m.id,m.row);
+    else if(d.type==='tool'){const x=findU(P,m.target);x.tools.push(m.id)}
+    else if(d.type==='boon'||d.type==='blight'){G.aura[d.fx.row]=d.fx.v;P.grave.push(m.id)}
+    else if(d.type==='event'){const fx=d.fx;
+      if(fx.fell||fx.bounce){const x=findU(O,m.target);if(x){if(fx.fell)toGrave(G,O,x);else{for(const r of ['C','T'])O.rows[r]=O.rows[r].filter(y=>y!==x);O.grave.push(...x.tools);O.hand.push(x.id)}}}
+      if(fx.fellOwn){const x=findU(P,m.target);if(x)toGrave(G,P,x)}
+      if(fx.clearAuras)G.aura={C:0,T:0};
+      if(fx.wipe)for(const Q of G.p)for(const x of units(Q).slice())if(!C(x.id).kw.ancient&&power(G,Q,x)<=fx.wipe)toGrave(G,Q,x);
+      if(fx.regrow)regrow(G,P);
+      if(fx.daze)O.k.dz=1;
+      if(fx.clearingBuff)for(const x of P.rows.C)x.tmp+=fx.clearingBuff;
+      if(fx.reviveHand){const b=bestUnitIn(P.grave,10);if(b){P.grave.splice(P.grave.indexOf(b),1);P.hand.push(b)}}
+      if(fx.draw)for(let k=0;k<fx.draw;k++)draw(G,i);
+      P.grave.push(m.id)}
+    else P.grave.push(m.id);return}
+  if(m.t==='attack')attack(G,i,m.a,m.d,def)}
+function enter(G,i,id,row){const P=G.p[i],O=G.p[1-i],d=C(id);if(P.rows[row].length>=ROWCAP){P.grave.push(id);return}
+  const x=inst(G,id);x.row=row;P.rows[row].push(x);const kw=d.kw;
+  if(kw.scout)draw(G,i);
+  if(kw.regrow)regrow(G,P);
+  if(kw.revive){const b=bestUnitIn(P.grave,3);if(b){P.grave.splice(P.grave.indexOf(b),1);P.hand.push(b)}}
+  if(kw.call){const j=P.deck.findIndex(z=>z===id||(d.mus&&C(z).mus===d.mus));if(j>=0)P.hand.push(P.deck.splice(j,1)[0])}
+  if(kw.fire){const t=enemyTargets(G,i,(y,Q)=>power(G,Q,y)<=kw.fire).sort((a,b)=>power(G,O,b)-power(G,O,a))[0];if(t)toGrave(G,O,t)}}
+function effect(G,i,op,v,target){const P=G.p[i],O=G.p[1-i];
+  if(op==='buff'){const x=findU(P,target);if(x)x.tmp+=v}
+  else if(op==='shield'){const x=findU(P,target);if(x)x.sh+=v}
+  else if(op==='ready'){const x=findU(P,target);if(x){x.exh=false;x.sick=false}}
+  else if(op==='draw'){for(let k=0;k<v;k++)draw(G,i)}
+  else if(op==='cycleDraw'){if(P.grave.length){const b=bestUnitIn(P.grave,10)||P.grave[0];P.grave.splice(P.grave.indexOf(b),1);P.deck.push(b)}for(let k=0;k<v;k++)draw(G,i)}
+  else if(op==='buffRow'){for(const x of P.rows.C)x.tmp+=v}
+  else if(op==='readyAll'){for(const x of units(P)){x.exh=false;x.sick=false}P.k.exh=false}
+  else if(op==='hush')O.k.hush=1;
+  else if(op==='daze')O.k.dz=1;
+  else if(op==='regrow')regrow(G,P);
+  else if(op==='regrowDraw'){regrow(G,P);draw(G,i)}
+  else if(op==='fell'||op==='fellExhausted'){const x=findU(O,target);if(x)toGrave(G,O,x)}
+  else if(op==='bounce'){const x=findU(O,target);if(x){for(const r of ['C','T'])O.rows[r]=O.rows[r].filter(y=>y!==x);O.grave.push(...x.tools);O.hand.push(x.id)}}
+  else if(op==='reviveHand'){const b=bestUnitIn(P.grave,10);if(b){P.grave.splice(P.grave.indexOf(b),1);P.hand.push(b)}}
+  else if(op==='revivePlay'){const b=bestUnitIn(P.grave,10);if(b){const d=C(b),rs=rowsFor(P,d);if(rs.length){P.grave.splice(P.grave.indexOf(b),1);enter(G,i,b,rs[0])}}}}
+/* Trample (on: 'chip'). 0 = off. 'carry' = the power left over after beating a blocker carries on to the
+   original target and must beat it on its own. 'chip' = any power left over after beating a blocker cracks a Ring
+   (Keeper attacks) or fells the target if it is enough (unit attacks). */
+let TRAMPLE='chip';const DEFENDERS={};const setTrample=v=>{TRAMPLE=v};const TS={blocks:0,through:0,saved:0,gaveUp:0,kAtt:0,kills:0,readyKills:0};
+const tramples=(left,tpow,isK)=>left>0&&(TRAMPLE==='chip'&&isK?true:left>=tpow);
+/* one attack, with the defender's single React window */
+function attack(G,i,a,d,def){const P=G.p[i],O=G.p[1-i];let att,ap;
+  if(a==='K'){P.k.exh=true;ap=kPower(G,P)}else{att=findU(P,a);att.exh=true;ap=power(G,P,att)}
+  let tgt=d==='K'?null:findU(O,d);let dp=d==='K'?kPower(G,O):power(G,O,tgt);
+  const aN=a==='K'?KEEPERS[P.k.id].n:nm(att.id),dN=d==='K'?(O.name==='You'?'your Keeper':O.name+"'s Keeper"):nm(tgt.id);
+  const plan=(def||DEFENDERS[O.ai]||aiDefend)(G,1-i,ap,d,dp,a);G.lastAttack={a:aN,d:dN,ap,dp,plan,landed:false,crack:null,isK:d==='K',trade:false};O.stats.react+=plan.cards.length;
+  for(const id of plan.cards){O.hand.splice(O.hand.indexOf(id),1);O.grave.push(id);const c=C(id);if(c.type==='reaction')O.sap-=c.cost}
+  if(plan.negate){lg(G,aN+' attacks '+dN+': Fade, the attack misses');return}
+  if(plan.decoy){lg(G,aN+' attacks '+dN+': a Scarecrow takes the hit');return}
+  const orig=tgt,origK=d==='K',origP=dp;let blocked=false,bN='';
+  if(plan.guard!=null){const g=findU(O,plan.guard);g.exh=true;tgt=g;d=g.u;dp=blockPower(G,O,g);blocked=true;bN=nm(g.id)}
+  dp+=plan.plus;ap=Math.max(0,ap-plan.minus);
+  if(blocked&&TRAMPLE){TS.blocks++;
+    if(ap>dp){const left=ap-dp;
+      if(tramples(left,origP,origK)){TS.through++;lg(G,aN+' ('+ap+') tramples '+nm(tgt.id)+' ('+dp+'), '+left+' carries on');toGrave(G,O,tgt);
+        G.lastAttack.landed=true;G.lastAttack.trample=left;G.lastAttack.blk=nm(tgt.id);G.lastAttack.through=origK?'K':nm(orig.id);G.lastAttack.fap=ap;G.lastAttack.fdp=dp;
+        if(!origK){if(orig&&O.rows.C.concat(O.rows.T).includes(orig)){lg(G,'  '+nm(orig.id)+' ('+origP+') is felled too');toGrave(G,O,orig)}return}
+        tgt=null;d='K';dp=origP;ap=Math.max(ap,dp);/* fall through to the Keeper hit below */
+      }else TS.saved++}}
+  G.lastAttack.fap=ap;G.lastAttack.fdp=dp;G.lastAttack.dn=tgt?nm(tgt.id):(bN||dN);G.lastAttack.guarded=plan.guard!=null;
+  const how=(plan.guard!=null?' (blocked by '+bN+')':'')+(plan.cards.length?' ('+plan.cards.map(nm).join(', ')+')':'');
+  if(ap<dp){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): held'+how);return}
+  G.lastAttack.landed=true;
+  /* two units of equal power fell each other; a Keeper is never felled */
+  if(tgt&&att&&ap===dp){lg(G,aN+' ('+ap+') attacks '+nm(tgt.id)+' ('+dp+'): both felled'+how);G.lastAttack.trade=true;toGrave(G,O,tgt);toGrave(G,P,att);return}
+  if(tgt){lg(G,aN+' ('+ap+') attacks '+dN+' ('+dp+'): felled'+how);TS.kills++;G.kills=(G.kills||0)+1;toGrave(G,O,tgt);return}
+  lg(G,aN+' ('+ap+') hits '+dN+' ('+dp+')'+how);
+  /* clock test: from total turn RULES.clock on, every Keeper hit cracks one extra Ring */
+  const n=((att&&kwOf(att,'double'))?2:1)+(RULES.clock&&G.turnNo>=RULES.clock?1:0);P.stats.hits++;O.k.wear=(O.k.wear||0)+1;
+  for(let k=0;k<n&&!G.over;k++){if(!O.rings.length){end(G,i,'rings');return}
+    const id=O.rings.pop();const c=C(id);G.lastAttack.crack=id;lg(G,'  A Ring cracks: '+c.n+(c.kw.sprout&&c.type==='unit'?' Sprouts onto '+own(O)+' board':' goes to '+own(O)+' hand'));
+    if(c.kw.sprout&&c.type==='unit'){const rs=rowsFor(O,c);if(rs.length){enter(G,1-i,id,rs[0]);continue}}
+    O.hand.push(id)}}
+/* ---------- computer opponent ---------- */
+const W={ring:3,hand:1,heart:1.5};
+function value(G,i){const P=G.p[i],O=G.p[1-i];if(G.over)return G.winner===i?1e4:-1e4;
+  const side=(Q,j)=>units(Q).reduce((s,x)=>s+power(G,Q,x)+0.6+(x.tools.length*0.3),0)+W.ring*Q.rings.length+Q.heart.length*W.heart+W.hand*Q.hand.length+(Q.rings.length===0?-4:0);
+  return side(P,i)-side(O,1-i)}
+function aiDefend(G,j,ap,d,dp){const Q=G.p[j];const none={cards:[],plus:0,minus:0,guard:null,negate:false,decoy:false};
+  if(dp>ap)return none;
+  const isK=d==='K',lethal=isK&&Q.rings.length===0;
+  const worth=lethal?1e3:isK?(Q.rings.length<=2?4:2.2):(()=>{const x=findU(Q,d);return power(G,Q,x)+0.6})();
+  const need=ap-dp+1,opts=[];
+  /* single-card answers */
+  for(const id of new Set(Q.hand)){const c=C(id);if(c.type!=='reaction'||c.cost>Q.sap)continue;
+    if(c.fx.negate)opts.push({cost:1.6,p:{...none,cards:[id],negate:true}});
+    if(c.fx.decoy)opts.push({cost:1.3,p:{...none,cards:[id],decoy:true}})}
+  let lost=0;for(const x of blockers(G,Q,d)){const gp=blockPower(G,Q,x);if(TRAMPLE&&tramples(ap-gp,dp,isK)){lost++;continue}opts.push({cost:gp>ap?0.4:power(G,Q,x)+0.6,p:{...none,guard:x.u}})}
+  if(lost&&!opts.some(o=>o.p.guard!=null))TS.gaveUp++;if(isK)TS.kAtt++;
+  /* stack boosts: reactions then Brace cards, cheapest first */
+  let plus=0,minus=0,cards=[],sap=Q.sap,cost=0;const hand=Q.hand.slice();
+  const boosts=hand.map(id=>{const c=C(id);if(c.type==='reaction'){if(c.fx.plus)return {id,v:c.fx.plus,s:c.cost};if(c.fx.attackerMinus)return {id,v:c.fx.attackerMinus,s:c.cost,m:1};if(c.fx.plusPerUnit)return {id,v:units(Q).length,s:c.cost}}if(c.kw.brace)return {id,v:c.kw.brace,s:0};return null}).filter(Boolean).sort((a,b)=>b.v-a.v);
+  for(const b of boosts){if(plus+minus>=need)break;if(b.s>sap)continue;sap-=b.s;cards.push(b.id);if(b.m)minus+=b.v;else plus+=b.v;cost+=1}
+  if(plus+minus>=need)opts.push({cost,p:{...none,cards,plus,minus}});
+  opts.sort((a,b)=>a.cost-b.cost);
+  if(opts.length&&opts[0].cost<worth)return opts[0].p;
+  return none}
+function aiWork(G){const i=G.turn;let guard=0;const P0=G.p[i],O0=G.p[1-i];
+  const swing=!P0.k.exh&&KEEPERS[P0.k.id].p>=KEEPERS[O0.k.id].p;
+  while(!G.over&&G.phase==='work'&&guard++<30){const ms=moves(G).filter(m=>m.t!=='tofell'&&!(swing&&m.t==='ability'));const base=value(G,i);let best=null,bv=0.25;
+    for(const m of ms){const H=clone(G);apply(H,m);let v=value(H,i)-base;
+      if(m.t==='coin'){/* only worth it if it unlocks a play */const nm=moves(H).filter(x=>x.t==='play'&&C(x.id).cost===H.p[i].sap);v=nm.length?0.3:-1}
+      if(v>bv){bv=v;best=m}}
+    if(!best)break;apply(G,best)}
+  if(!G.over&&G.phase==='work')apply(G,{t:'tofell'})}
+function aiFell(G){const i=G.turn;let guard=0;
+  while(!G.over&&G.phase==='fell'&&guard++<12){const ms=moves(G).filter(m=>m.t==='attack');if(!ms.length)break;
+    const P=G.p[i],O=G.p[1-i];let best=null,bs=-1e9;
+    for(const m of ms){const ap=m.a==='K'?kPower(G,P):power(G,P,findU(P,m.a));
+      const dp=m.d==='K'?kPower(G,O):power(G,O,findU(O,m.d));if(ap<dp)continue;
+      const tv=m.d==='K'?(O.rings.length===0?100:3+(6-O.rings.length)*0.2):dp+0.6-(ap===dp?ap+0.6:0);
+      const cost=m.a==='K'?0.3:0.5+ap*0.05;const s=tv-cost;if(s>bs){bs=s;best=m}}
+    if(!best)break;apply(G,best)}
+  if(!G.over)apply(G,{t:'end'})}
+/* one AI decision at a time, for the screen */
+function aiNext(G){const i=G.turn;
+  if(G.phase==='work'){const P0=G.p[i],O0=G.p[1-i];const swing=false;const ms=moves(G).filter(m=>m.t!=='tofell');const base=value(G,i);let best=null,bv=0.25;
+    for(const m of ms){const H=clone(G);apply(H,m);let v=value(H,i)-base;if(m.t==='coin'){const nm2=moves(H).filter(x=>x.t==='play'&&C(x.id).cost===H.p[i].sap);v=nm2.length?0.3:-1}if(v>bv){bv=v;best=m}}
+    return best||{t:'tofell'}}
+  const P=G.p[i],O=G.p[1-i];let best=null,bs=-1e9;
+  for(const m of moves(G).filter(m=>m.t==='attack')){const ap=m.a==='K'?kPower(G,P):power(G,P,findU(P,m.a));const dp=m.d==='K'?kPower(G,O):power(G,O,findU(O,m.d));if(ap<dp)continue;
+    const tv=m.d==='K'?(O.rings.length===0?100:3+(6-O.rings.length)*0.2):dp+0.6-(ap===dp?ap+0.6:0);const s=tv-(0.5+ap*0.05);if(s>bs){bs=s;best=m}}
+  return best||{t:'end'}}
+/* what an attack looks like before anyone reacts (for the React prompt) */
+function preview(G,m){const i=G.turn,P=G.p[i],O=G.p[1-i];const ap=m.a==='K'?kPower(G,P):power(G,P,findU(P,m.a));const dp=m.d==='K'?kPower(G,O):power(G,O,findU(O,m.d));
+  return {ap,dp,aName:m.a==='K'?KEEPERS[P.k.id].n:nm(findU(P,m.a).id),dName:m.d==='K'?'your Keeper':nm(findU(O,m.d).id),d:m.d}}
+function play(a,b,seed,maxTurns){const G=newGame(a,b,seed);maxTurns=maxTurns||80;
+  while(!G.over&&G.turnNo<maxTurns){aiWork(G);if(!G.over&&G.phase==='fell')aiFell(G)}
+  if(!G.over)end(G,-1,'timeout');return G}
+const API={RULES,setRule,DEFENDERS,setTrample,setTargets,TS,blockPower,blockers,newGame,moves,apply,play,value,power,kPower,units,findU,aiWork,aiFell,aiNext,aiDefend,preview,redraw,clone,abilityText,startRings,canAttack};
+if(typeof module!=='undefined')module.exports=API;
+
+__mods['./engine.js']=module.exports})();
+(function(){const module={exports:{}};const require=__req;
+/* Heartwood TCG: a "thinking" computer opponent for testing rules.
+   - Never looks at hidden cards: before each look-ahead it reshuffles everything it can't see
+     (the other player's hand + deck, both decks, both Ring stacks).
+   - Work and Fell: for every legal move, plays out the rest of its turn and the other player's whole
+     next turn several times, then scores the position at the start of its next turn. Picks the best average.
+   - Defending: tries every sensible answer (take it, each blocker, Reactions/Brace stacks, Fade, Scarecrow),
+     resolves each on a copy and keeps the one that leaves it best off, counting what Sap it keeps for later.
+   - Scoring knows Rings get more precious as they run out, threats on board, cards in hand,
+     a thin deck, and how many big hitters each side has against the other's Keeper. */
+const E=require('./engine.js');const {CARDS,KEEPERS}=require('./cards.js');
+const C=id=>CARDS[id];
+const OPT={samples:3,maxCand:14,rw:1.75,uw:1,pw:1,hw:1,deckNeed:15,dw:2.5};
+let rs=12345;const rnd=()=>{rs=(rs*1103515245+12345)>>>0;return rs/4294967296};
+const shuf=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* ---------- position score from player i's side ---------- */
+const lifeVal=L=>{let v=0;for(let k=1;k<=L;k++)v+=2.2+7/k;return v};/* L = hits still needed to win */
+function unitVal(G,P,x){const d=C(x.id),kw=d.kw;let v=1+E.power(G,P,x)*1.1+x.tools.length*0.3;
+  if(kw.guard)v+=0.6;if(kw.rally)v+=0.5*(E.units(P).length-1);if(kw.double)v+=1;if(kw.crew)v+=0.4;return v}
+function side(G,j){const P=G.p[j],O=G.p[1-j];
+  let v=OPT.rw*lifeVal(P.rings.length+1)+P.heart.length*1.2;
+  for(const x of E.units(P))v+=OPT.uw*unitVal(G,P,x);
+  for(const id of P.hand){const d=C(id);v+=OPT.hw*(d.type==='reaction'?1.1:d.type==='unit'&&d.cost<=P.sapLvl+1?1:0.8)}
+  /* a thin deck is a slow loss: weigh it like a real player, more as it empties */
+  {const dl=P.deck.length,need=OPT.deckNeed;if(dl<need)v-=OPT.dw*(need-dl)*(need-dl)/need}
+  /* pressure: units that beat their Keeper, minus their blockers that could stop them */
+  const kp=E.kPower(G,O),hit=E.units(P).filter(x=>E.power(G,P,x)>=kp).length;
+  const walls=E.units(O).filter(y=>y.row==='C'||C(y.id).kw.guard).length;
+  v+=OPT.pw*Math.max(0,hit-walls*0.5)*(1.2+3/(O.rings.length+1));
+  return v}
+function score(G,i){if(G.over)return G.winner===i?1e4:G.winner<0?0:-1e4;return side(G,i)-side(G,1-i)}
+
+/* ---------- hidden information: reshuffle what player i can't see ---------- */
+function determinize(G,i){const H=E.clone(G);H.rs=(rnd()*4294967296)>>>0||1;const O=H.p[1-i],P=H.p[i];
+  const pool=shuf(O.hand.concat(O.deck)),n=O.hand.length;O.hand=pool.slice(0,n);O.deck=pool.slice(n);
+  shuf(P.deck);for(const Q of H.p){const r=shuf(Q.rings.concat(Q.heart)),k=Q.rings.length;Q.rings=r.slice(0,k);Q.heart=r.slice(k)}
+  return H}
+
+/* ---------- defending: try each answer on a copy ---------- */
+function smartDefend(G,j,ap,d,dp,a){const Q=G.p[j];const none={cards:[],plus:0,minus:0,guard:null,negate:false,decoy:false};
+  if(dp>ap)return none;
+  const opts=[none];
+  for(const id of new Set(Q.hand)){const c=C(id);if(c.type!=='reaction'||c.cost>Q.sap)continue;
+    if(c.fx.negate)opts.push({...none,cards:[id],negate:true});if(c.fx.decoy)opts.push({...none,cards:[id],decoy:true})}
+  /* boost cards, best value per Sap first; try each prefix */
+  const boosts=[];Q.hand.forEach(id=>{const c=C(id);if(c.type==='reaction'){if(c.fx.plus)boosts.push({id,v:c.fx.plus,s:c.cost});else if(c.fx.attackerMinus)boosts.push({id,v:c.fx.attackerMinus,s:c.cost,m:1});else if(c.fx.plusPerUnit)boosts.push({id,v:E.units(Q).length,s:c.cost})}else if(c.kw&&c.kw.brace)boosts.push({id,v:c.kw.brace,s:0})});
+  boosts.sort((x,y)=>(x.s-y.s)||(y.v-x.v));
+  const prefixes=[[]];{let sap=Q.sap,cur=[];for(const b of boosts){if(b.s>sap)continue;sap-=b.s;cur=cur.concat([b]);prefixes.push(cur);if(prefixes.length>5)break}}
+  const guards=[null,...E.blockers(G,Q,d).map(x=>x.u)];
+  for(const g of guards)for(const pre of prefixes){if(g==null&&!pre.length)continue;
+    opts.push({...none,guard:g,cards:pre.map(b=>b.id),plus:pre.filter(b=>!b.m).reduce((s,b)=>s+b.v,0),minus:pre.filter(b=>b.m).reduce((s,b)=>s+b.v,0)})}
+  let best=none,bs=-1e9;
+  for(const p of opts){const H=E.clone(G);H.log=[];
+    /* the attacker is already tired; replay just the fight on the copy */
+    const P=H.p[1-j];let undo=null;if(a==='K')H.p[1-j].k.exh=false;else{const x=E.findU(P,a);if(x)x.exh=false}
+    E.apply(H,{t:'attack',a,d},()=>p);
+    let v=score(H,j);
+    /* Sap kept back is still worth something on their turn (more Reactions later) */
+    v+=H.p[j].sap*0.15;
+    if(v>bs){bs=v;best=p}}
+  return best}
+
+/* ---------- playouts with the quick policy ---------- */
+function quickRestOfTurn(H){const i=H.turn;let n=0;while(!H.over&&H.turn===i&&n++<3){if(H.phase==='work')E.aiWork(H);else E.aiFell(H)}}
+function lookahead(G,i,m){let tot=0;
+  for(let s=0;s<OPT.samples;s++){const H=determinize(G,i);H.log=[];E.apply(H,m);
+    /* finish my turn, then their whole reply; always stop at the start of my next turn */
+    let n=0;while(!H.over&&H.turn===i&&n++<4){if(H.phase==='work')E.aiWork(H);else E.aiFell(H)}
+    n=0;while(!H.over&&H.turn!==i&&n++<4){if(H.phase==='work')E.aiWork(H);else E.aiFell(H)}
+    tot+=score(H,i)}
+  return tot/OPT.samples}
+/* pick the moves worth looking ahead on: an instant score first, then the best few */
+function pick(G,i,ms){if(ms.length===1)return ms[0];
+  let cand=ms;if(ms.length>OPT.maxCand){cand=ms.map(m=>{const H=E.clone(G);H.log=[];E.apply(H,m);return [score(H,i),m]}).sort((x,y)=>y[0]-x[0]).slice(0,OPT.maxCand).map(x=>x[1]);
+    for(const t of ['tofell','end']){const e=ms.find(m=>m.t===t);if(e&&!cand.includes(e))cand.push(e)}}
+  let best=cand[0],bs=-1e9;for(const m of cand){const v=lookahead(G,i,m);if(v>bs){bs=v;best=m}}return best}
+/* one decision for whoever's turn it is (the phone board asks for moves one at a time) */
+function smartNext(G){const i=G.turn;let ms=E.moves(G);
+    if(G.phase==='fell'){const P=G.p[i],O=G.p[1-i];ms=ms.filter(m=>m.t!=='attack'||(m.a==='K'?E.kPower(G,P):E.power(G,P,E.findU(P,m.a)))>=(m.d==='K'?E.kPower(G,O):E.power(G,O,E.findU(O,m.d))))}
+    if(G.phase==='work'){const P=G.p[i];ms=ms.filter(m=>m.t!=='coin'||P.hand.some(id=>C(id).cost>P.sap&&C(id).cost<=P.sap+2))}
+    return pick(G,i,ms)}
+function smartTurn(G){const i=G.turn;let n=0;
+  while(!G.over&&G.turn===i&&n++<40){let ms=E.moves(G);
+    /* the coin only when it unlocks a play this turn, same as the quick AI */
+    /* never make an attack that can't land: the defender can only add power, so it just tires the unit */
+    if(G.phase==='fell'){const P=G.p[i],O=G.p[1-i];ms=ms.filter(m=>m.t!=='attack'||(m.a==='K'?E.kPower(G,P):E.power(G,P,E.findU(P,m.a)))>=(m.d==='K'?E.kPower(G,O):E.power(G,O,E.findU(O,m.d))))}
+    if(G.phase==='work'){const P=G.p[i];ms=ms.filter(m=>m.t!=='coin'||P.hand.some(id=>C(id).cost>P.sap&&C(id).cost<=P.sap+2))}
+    E.apply(G,pick(G,i,ms))}}
+/* smarter mulligan: want 2+ cards you can play by turn 3 and at least one unit costing 1-2 */
+function smartMulligan(G,i){const P=G.p[i],ok=h=>h.filter(id=>C(id).cost<=3).length>=2&&h.some(id=>C(id).type==='unit'&&C(id).cost<=2);
+  if(!ok(P.hand))E.redraw(G,i)}
+
+E.DEFENDERS.smart=smartDefend;
+/* a full game: kinds = ['smart'|'quick', 'smart'|'quick'] */
+function playMatch(a,b,seed,kinds,maxTurns){rs=(seed*2654435761)>>>0||7;
+  const G=E.newGame(a,b,seed);kinds.forEach((k,j)=>{G.p[j].ai=k==='smart'?'smart':undefined});
+  /* the engine already did the quick mulligan; smart players get their own check on top */
+  kinds.forEach((k,j)=>{if(k==='smart')smartMulligan(G,j)});
+  maxTurns=maxTurns||80;
+  while(!G.over&&G.turnNo<maxTurns){const k=kinds[G.turn];if(k==='smart')smartTurn(G);else{E.aiWork(G);if(!G.over&&G.phase==='fell')E.aiFell(G)}}
+  if(!G.over){G.over=true;G.winner=-1;G.reason='timeout'}return G}
+module.exports={smartDefend,smartTurn,smartNext,playMatch,score,OPT};
+
+__mods['./smart.js']=module.exports})();
+const TCG=Object.assign(__req('./engine.js'),(({CARDS,UNITS,KEEPERS,starter})=>({CARDS,UNITS,KEEPERS,starter}))(__req('./cards.js')));
+/* ===================== Heartwood TCG (preview): the phone board =====================
+   Mirrored like a real table: their camp top-left (their right), yours bottom-right.
+   Rows top to bottom: their Treeline, their Clearing, the middle line (auras), your Clearing, your Treeline. */
+let TG=null,TS={sel:null,att:null,ab:null,busy:false,move:null};
+/* The board is shared by the idle game and the standalone TCG app. A host can plug in its own opponent (aiNext),
+   what happens when a match ends (finish), and the Play again / Close buttons (again, close). */
+const TCG_HOST={};
+const TK=()=>TCG.KEEPERS,TCd=id=>TCG.CARDS[id];
+const TKW={eager:'Eager',guard:'Guard',crew:'Work Crew',rally:'Rally',revive:'Revive',scout:'Scout',call:'Call the Pack',fire:'Firebrand',ancient:'Ancient',double:'Double Cut',brace:'Brace',sprout:'Sprout',regrow:'Regrow',nimble:'Nimble'};
+const TKW_TXT={eager:'can attack the turn it is played',guard:'can block from either row, and gets +2 power while blocking',crew:'+1 power for each other copy on your board',rally:'your other units +1 power on your turn',revive:'when played, take back a unit costing 3 or less from your discard pile',scout:'when played, draw a card',call:'when played, find a copy in your deck and add it to your hand',fire:'when played, fell an enemy unit with that much power or less',ancient:'can\'t be targeted by abilities, Blights or Firebrand',double:'a landed hit on a Keeper cracks 2 Rings',brace:'discard while defending: +1 power for that fight',sprout:'if cracked from your Rings, it plays itself for free',regrow:'when played, Regrow (move a card from your Heartwood to your Rings)',nimble:'may switch rows once per turn'};
+const TTYPE_IC={tool:'hammer',reaction:'glove',event:'scroll',boon:'sun',blight:'snow'};
+const TROW={C:'Clearing',T:'Treeline',W:'Wanderer'};
+/* Cards that only exist in the TCG (Tools, Reactions, Events, Lantern Light) are part of the idle game's collection too:
+   they drop from sealed cards, show under TCG in the collection, and are shared with the Heartwood TCG account. */
+const TCG_ONLY=Object.values(TCG.CARDS).filter(d=>d.type!=='unit'&&!CARD[d.id]);
+TCG_ONLY.forEach(d=>{CARD[d.id]={id:d.id,n:d.n,f:d.f,row:-1,p:0,ab:'tcg',r:d.r,unit:0,sp:'tcg',tcg:d.type,ic:TTYPE_IC[d.type]}});
+function tKwLine(d){return Object.keys(d.kw||{}).map(k=>k==='fire'?'Firebrand '+d.kw.fire:k==='brace'?'Brace +'+d.kw.brace:TKW[k]).join(' · ')}
+function tFxText(d){const f=d.fx||{};if(d.type==='tool')return 'Attach to a unit: +'+(f.p||0)+' power'+(f.eager?', Eager':'')+(f.guard?', Guard':'')+(f.nimble?', Nimble':'');
+  if(d.type==='boon'||d.type==='blight')return (f.row==='C'?'Clearing':'Treeline')+' units on both sides '+(f.v>0?'+':'')+f.v+' power, until replaced';
+  if(d.type==='reaction')return 'When attacked: '+(f.negate?'the attack misses':f.decoy?'a 3-power Scarecrow takes the hit':f.plus?'+'+f.plus+' power':f.attackerMinus?'the attacker gets −'+f.attackerMinus:f.plusPerUnit?'+1 power for each of your units':'');
+  const out=[];if(f.fell)out.push('fell an enemy unit with '+f.fell+' or less power');if(f.bounce)out.push('return an enemy unit with '+f.bounce+' or less power to its owner\'s hand');if(f.fellOwn)out.push('fell one of your units');if(f.regrow)out.push('Regrow');if(f.clearAuras)out.push('clear both aura slots');if(f.wipe)out.push('fell every unit with '+f.wipe+' or less power');if(f.daze)out.push('Daze their Keeper');if(f.clearingBuff)out.push('your Clearing +'+f.clearingBuff+' this turn');if(f.reviveHand)out.push('take your best unit back from the discard pile');if(f.draw)out.push('draw '+f.draw);
+  return out.join(', ').replace(/^./,c=>c.toUpperCase())}
+function tCard(id,o){o=o||{};const d=TCd(id),F=FACTIONS.find(f=>f.id===d.f)||FACTIONS[4];const art=CARD[id]?`<img src="${cardArt(id)}" alt="">`:`<span class="tic">${ico(TTYPE_IC[d.type]||'card')}</span>`;
+  const pw=d.type==='unit'?`<span class="pw${o.pw!=null&&o.pw>d.p?' up':o.pw!=null&&o.pw<d.p?' dn':''}">${o.pw!=null?o.pw:d.p}</span>`:'';
+  return `<div class="cd tc${o.sm?' sm':''}${d.kw&&d.kw.ancient?' hero':''}${o.ex?' ex':''}${o.cls?' '+o.cls:''}" style="--fc:${F.col};--rc:${RAR[Math.min(6,d.r||0)].c}" data-cid="${id}"${o.attr||''}>${art}${pw}<span class="sap">${d.cost}</span>${o.tools?`<span class="tl">${ico('hammer')}${o.tools>1?o.tools:''}</span>`:''}${o.nm?`<span class="tn">${d.n}</span>`:''}</div>`}
+function tcgPopup(id){const d=TCd(id);if(!d)return;const F=FACTIONS.find(f=>f.id===d.f)||FACTIONS[4];const z=$('cardZoom');
+  const kw=Object.keys(d.kw||{}).map(k=>`<b>${k==='fire'?'Firebrand '+d.kw.fire:k==='brace'?'Brace +'+d.kw.brace:TKW[k]}</b>: ${TKW_TXT[k]}`).join('<br>');
+  z.innerHTML=`<div class="czp"><h2 style="color:${RAR[Math.min(6,d.r||0)].c}">${d.n}</h2><div class="note">${F.n} · ${d.type==='unit'?TROW[d.row]+' unit':d.type[0].toUpperCase()+d.type.slice(1)} · ${d.cost} Sap</div><div style="display:flex;justify-content:center;margin:10px 0">${tCard(id,{cls:'big'})}</div><div style="font-size:17px;line-height:1.3;text-align:left">${d.type==='unit'?`<b>${d.p}</b> power<br>`:''}${kw}${d.type!=='unit'?tFxText(d):''}</div><button class="buy" type="button">Close</button></div>`;z.hidden=false}
+/* ---------- start ---------- */
+function tcgStart(){showModal(`<h2>${ico('card')} Heartwood TCG</h2><div class="note">Preview of the new turn-based format. Pick a faction; you get its starter deck.</div><div class="btns" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">${FACTIONS.slice(0,4).map(f=>`<button class="buy" type="button" data-tcgf="${f.id}" style="background:${f.col};color:#fff">${f.n}</button>`).join('')}</div><button class="info" type="button" id="toastOk">Cancel</button>`)}
+function tcgPickKeeper(f){const ks=Object.values(TK()).filter(k=>k.f===f);
+  showModal(`<h2>Choose your Keeper</h2><div class="note">More power: harder to hit, fewer Rings, weaker abilities.</div>${ks.map(k=>`<div class="row" style="text-align:left"><div class="t"><div class="n">${k.n}<small>${k.p} power · ${TCG.startRings(k.id)} Rings</small></div><div class="d">${k.ab.map(([c,op,v])=>`${c} Sap: ${TCG.abilityText(op,v)}`).join('<br>')}</div></div><button class="buy" type="button" data-tcgk="${k.id}">Pick</button></div>`).join('')}<button class="info" type="button" id="toastOk">Cancel</button>`);$('toast').classList.add('wide')}
+function tcgBegin(kid){const f=TK()[kid].f,of='LWSB'.replace(f,'')[Math.floor(Math.random()*3)],ok=Object.values(TK()).filter(k=>k.f===of);const okid=ok[Math.floor(Math.random()*ok.length)].id;
+  const mine=TCG.starter(f),theirs=TCG.starter(of);
+  tcgBeginDecks({keeper:kid,main:mine.main,ring:mine.ring},{name:FACTIONS.find(x=>x.id===of).n,keeper:okid,main:theirs.main,ring:theirs.ring})}
+/* start a match from two decks: {keeper, main:[30 ids], ring:[6 ids]} (theirs also has a name; oppAi 'smart' makes them defend with the smart AI) */
+function tcgBeginDecks(me,them,oppAi){
+  TG=TCG.newGame({name:'You',keeper:me.keeper,main:me.main,ring:me.ring},{name:them.name,keeper:them.keeper,main:them.main,ring:them.ring},(Math.random()*4e9)>>>0,0);
+  if(oppAi)TG.p[1].ai=oppAi;
+  TG.redrawn=false;TS={sel:null,att:null,ab:null,busy:false,move:null};nextToast();$('tcg').hidden=false;sfx('shimmer');
+  showToast('Coin flip',TG.first===0?'You go first, starting on 1 Sap. Sap grows by 2 every turn':'They go first. You start on 2 Sap, and Sap grows by 2 every turn','amber');
+  tcgRender()}
+const tMull=()=>TG&&!TG.redrawn;
+/* ---------- render ---------- */
+function tRow(pi,r){const P=TG.p[pi],tg=tTargets(),mine=pi===0;const rowTgt=mine&&tg.rows.includes(r);
+  const au=TG.aura[r];
+  return `<div class="tr${rowTgt?' tgt':''}" data-trow="${pi}${r}"><span class="tlab">${pi?'Their':'Your'} ${TROW[r]}${au?` <b class="${au>0?'up':'dn'}">${au>0?'+':''}${au}</b>`:''}</span><div class="cs">${P.rows[r].map(x=>{const can=tg.units.includes(x.u);return tCard(x.id,{pw:TCG.power(TG,P,x),ex:x.exh,tools:x.tools.length,cls:(can?'tgt':'')+(TS.att===x.u?' sel':''),attr:` data-tu="${x.u}"`})}).join('')}</div></div>`}
+function tCamp(pi){const P=TG.p[pi],K=TK()[P.k.id],tg=tTargets(),kt=pi===1&&tg.keeper;
+  const rings=`<span class="trg">${P.rings.map(()=>'<i></i>').join('')}${P.heart.map(()=>'<i class="hw"></i>').join('')}</span>`;
+  const sap=`<span class="tsp">${ico('drop')}${P.sap}/${P.sapLvl}</span>`;
+  return `<div class="tcamp${pi?' opp':''}">${pi?'':`<span class="hc">${ico('chest')}${P.deck.length}</span>`}${pi?`<span class="hc">${ico('card')}${P.hand.length}</span>`:''}${sap}${rings}<button type="button" class="tkp${kt?' tgt':''}${P.k.hush?' hush':''}${P.k.dz?' dz':''}" data-tkeep="${pi}">${ico('crew')}<span>${K.n}</span><b>${K.p}</b></button>${pi?`<span class="hc">${ico('chest')}${P.deck.length}</span>`:''}</div>`}
+function tcgRender(){const el=$('tcg');if(!TG){el.hidden=true;return}const P=TG.p[0],O=TG.p[1],my=!tMull()&&TG.turn===0&&!TG.over&&!TS.busy;
+  let h=`<div class="tbar opp">${tCamp(1)}<button type="button" class="dquit" id="tQuit" aria-label="Leave">✕</button></div>`;
+  h+=tRow(1,'T')+tRow(1,'C');
+  const last=TG.log.slice(-2).map(x=>`<div>${x}</div>`).join('');
+  h+=`<div class="tmid"><span class="tph">${TG.over?'Game over':TG.turn===0?(TG.phase==='work'?'Your turn · Work':'Your turn · Fell'):'Their turn…'}</span><div class="tlog" id="tLog" role="button">${last||'Match log'}</div></div>`;
+  h+=tRow(0,'C')+tRow(0,'T');
+  h+=`<div class="tbar me">${my&&P.coin?`<button type="button" class="info" id="tCoin">${ico('amber')}Coin</button>`:''}${my&&TG.phase==='work'?`<button type="button" class="buy" id="tFell">Attack ▸</button>`:my&&TG.phase==='fell'?`<button type="button" class="buy" id="tEnd">End turn</button>`:''}${tCamp(0)}</div>`;
+  h+=`<div class="dinfo" id="tInfo">${tInfo()}</div><div class="dhand">${P.hand.map((id,k)=>tCard(id,{cls:TS.sel===k?'sel':'',attr:` data-th="${k}"`})).join('')}</div>`;
+  el.innerHTML=h}
+function tInfo(){if(!TG)return '';const P=TG.p[0];if(TG.over)return '';
+  if(tMull())return `Starting hand. Keep it, or shuffle it back and draw a new one (once). <button type="button" class="info" id="tRedraw">Redraw once</button> <button type="button" class="buy" id="tKeep">Keep</button>`;
+  if(TG.turn!==0||TS.busy)return '<i>They are thinking…</i>';
+  if(TS.ab!=null){const [c,op,v]=TK()[P.k.id].ab[TS.ab];return `${TCG.abilityText(op,v)}: tap a glowing unit <button type="button" class="info" id="tCancel">Cancel</button>`}
+  if(TS.sel!=null){const id=P.hand[TS.sel],d=TCd(id),ms=tMovesFor(id);
+    const what=`<b>${d.n}</b> · ${d.cost} Sap${d.type==='unit'?' · '+d.p+' power · '+TROW[d.row]:''}${d.type==='unit'&&tKwLine(d)?' · '+tKwLine(d):d.type!=='unit'?' · '+tFxText(d):''}`;
+    if(TG.phase!=='work')return what;
+    if(!ms.length)return what+(d.type==='reaction'?' · <i>played when you are attacked</i>':d.cost>P.sap?' · <i>not enough Sap</i>':' · <i>nothing to play it on</i>');
+    if(ms.length===1&&ms[0].row==null&&ms[0].target==null)return what+` <button type="button" class="buy" id="tPlay">Play</button>`;
+    return what+' · tap a glowing '+(ms[0].row!=null?'row':'unit')}
+  if(TS.att!=null){const x=TCG.findU(P,TS.att),ap=TCG.power(TG,P,x),kp=TCG.kPower(TG,TG.p[1]);return `<b>${TCd(x.id).n}</b> (${ap}) attacks: tap their Keeper (${kp}) or a glowing exhausted unit. Higher power fells their unit; equal power fells both. Hitting their Keeper needs equal or higher.${ap<kp?' <i>Too weak to hit their Keeper alone.</i>':''} <button type="button" class="info" id="tCancel">Cancel</button>`}
+  if(TS.move!=null)return `<button type="button" class="info" id="tMove">Switch row</button> <button type="button" class="info" id="tCancel">Cancel</button>`;
+  return TG.phase==='work'?'Play cards from your hand, or tap your Keeper for abilities. Then Attack.':'Tap one of your ready units to attack with it, or End turn.'}
+function tMovesFor(id){return TCG.moves(TG).filter(m=>m.t==='play'&&m.id===id)}
+function tTargets(){const out={rows:[],units:[],keeper:false};if(!TG||TG.turn!==0||TS.busy)return out;const P=TG.p[0];
+  if(TS.sel!=null&&TG.phase==='work'){tMovesFor(P.hand[TS.sel]).forEach(m=>{if(m.row!=null)out.rows.push(m.row);if(m.target!=null)out.units.push(m.target)})}
+  else if(TS.ab!=null){TCG.moves(TG).filter(m=>m.t==='ability'&&m.ai===TS.ab&&m.target!=null).forEach(m=>out.units.push(m.target))}
+  else if(TS.att!=null){TCG.moves(TG).filter(m=>m.t==='attack'&&m.a===TS.att).forEach(m=>{if(m.d==='K')out.keeper=true;else out.units.push(m.d)})}
+  else if(TG.phase==='fell'){TCG.moves(TG).filter(m=>m.t==='attack').forEach(m=>{if(!out.units.includes(m.a))out.units.push(m.a)})}
+  return out}
+/* ---------- your moves ---------- */
+function tDo(m){if(!TG||TG.over)return;TS.sel=null;TS.att=null;TS.ab=null;TS.move=null;const rings=TG.p[1].rings.length;TCG.apply(TG,m);
+  if(m.t==='attack'&&TG.lastAttack){const la=TG.lastAttack;sfx(la.landed?'fell':'buy');if(la.landed&&TG.p[1].rings.length<rings)addQuake(4);if(!TG.over)tAttackResult(la,true)}else sfx('chop');
+  tcgRender();tcgAfter()}
+/* plain-words result of a fight, including any cards the defender used from their hand */
+function tAttackResult(la,mine){const used=(la.plan&&la.plan.cards||[]).map(id=>TCd(id).n);const tgt=la.guarded?la.dn+' (blocking)':la.isK?(mine?'Their Keeper':'Your Keeper'):la.dn;
+  if(la.plan&&la.plan.negate){showToast('Missed',`${mine?'They':'You'} played Fade: the attack missed`,'card');return}
+  if(la.plan&&la.plan.decoy){showToast('Scarecrow',`A Scarecrow took the hit`,'card');return}
+  const fap=la.fap!=null?la.fap:la.ap,fdp=la.fdp!=null?la.fdp:la.dp,boost=used.length?` with ${used.join(', ')} from ${mine?'their':'your'} hand`:'';
+  if(la.trample){const thr=la.through==='K'?(mine?'their Keeper: a Ring cracks':'your Keeper: a Ring cracks'):la.through+', felling it too';
+    showToast('Trample',`${la.a} (${fap}) beat ${la.blk} (${fdp})${boost} and ${la.trample} carried on to ${thr}`,'card');return}
+  if(!la.landed)showToast('Held',`${tgt} defended at ${fdp}${boost}, beating ${la.a} (${fap}). ${mine?'Your':'Their'} ${la.a} is tired (exhausted), not felled.`,'card');
+  else if(la.trade)showToast('Both felled',`${la.a} and ${tgt} were equal (${fap}), so they felled each other${boost}`,'card');
+  else if(!la.crack)showToast('Felled',`${la.a} (${fap}) felled ${tgt} (${fdp})${boost}`,'card')}
+function tcgClick(e){if(!TG||!$('peekBack').hidden)return;const P=TG.p[0];
+  if(e.target.closest('#tQuit')){if(TG.over||confirm('Leave this game? It won\'t be saved.')){TG=null;$('tcg').hidden=true}return}
+  if(e.target.closest('#tLog')){showModal(`<h2>${ico('book')} Match log</h2><div class="logl">${TG.log.map(x=>`<div>${x}</div>`).join('')}</div><button class="buy" type="button" id="toastOk">Close</button>`);const l=$('toast').querySelector('.logl');if(l)l.scrollTop=l.scrollHeight;return}
+  {const kp=e.target.closest('[data-tkeep]');if(kp&&kp.dataset.tkeep==='1'&&TS.att!=null){tDo({t:'attack',a:TS.att,d:'K'});return}if(kp){tKeeperSheet(+kp.dataset.tkeep);return}}
+  if(e.target.closest('#tKeep')){TG.redrawn=true;tcgRender();tcgAfter();return}
+  if(e.target.closest('#tRedraw')){TCG.redraw(TG,0);TG.redrawn=true;sfx('buy');tcgRender();tcgAfter();return}
+  if(tMull()||TG.turn!==0||TS.busy||TG.over)return;
+  if(e.target.closest('#tCancel')){TS.sel=TS.att=TS.ab=TS.move=null;tcgRender();return}
+  if(e.target.closest('#tCoin')){tDo({t:'coin'});return}
+  if(e.target.closest('#tFell')){tDo({t:'tofell'});return}
+  if(e.target.closest('#tEnd')){tcgEndTurn();return}
+  if(e.target.closest('#tPlay')){const ms=tMovesFor(P.hand[TS.sel]);if(ms[0])tDo(ms[0]);return}
+  if(e.target.closest('#tMove')){tDo({t:'move',u:TS.move});return}
+  const th=e.target.closest('[data-th]');if(th){const k=+th.dataset.th;TS.att=TS.ab=TS.move=null;
+    TS.sel=TS.sel===k?null:k;tcgRender();return}
+  const tu=e.target.closest('[data-tu]');if(tu){const u=+tu.dataset.tu;
+    if(TS.sel!=null){const m=tMovesFor(P.hand[TS.sel]).find(m=>m.target===u);if(m){tDo(m);return}}
+    if(TS.ab!=null){const m=TCG.moves(TG).find(m=>m.t==='ability'&&m.ai===TS.ab&&m.target===u);if(m){tDo(m);return}}
+    if(TS.att!=null){const m=TCG.moves(TG).find(m=>m.t==='attack'&&m.a===TS.att&&m.d===u);if(m){tDo(m);return}}
+    const mine=TCG.findU(P,u);
+    if(mine&&TG.phase==='fell'&&TCG.moves(TG).some(m=>m.t==='attack'&&m.a===u)){TS.att=TS.att===u?null:u;TS.sel=null;tcgRender();return}
+    if(mine&&TG.phase==='work'&&TCG.moves(TG).some(m=>m.t==='move'&&m.u===u)){TS.move=u;TS.sel=null;tcgRender();return}
+    return}
+  const tr=e.target.closest('[data-trow]');if(tr&&TS.sel!=null){const r=tr.dataset.trow.slice(1);if(tr.dataset.trow[0]==='0'){const m=tMovesFor(P.hand[TS.sel]).find(m=>m.row===r);if(m)tDo(m)}}}
+function tKeeperSheet(pi){const P=TG.p[pi],K=TK()[P.k.id],my=pi===0&&!tMull()&&TG.turn===0&&TG.phase==='work'&&!TS.busy&&!TG.over;const ms=my?TCG.moves(TG).filter(m=>m.t==='ability'):[];
+  showModal(`<h2>${ico('crew')} ${K.n}</h2><div class="note">${FACTIONS.find(f=>f.id===K.f).n} · ${K.p} power · ${P.rings.length} Rings left${P.heart.length?' · '+P.heart.length+' in the Heartwood':''}${P.k.hush?' · <b>Hushed</b>':''}${P.k.dz?' · <b>Dazed</b>':''}</div><div style="text-align:left;margin-top:8px">${K.ab.map(([c,op,v],i)=>{const can=ms.some(m=>m.ai===i);return `<div class="row"><div class="t"><div class="n">${c} Sap<small>${P.k.used[i]?'used this turn':''}</small></div><div class="d">${TCG.abilityText(op,v)}</div></div>${my?`<button class="buy" type="button" data-tab2="${i}" ${can?'':'disabled'}>Use</button>`:''}</div>`}).join('')}</div><div class="note">${pi?'':'Keepers never attack. Each ability once per turn, during Work.'}</div><button class="info" type="button" id="toastOk">Close</button>`);$('toast').classList.add('wide')}
+function tUseAbility(i){nextToast();if(tMull())return;const ms=TCG.moves(TG).filter(m=>m.t==='ability'&&m.ai===i);if(!ms.length)return;if(ms.length===1&&ms[0].target==null){tDo(ms[0]);return}TS.ab=i;TS.sel=TS.att=TS.move=null;tcgRender()}
+/* ---------- their turn ---------- */
+function tcgEndTurn(){tDo({t:'end'})}
+function tcgAfter(){if(!TG)return;if(TG.over){tcgFinish();return}if(TG.turn!==1)return;TS.busy=true;tcgRender();setTimeout(tcgAIStep,650)}
+function tcgAIStep(){if(!TG||TG.over){TS.busy=false;tcgAfter();return}if(TG.turn!==1){TS.busy=false;tcgRender();return}
+  const m=(TCG_HOST.aiNext||TCG.aiNext)(TG);
+  if(m.t==='attack'){tcgReact(m);return}
+  const before=TG.log.length;TCG.apply(TG,m);if(m.t==='play'||m.t==='ability')sfx('chop');
+  tcgRender();if(TG.over){TS.busy=false;tcgFinish();return}setTimeout(tcgAIStep,m.t==='tofell'?300:700)}
+/* the React window: you choose a blocker, Reactions and Brace cards, and see if it holds */
+let TR=null;
+function tcgReact(m){const pv=TCG.preview(TG,m),P=TG.p[0];TR={m,pv,idx:[],guard:null};
+  const can=P.hand.some(id=>{const d=TCd(id);return (d.type==='reaction'&&d.cost<=P.sap)||(d.kw&&d.kw.brace)})||TCG.blockers(TG,P,pv.d).length>0;
+  if(!can){const ring=P.rings.length;TCG.apply(TG,m,()=>({cards:[],plus:0,minus:0,guard:null,negate:false,decoy:false}));tReactDone(ring);return}
+  tReactShow()}
+function tReactPlan(){const P=TG.p[0];let plus=0,minus=0,negate=false,decoy=false,sap=0;
+  const cards=TR.idx.map(k=>P.hand[k]);for(const id of cards){const d=TCd(id);if(d.type==='reaction'){sap+=d.cost;const f=d.fx;if(f.negate)negate=true;if(f.decoy)decoy=true;if(f.plus)plus+=f.plus;if(f.attackerMinus)minus+=f.attackerMinus;if(f.plusPerUnit)plus+=TCG.units(P).length}else if(d.kw.brace)plus+=d.kw.brace}
+  let dp=TR.pv.dp;if(TR.guard!=null){const g=TCG.findU(P,TR.guard);dp=TCG.blockPower(TG,P,g)}
+  const ap=Math.max(0,TR.pv.ap-minus);let holds=negate||decoy||ap<dp+plus,tr=null;
+  /* trample: a blocker that loses lets the leftover power carry on */
+  if(!holds&&TR.guard!=null&&ap>dp+plus){const left=ap-dp-plus;tr={left,hit:TR.pv.d==='K'||left>=TR.pv.dp}}
+  return {plan:{cards,plus,minus,guard:TR.guard,negate,decoy},sap,ap,dp:dp+plus,holds,tr}}
+function tReactShow(){const P=TG.p[0],pl=tReactPlan(),pv=TR.pv;
+  const opts=[];P.hand.forEach((id,k)=>{const d=TCd(id);if(d.type==='reaction'||(d.kw&&d.kw.brace))opts.push([id,k])});
+  const guards=TCG.blockers(TG,P,pv.d);
+  showModal(`<h2>${ico('swords')} You're attacked!</h2><div style="font-size:19px"><b>${pv.aName}</b> (${pl.ap}) attacks <b>${pv.dName}</b> (${TR.guard!=null?pv.dp:pl.dp})${TR.guard!=null?`<br>blocked by <b>${TCd(TCG.findU(P,TR.guard).id).n}</b> (${pl.dp})`:''}</div><div class="note">${pl.holds?'<b style="color:var(--sap)">Your defence holds</b>':pl.tr?(pl.tr.hit?(pv.d==='K'?`Trample: your blocker is felled and ${pl.tr.left} carries on, so a Ring still cracks`:`Trample: your blocker is felled and ${pl.tr.left} carries on, felling ${pv.dName} too`):`Your blocker is felled, but the ${pl.tr.left} that carries on can't beat ${pv.dName}`):pv.d==='K'&&TR.guard==null?'It lands: a Ring cracks into your hand':pl.ap===pl.dp?'Equal power: both units are felled':'It lands: your unit is felled'} · Sap left ${P.sap-pl.sap}</div>
+  ${guards.length?`<p class="sec">Block with</p><div class="cgrid" style="justify-content:center">${guards.map(x=>tCard(x.id,{pw:TCG.blockPower(TG,P,x),cls:TR.guard===x.u?'sel':'',attr:` data-rg="${x.u}"`})).join('')}</div>`:''}
+  ${opts.length?`<p class="sec">Reactions and Brace</p><div class="cgrid" style="justify-content:center">${opts.map(([id,k])=>tCard(id,{cls:TR.idx.includes(k)?'sel':'',attr:` data-rc="${k}"`})).join('')}</div>`:''}
+  <div class="note">Any ready unit in your Clearing can block (Guard units from either row, +2). Trample: if the attacker beats your blocker, the power left over carries on. Tap cards to add them; hold to read.</div><div class="pair" style="justify-content:center"><button class="info" type="button" data-rtake="1">Take it</button><button class="buy" type="button" data-rdef="1" ${TR.idx.length||TR.guard!=null?'':'disabled'} ${pl.sap>P.sap?'disabled':''}>Defend</button></div>`,true);$('toast').classList.add('wide')}
+function TCGpow(x){return TCG.power(TG,TG.p[0],x)}
+function tReactDone(ring){const la=TG.lastAttack,P=TG.p[0];TR=null;
+  if(la){sfx(la.landed?'fell':'buy');if(la.landed&&la.crack){addQuake(5);buzz([20,30]);showToast(la.trample?'Trample: a Ring cracks':'A Ring cracks',`${la.trample?`${la.a} beat ${la.blk} and ${la.trample} carried on. `:''}${TCd(la.crack).n} goes to your hand${TCd(la.crack).kw.sprout?' and Sprouts':''}`,'card')}else if(!TG.over)tAttackResult(la,false)}
+  tcgRender();if(TG.over){TS.busy=false;tcgFinish();return}setTimeout(tcgAIStep,800)}
+function tcgReactClick(e){if(!TR)return false;const P=TG.p[0];
+  const g=e.target.closest('[data-rg]');if(g){const u=+g.dataset.rg;TR.guard=TR.guard===u?null:u;tReactShow();return true}
+  const c=e.target.closest('[data-rc]');if(c){const k=+c.dataset.rc,i=TR.idx.indexOf(k);if(i>=0)TR.idx.splice(i,1);else TR.idx.push(k);tReactShow();return true}
+  if(e.target.closest('[data-rtake]')){const m=TR.m,ring=P.rings.length;nextToast();TCG.apply(TG,m,()=>({cards:[],plus:0,minus:0,guard:null,negate:false,decoy:false}));tReactDone(ring);return true}
+  if(e.target.closest('[data-rdef]')){const pl=tReactPlan(),m=TR.m,ring=P.rings.length;if(pl.sap>P.sap)return true;nextToast();TCG.apply(TG,m,()=>pl.plan);tReactDone(ring);return true}
+  return false}
+function tcgFinish(){if(!TG||TG.done)return;TG.done=true;const won=TG.winner===0;if(TCG_HOST.finish)TCG_HOST.finish(won,TG);else{S.tcgStats=S.tcgStats||{w:0,l:0};if(won)S.tcgStats.w++;else S.tcgStats.l++;save()}
+  setTimeout(()=>{if(!TG)return;showModal(`<h2>${won?'Victory!':'Defeat'}</h2><div class="note">${TG.reason==='deck-out'?(won?'They ran out of cards':'You ran out of cards'):won?'You broke through their last Ring':'They broke through your last Ring'} · ${Math.ceil(TG.turnNo/2)} turns</div>${TCG_HOST.finishNote?TCG_HOST.finishNote(won):'<div class="note">Preview format: no rewards yet. Tell us what you think with Suggest an idea.</div>'}<div class="btns" style="display:flex;gap:6px;justify-content:center;margin-top:6px"><button class="buy" type="button" data-tcgagain="1">Play again</button><button class="info" type="button" data-tcgclose="1">Close</button></div>`);sfx(won?'level':'buy')},700)}
+
+$('tcg').addEventListener('click',tcgClick);
+$('toast').addEventListener('click',e=>{if(e.target.closest('[data-peek]')){e.stopImmediatePropagation();peekBoard(true)}},true);
+$('peekBack').addEventListener('click',()=>peekBoard(false));
+$('toast').addEventListener('click',e=>{if(tcgReactClick(e))return;
+  const f=e.target.closest('[data-tcgf]');if(f){tcgPickKeeper(f.dataset.tcgf);return}
+  const k=e.target.closest('[data-tcgk]');if(k){tcgBegin(k.dataset.tcgk);return}
+  const a=e.target.closest('[data-tab2]');if(a){tUseAbility(+a.dataset.tab2);return}
+  if(e.target.closest('[data-tcgagain]')){nextToast();TG=null;$('tcg').hidden=true;if(TCG_HOST.again)TCG_HOST.again();else tcgStart();return}
+  if(e.target.closest('[data-tcgclose]')){nextToast();TG=null;$('tcg').hidden=true;if(TCG_HOST.close)TCG_HOST.close();else buildList(true);return}});
+
+/* ===================== Heartwood TCG: the standalone app =====================
+   Same account and the same card collection as Idle Heartwood (users/{uid}/data/cards).
+   Its own record users/{uid}/data/tcg holds decks and results; users/{uid}/data/link carries
+   check-ins that keep the idle camp's away timer going, and the idle camp's status for the home screen. */
+const S={wishPend:0,shown:{}};function save(){}function buildList(){}let tab='',DG=null;
+function cardPopup(id){tcgPopup(id)}
+const SM=__req('./smart.js');
+const A={screen:'home',fb:null,email:null,cards:{},tcg:{decks:[],stats:{w:0,l:0}},link:null,ready:false,
+  edit:null,editMode:'main',poolType:'unit',collF:'L',pick:null,diff:'smart',lastMatch:null};
+const FN={L:'Lumberjacks',W:'Wardens',S:'Forest Spirits',B:'Beasts',N:'Neutral'};
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- cloud ---------- */
+async function fbInit(){if(typeof FB_CONFIG==='undefined'||!FB_CONFIG)return null;const V='10.12.2',u=m=>`https://www.gstatic.com/firebasejs/${V}/firebase-${m}.js`;
+  const [Ap,AU,FS]=await Promise.all([import(u('app')),import(u('auth')),import(u('firestore'))]);
+  const app=Ap.initializeApp(FB_CONFIG),auth=AU.getAuth(app),fs=FS.getFirestore(app);
+  await new Promise(r=>{const un=AU.onAuthStateChanged(auth,()=>{un();r()})});try{await AU.getRedirectResult(auth)}catch(_){}
+  if(!auth.currentUser)await AU.signInAnonymously(auth);
+  const d=n=>FS.doc(fs,'users/'+auth.currentUser.uid+'/data/'+n);
+  return {AU,auth,FS,
+    email:()=>{const p=auth.currentUser&&auth.currentUser.providerData.find(x=>x.providerId==='google.com');return p?p.email||'Google account':null},
+    get:async n=>{const r=await FS.getDoc(d(n));return r.exists()?r.data():null},
+    set:(n,o)=>FS.setDoc(d(n),o,{merge:true}),
+    checkin:()=>FS.setDoc(d('link'),{chk:FS.arrayUnion(Date.now())},{merge:true})}}
+/* without the cloud (the preview inside Claude), decks and results stay on this device */
+const LOCAL={get:n=>{try{return JSON.parse(localStorage.getItem('hwtcg-'+n)||'null')}catch(_){return null}},set:(n,o)=>{try{const c=LOCAL.get(n)||{};localStorage.setItem('hwtcg-'+n,JSON.stringify(Object.assign(c,o)))}catch(_){}}};
+async function loadAll(){const fb=A.fb;
+  if(fb){const [c,t,l]=await Promise.all([fb.get('cards'),fb.get('tcg'),fb.get('link')]);A.cards=(c&&c.c)||{};A.tcg=Object.assign({decks:[],stats:{w:0,l:0}},t||{});A.link=l;A.email=fb.email()}
+  else{A.tcg=Object.assign({decks:[],stats:{w:0,l:0}},LOCAL.get('tcg')||{});A.cards={}}
+  A.ready=true;render()}
+function saveTcg(){const o={decks:A.tcg.decks,stats:A.tcg.stats,t:Date.now()};if(A.fb)A.fb.set('tcg',o).catch(()=>showToast('Not saved','Check your connection and try again','leaf'));else LOCAL.set('tcg',o)}
+/* a check-in at most every 10 minutes: opening the app, or finishing a match */
+async function checkin(){if(!A.fb)return;let last=0;try{last=+localStorage.getItem('hwtcg-chk')||0}catch(_){}
+  if(Date.now()-last<600000)return;try{await A.fb.checkin();localStorage.setItem('hwtcg-chk',String(Date.now()));A.link=await A.fb.get('link');if(A.screen==='home')render()}catch(_){}}
+async function signIn(){const fb=A.fb;if(!fb)return;const {AU,auth}=fb,prov=new AU.GoogleAuthProvider();
+  try{await AU.linkWithPopup(auth.currentUser,prov)}
+  catch(e){const c=e&&e.code;if(c==='auth/credential-already-in-use'){await AU.signInWithCredential(auth,AU.GoogleAuthProvider.credentialFromError(e))}
+    else if(c==='auth/popup-blocked'||c==='auth/operation-not-supported-in-this-environment'){await AU.signInWithRedirect(auth,prov);return}
+    else if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request')return;else{showToast('Sign-in failed',(e&&e.message)||'Try again later','leaf');return}}
+  await loadAll();checkin();showToast('Signed in','Your cards and decks follow your Google account','leaf')}
+
+/* ---------- cards and decks ---------- */
+const own=id=>A.cards[id]||0;
+const isAncient=id=>!!(TCd(id).kw&&TCd(id).kw.ancient);
+const maxCopies=id=>isAncient(id)?1:3;
+const sortCards=(a,b)=>TCd(a).cost-TCd(b).cost||TCd(a).n.localeCompare(TCd(b).n);
+function starterDeck(f){const s=TCG.starter(f);return {id:'st_'+f,name:FN[f]+' starter',f,keeper:f+'_a',main:s.main,ring:s.ring,starter:true}}
+const STARTERS=()=>'LWSB'.split('').map(starterDeck);
+function count(list){const c={};list.forEach(id=>c[id]=(c[id]||0)+1);return c}
+/* what's wrong with a deck, in plain words (empty = ready to play) */
+function deckProblems(D){if(D.starter)return [];const out=[];
+  if(D.main.length!==30)out.push(`Main deck has ${D.main.length} of 30 cards`);
+  if(D.ring.length!==6)out.push(`Ring deck has ${D.ring.length} of 6 cards`);
+  const c=count(D.main.concat(D.ring));
+  for(const id in c){const d=TCd(id);if(!d){out.push('Unknown card '+id);continue}
+    if(d.f!==D.f&&d.f!=='N')out.push(`${d.n} isn't a ${FN[D.f]} or Neutral card`);
+    if(c[id]>maxCopies(id))out.push(`${d.n}: at most ${maxCopies(id)} ${maxCopies(id)===1?'copy':'copies'}`);
+    else if(c[id]>own(id))out.push(`${d.n}: you own ${own(id)}, the deck uses ${c[id]}`)}
+  return out}
+const allDecks=()=>A.tcg.decks.concat(STARTERS());
+const findDeck=id=>allDecks().find(d=>d.id===id);
+
+/* ---------- idle camp status (from the link record) ---------- */
+function campHtml(){const L=A.link,idle=L&&L.idle;
+  if(!A.fb)return `<div class="row"><div class="t"><div class="n">${ico('tent')}Your idle camp</div><div class="d">On the website, playing here keeps your Idle Heartwood camp going.</div></div></div>`;
+  if(!idle)return `<div class="row"><div class="t"><div class="n">${ico('tent')}Your idle camp</div><div class="d">Open Idle Heartwood on this account once to link your camp. After that, every visit here keeps its away timer going.</div></div></div>`;
+  const now=Date.now(),cap=(idle.capH||12)*3600,from=idle.last||now,chk=(L.chk||[]).filter(t=>t>from).sort((a,b)=>a-b);
+  let prev=from,banked=0;for(const t of chk){banked+=Math.min((t-prev)/1000,cap);prev=t}
+  const fill=Math.min((now-prev)/1000,cap),waiting=banked+fill,pct=Math.round(100*fill/cap),hr=s=>s>=3600?(s/3600).toFixed(s>=36000?0:1)+'h':Math.round(s/60)+'m';
+  return `<div class="row"><div class="t"><div class="n">${ico('tent')}Your idle camp<small>stores ${pct}% full</small></div>
+    <div class="bar" style="margin:6px 0 4px"><i style="width:${pct}%"></i></div>
+    <div class="d">Waiting for you in Idle Heartwood: about <b>${hr(waiting)}</b> of away time${chk.length?` (${chk.length} visit${chk.length===1?'':'s'} from here so far)`:''}. Stores hold ${idle.capH||12}h. Every visit here empties them into your camp, so they keep filling.</div></div></div>`}
+
+/* ---------- screens ---------- */
+function navHtml(){return [['home','house','Home'],['play','swords','Play'],['decks','card','Decks'],['coll','book','Collection']].map(([k,ic,n])=>`<button type="button" data-nav="${k}" aria-pressed="${A.screen===k||(k==='decks'&&A.screen==='edit')}">${ico(ic)}<span>${n}</span></button>`).join('')}
+function homeHtml(){const st=A.tcg.stats,tot=Object.keys(TCG.CARDS).length,have=Object.keys(TCG.CARDS).filter(id=>own(id)>0).length;
+  return `<div class="hero"><h1>Heartwood TCG</h1><div class="note">Turn-based battles with your Idle Heartwood cards</div></div>
+  <button class="buy big" type="button" data-nav="play">${ico('swords')} Play</button>
+  <p class="sec">Record</p><div class="row"><div class="t"><div class="n">${ico('medal')}${st.w} wins · ${st.l} losses</div><div class="d">Against the computer. Rewards and a ladder come next.</div></div></div>
+  <p class="sec">Collection</p><div class="row"><div class="t"><div class="n">${ico('card')}${have} of ${tot} cards</div><div class="d">Shared with Idle Heartwood: cards you find there show up here.</div></div><button class="info" type="button" data-nav="coll">View</button></div>
+  <p class="sec">Camp</p>${campHtml()}
+  <p class="sec">Account</p>${accountHtml()}`}
+function accountHtml(){if(!A.fb)return `<div class="row"><div class="t"><div class="n">${ico('leaf')}Playing on this device</div><div class="d">The website version shares your account with Idle Heartwood.</div></div></div>`;
+  return `<div class="row"><div class="t"><div class="n">${ico('leaf')}${A.email?'Signed in':'This device only'}</div><div class="d">${A.email?'Signed in as '+esc(A.email)+'. The same account as Idle Heartwood.':'Sign in with the Google account you use in Idle Heartwood to bring your cards here.'}</div></div>${A.email?'':'<button class="buy" type="button" data-signin="1">Sign in with Google</button>'}</div>`}
+function deckRow(D,act){const p=deckProblems(D),K=TCG.KEEPERS[D.keeper];
+  return `<div class="row"><div class="t"><div class="n"><span class="dot" style="background:${FACTIONS.find(f=>f.id===D.f).col}"></span>${esc(D.name)}<small>${K.n}</small></div><div class="d">${p.length?`<span style="color:#ff9f43">${esc(p[0])}${p.length>1?` (+${p.length-1} more)`:''}</span>`:D.starter?'Always available':`Ready${D.w||D.l?` · ${D.w||0}–${D.l||0}`:''}`}</div></div>${act}</div>`}
+function playHtml(){const ds=allDecks();if(!A.pick||!findDeck(A.pick))A.pick=(ds.find(d=>!deckProblems(d).length)||ds[0]).id;
+  return `<p class="sec">Choose your deck</p>${ds.map(D=>deckRow(D,`<button class="${A.pick===D.id?'buy':'info'}" type="button" data-pick="${D.id}" ${deckProblems(D).length?'disabled':''}>${A.pick===D.id?'Picked':'Pick'}</button>`)).join('')}
+  <p class="sec">Opponent</p><div class="sel">${[['smart','Smart'],['easy','Easy']].map(([k,n])=>`<button type="button" data-diff="${k}" aria-pressed="${A.diff===k}">${n}</button>`).join('')}</div>
+  <div class="note">${A.diff==='smart'?'Smart thinks ahead and defends well.':'Easy plays the best-looking card and is good for learning.'} They use a random starter deck.</div>
+  <button class="buy big" type="button" data-start="1">${ico('swords')} Start match</button>`}
+function decksHtml(){const mine=A.tcg.decks;
+  return `<p class="sec">Your decks</p>${mine.length?mine.map(D=>deckRow(D,`<button class="info" type="button" data-edit="${D.id}">Edit</button>`)).join(''):'<div class="note">No decks yet. Start from a starter deck, or build one from scratch.</div>'}
+  <button class="buy" type="button" data-newdeck="1">${ico('card')} New deck</button>
+  <p class="sec">Starter decks</p>${STARTERS().map(D=>deckRow(D,`<button class="info" type="button" data-copy="${D.f}">Copy</button>`)).join('')}
+  <div class="note">A deck is 30 cards plus a 6-card Ring deck, from one faction and Neutral, using cards you own. Up to 3 copies of a card (1 of an Ancient).</div>`}
+function editHtml(){const D=A.edit,c=count(D.main.concat(D.ring)),list=A.editMode==='main'?D.main:D.ring,p=deckProblems(D);
+  const keepers=Object.values(TCG.KEEPERS).filter(k=>k.f===D.f);
+  const pool=Object.keys(TCG.CARDS).filter(id=>{const d=TCd(id);return (d.f===D.f||d.f==='N')&&own(id)>0&&(A.poolType==='unit'?d.type==='unit':d.type!=='unit')}).sort(sortCards);
+  const grouped=Object.entries(count(list)).sort((a,b)=>sortCards(a[0],b[0]));
+  return `<div class="row"><div class="t"><div class="n"><span class="dot" style="background:${FACTIONS.find(f=>f.id===D.f).col}"></span>${esc(D.name)}</div><div class="d">${FN[D.f]}</div></div><div class="pair"><button class="info" type="button" data-rename="1">Rename</button><button class="buy" type="button" data-savedeck="1">Save</button></div></div>
+  <p class="sec">Keeper</p><div class="sel">${keepers.map(k=>`<button type="button" data-keeper="${k.id}" aria-pressed="${D.keeper===k.id}"><span class="kp">${k.n}<br><small>${k.p} power</small></span></button>`).join('')}</div>
+  <div class="note">${(()=>{const K=TCG.KEEPERS[D.keeper];return `${K.n}: ${K.p} power, ${TCG.startRings(K.id)} Rings. `+K.ab.map(([c2,op,v])=>`${c2} Sap: ${TCG.abilityText(op,v)}`).join(' · ')})()}</div>
+  <div class="sel">${[['main','Main deck',D.main.length,30],['ring','Ring deck',D.ring.length,6]].map(([k,n,x,y])=>`<button type="button" data-emode="${k}" aria-pressed="${A.editMode===k}">${n} <b style="color:${x===y?'var(--sap)':'#ff9f43'}">${x}/${y}</b></button>`).join('')}</div>
+  <div class="cgrid">${grouped.length?grouped.map(([id,n])=>`<div class="cw">${tCard(id,{attr:` data-rmc="${id}"`})}<span class="cnt">×${n}</span></div>`).join(''):`<div class="note">Empty. Tap cards below to add them.</div>`}</div>
+  ${A.editMode==='ring'?'<div class="note">Rings crack into your hand when your Keeper is hit. Big units and Sprout cards make strong Rings.</div>':''}
+  <p class="sec">Add cards</p><div class="sel">${[['unit','Units'],['other','Tools, Reactions, Events']].map(([k,n])=>`<button type="button" data-ptype="${k}" aria-pressed="${A.poolType===k}">${n}</button>`).join('')}</div>
+  <div class="cgrid">${pool.length?pool.map(id=>{const left=Math.min(own(id),maxCopies(id))-(c[id]||0);return `<div class="cw${left<=0?' dim':''}">${tCard(id,{attr:left>0?` data-addc="${id}"`:''})}<span class="cnt">${left>0?'+'+left:'max'}</span></div>`}).join(''):`<div class="note">You don't own any ${A.poolType==='unit'?'units':'cards of this kind'} for ${FN[D.f]} yet. Find them in Idle Heartwood chests.</div>`}</div>
+  ${p.length?`<p class="sec">Before you can play</p>${p.slice(0,6).map(x=>`<div class="note" style="color:#ff9f43">· ${esc(x)}</div>`).join('')}`:'<div class="note" style="color:var(--sap)">Ready to play</div>'}
+  <div class="pair" style="margin-top:10px"><button class="info" type="button" data-back="1">Back</button>${D.id&&A.tcg.decks.some(x=>x.id===D.id)?'<button class="info" type="button" data-deldeck="1">Delete deck</button>':''}</div>
+  <div class="note">Tap a card in the deck to take it out; hold any card to read it.</div>`}
+function collHtml(){const ids=Object.keys(TCG.CARDS).filter(id=>TCd(id).f===A.collF).sort(sortCards),have=ids.filter(id=>own(id)>0).length;
+  return `<div class="sel">${'LWSBN'.split('').map(f=>`<button type="button" data-collf="${f}" aria-pressed="${A.collF===f}"><span class="dot" style="background:${FACTIONS.find(x=>x.id===f).col}"></span>${FN[f].split(' ').pop()}</button>`).join('')}</div>
+  <div class="note">${have} of ${ids.length} ${FN[A.collF]} cards. Hold a card to read it.</div>
+  <div class="cgrid">${ids.map(id=>own(id)?`<div class="cw">${tCard(id,{})}<span class="cnt">×${own(id)}</span></div>`:`<div class="cw dim">${tCard(id,{})}<span class="cnt">0</span></div>`).join('')}</div>
+  ${A.fb&&!Object.keys(A.cards).length?'<div class="note">No cards yet on this account. Play Idle Heartwood and open sealed cards from chests, or sign in with the account you use there.</div>':''}`}
+function render(){$('nav').innerHTML=navHtml();const m=$('main');
+  if(!A.ready){m.innerHTML='<div class="note" style="margin-top:40px;text-align:center">Loading your cards…</div>';return}
+  const top=m.scrollTop;m.innerHTML=A.screen==='play'?playHtml():A.screen==='decks'?decksHtml():A.screen==='edit'&&A.edit?editHtml():A.screen==='coll'?collHtml():homeHtml();
+  if(A.screen==='edit')m.scrollTop=top}
+
+/* ---------- matches ---------- */
+function startMatch(){const D=findDeck(A.pick);if(!D||deckProblems(D).length){showToast('Pick a deck','That deck is not ready yet','card');return}
+  const of='LWSB'.replace(D.f,'')[Math.floor(Math.random()*3)],ok=Object.values(TCG.KEEPERS).filter(k=>k.f===of),okid=ok[Math.floor(Math.random()*ok.length)].id,T=TCG.starter(of);
+  A.lastMatch={deck:D.id};
+  TCG_HOST.aiNext=A.diff==='smart'?SM.smartNext:TCG.aiNext;
+  tcgBeginDecks({keeper:D.keeper,main:D.main.slice(),ring:D.ring.slice()},{name:FN[of],keeper:okid,main:T.main,ring:T.ring},A.diff==='smart'?'smart':null)}
+TCG_HOST.finish=won=>{const st=A.tcg.stats;if(won)st.w++;else st.l++;const D=A.tcg.decks.find(d=>d.id===(A.lastMatch&&A.lastMatch.deck));if(D){if(won)D.w=(D.w||0)+1;else D.l=(D.l||0)+1}saveTcg();checkin()};
+TCG_HOST.finishNote=won=>`<div class="note">Record ${A.tcg.stats.w}–${A.tcg.stats.l}${A.fb&&A.link&&A.link.idle?' · this match counts as a visit to your idle camp':''}</div>`;
+TCG_HOST.again=()=>startMatch();
+TCG_HOST.close=()=>{A.screen='home';render()};
+
+/* ---------- taps ---------- */
+$('app2').addEventListener('click',e=>{const q=s=>e.target.closest(s);let el;
+  if(el=q('[data-nav]')){A.screen=el.dataset.nav;$('main').scrollTop=0;render();return}
+  if(q('[data-signin]')){signIn();return}
+  if(el=q('[data-pick]')){A.pick=el.dataset.pick;render();return}
+  if(el=q('[data-diff]')){A.diff=el.dataset.diff;render();return}
+  if(q('[data-start]')){startMatch();return}
+  if(q('[data-newdeck]')){showModal(`<h2>New deck</h2><div class="note">Pick a faction. You can add Neutral cards too.</div><div class="btns" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">${'LWSB'.split('').map(f=>`<button class="buy" type="button" data-nf="${f}" style="background:${FACTIONS.find(x=>x.id===f).col};color:#fff">${FN[f]}</button>`).join('')}</div><button class="info" type="button" id="toastOk">Cancel</button>`);return}
+  if(el=q('[data-copy]')){const s=starterDeck(el.dataset.copy);A.edit={id:'d'+Date.now(),name:'My '+FN[s.f],f:s.f,keeper:s.keeper,main:s.main.slice(),ring:s.ring.slice()};A.editMode='main';A.screen='edit';$('main').scrollTop=0;render();return}
+  if(el=q('[data-edit]')){const D=A.tcg.decks.find(d=>d.id===el.dataset.edit);A.edit=JSON.parse(JSON.stringify(D));A.editMode='main';A.screen='edit';$('main').scrollTop=0;render();return}
+  if(!A.edit&&A.screen==='edit'){A.screen='decks';render();return}
+  if(el=q('[data-keeper]')){A.edit.keeper=el.dataset.keeper;render();return}
+  if(el=q('[data-emode]')){A.editMode=el.dataset.emode;render();return}
+  if(el=q('[data-ptype]')){A.poolType=el.dataset.ptype;render();return}
+  if(el=q('[data-addc]')){const id=el.dataset.addc,L=A.editMode==='main'?A.edit.main:A.edit.ring,cap=A.editMode==='main'?30:6;
+    if(L.length>=cap){showToast(A.editMode==='main'?'Main deck full':'Ring deck full',`It holds ${cap} cards. Take one out first.`,'card');return}L.push(id);render();return}
+  if(el=q('[data-rmc]')){const L=A.editMode==='main'?A.edit.main:A.edit.ring,i=L.lastIndexOf(el.dataset.rmc);if(i>=0)L.splice(i,1);render();return}
+  if(q('[data-rename]')){const n=prompt('Deck name',A.edit.name);if(n!=null&&n.trim()){A.edit.name=n.trim().slice(0,24);render()}return}
+  if(q('[data-savedeck]')){const D=A.edit,i=A.tcg.decks.findIndex(d=>d.id===D.id);if(i>=0)A.tcg.decks[i]=D;else A.tcg.decks.push(D);saveTcg();A.pick=D.id;showToast('Deck saved',deckProblems(D).length?'Saved. Finish it to play':'Ready to play','card');return}
+  if(q('[data-deldeck]')){if(!confirm('Delete this deck?'))return;A.tcg.decks=A.tcg.decks.filter(d=>d.id!==A.edit.id);saveTcg();A.edit=null;A.screen='decks';render();return}
+  if(q('[data-back]')){A.edit=null;A.screen='decks';render();return}
+  if(el=q('[data-collf]')){A.collF=el.dataset.collf;render();return}});
+/* pop-up buttons for this app (faction pick for a new deck, OK) */
+$('toast').addEventListener('click',e=>{const f=e.target.closest('[data-nf]');
+  if(f){nextToast();const k=f.dataset.nf;A.edit={id:'d'+Date.now(),name:'My '+FN[k],f:k,keeper:k+'_a',main:[],ring:[]};A.editMode='main';A.screen='edit';render();return}
+  if(e.target.id==='toastOk')nextToast()});
+$('cardZoom').addEventListener('click',e=>{e.stopPropagation();$('cardZoom').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('cardZoom').hidden)$('cardZoom').hidden=true});
+document.addEventListener('pointerdown',()=>{try{if(!AC&&sfxOn)sfx('chop')}catch(_){}},{once:true});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&A.fb)loadAll().then(checkin).catch(()=>{})});
+
+/* ---------- start ---------- */
+render();
+(async()=>{try{A.fb=await fbInit()}catch(e){console.warn('Cloud unavailable',e);A.fb=null}
+  try{await loadAll()}catch(e){A.ready=true;render();showToast('Offline','Could not load your cards. Starter decks still work.','leaf')}
+  checkin()})();
+
+
+})();</script></body></html>

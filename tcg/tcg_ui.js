@@ -2,6 +2,9 @@
    Mirrored like a real table: their camp top-left (their right), yours bottom-right.
    Rows top to bottom: their Treeline, their Clearing, the middle line (auras), your Clearing, your Treeline. */
 let TG=null,TS={sel:null,att:null,ab:null,busy:false,move:null};
+/* The board is shared by the idle game and the standalone TCG app. A host can plug in its own opponent (aiNext),
+   what happens when a match ends (finish), and the Play again / Close buttons (again, close). */
+const TCG_HOST={};
 const TK=()=>TCG.KEEPERS,TCd=id=>TCG.CARDS[id];
 const TKW={eager:'Eager',guard:'Guard',crew:'Work Crew',rally:'Rally',revive:'Revive',scout:'Scout',call:'Call the Pack',fire:'Firebrand',ancient:'Ancient',double:'Double Cut',brace:'Brace',sprout:'Sprout',regrow:'Regrow',nimble:'Nimble'};
 const TKW_TXT={eager:'can attack the turn it is played',guard:'can block from either row, and gets +2 power while blocking',crew:'+1 power for each other copy on your board',rally:'your other units +1 power on your turn',revive:'when played, take back a unit costing 3 or less from your discard pile',scout:'when played, draw a card',call:'when played, find a copy in your deck and add it to your hand',fire:'when played, fell an enemy unit with that much power or less',ancient:'can\'t be targeted by abilities, Blights or Firebrand',double:'a landed hit on a Keeper cracks 2 Rings',brace:'discard while defending: +1 power for that fight',sprout:'if cracked from your Rings, it plays itself for free',regrow:'when played, Regrow (move a card from your Heartwood to your Rings)',nimble:'may switch rows once per turn'};
@@ -29,7 +32,11 @@ function tcgPickKeeper(f){const ks=Object.values(TK()).filter(k=>k.f===f);
   showModal(`<h2>Choose your Keeper</h2><div class="note">More power: harder to hit, fewer Rings, weaker abilities.</div>${ks.map(k=>`<div class="row" style="text-align:left"><div class="t"><div class="n">${k.n}<small>${k.p} power · ${TCG.startRings(k.id)} Rings</small></div><div class="d">${k.ab.map(([c,op,v])=>`${c} Sap: ${TCG.abilityText(op,v)}`).join('<br>')}</div></div><button class="buy" type="button" data-tcgk="${k.id}">Pick</button></div>`).join('')}<button class="info" type="button" id="toastOk">Cancel</button>`);$('toast').classList.add('wide')}
 function tcgBegin(kid){const f=TK()[kid].f,of='LWSB'.replace(f,'')[Math.floor(Math.random()*3)],ok=Object.values(TK()).filter(k=>k.f===of);const okid=ok[Math.floor(Math.random()*ok.length)].id;
   const mine=TCG.starter(f),theirs=TCG.starter(of);
-  TG=TCG.newGame({name:'You',keeper:kid,main:mine.main,ring:mine.ring},{name:FACTIONS.find(x=>x.id===of).n,keeper:okid,main:theirs.main,ring:theirs.ring},(Math.random()*4e9)>>>0,0);
+  tcgBeginDecks({keeper:kid,main:mine.main,ring:mine.ring},{name:FACTIONS.find(x=>x.id===of).n,keeper:okid,main:theirs.main,ring:theirs.ring})}
+/* start a match from two decks: {keeper, main:[30 ids], ring:[6 ids]} (theirs also has a name; oppAi 'smart' makes them defend with the smart AI) */
+function tcgBeginDecks(me,them,oppAi){
+  TG=TCG.newGame({name:'You',keeper:me.keeper,main:me.main,ring:me.ring},{name:them.name,keeper:them.keeper,main:them.main,ring:them.ring},(Math.random()*4e9)>>>0,0);
+  if(oppAi)TG.p[1].ai=oppAi;
   TG.redrawn=false;TS={sel:null,att:null,ab:null,busy:false,move:null};nextToast();$('tcg').hidden=false;sfx('shimmer');
   showToast('Coin flip',TG.first===0?'You go first, starting on 1 Sap. Sap grows by 2 every turn':'They go first. You start on 2 Sap, and Sap grows by 2 every turn','amber');
   tcgRender()}
@@ -116,7 +123,7 @@ function tUseAbility(i){nextToast();if(tMull())return;const ms=TCG.moves(TG).fil
 function tcgEndTurn(){tDo({t:'end'})}
 function tcgAfter(){if(!TG)return;if(TG.over){tcgFinish();return}if(TG.turn!==1)return;TS.busy=true;tcgRender();setTimeout(tcgAIStep,650)}
 function tcgAIStep(){if(!TG||TG.over){TS.busy=false;tcgAfter();return}if(TG.turn!==1){TS.busy=false;tcgRender();return}
-  const m=TCG.aiNext(TG);
+  const m=(TCG_HOST.aiNext||TCG.aiNext)(TG);
   if(m.t==='attack'){tcgReact(m);return}
   const before=TG.log.length;TCG.apply(TG,m);if(m.t==='play'||m.t==='ability')sfx('chop');
   tcgRender();if(TG.over){TS.busy=false;tcgFinish();return}setTimeout(tcgAIStep,m.t==='tofell'?300:700)}
@@ -150,8 +157,8 @@ function tcgReactClick(e){if(!TR)return false;const P=TG.p[0];
   if(e.target.closest('[data-rtake]')){const m=TR.m,ring=P.rings.length;nextToast();TCG.apply(TG,m,()=>({cards:[],plus:0,minus:0,guard:null,negate:false,decoy:false}));tReactDone(ring);return true}
   if(e.target.closest('[data-rdef]')){const pl=tReactPlan(),m=TR.m,ring=P.rings.length;if(pl.sap>P.sap)return true;nextToast();TCG.apply(TG,m,()=>pl.plan);tReactDone(ring);return true}
   return false}
-function tcgFinish(){const won=TG.winner===0;S.tcgStats=S.tcgStats||{w:0,l:0};if(won)S.tcgStats.w++;else S.tcgStats.l++;save();
-  setTimeout(()=>{if(!TG)return;showModal(`<h2>${won?'Victory!':'Defeat'}</h2><div class="note">${TG.reason==='deck-out'?(won?'They ran out of cards':'You ran out of cards'):won?'You broke through their last Ring':'They broke through your last Ring'} · ${Math.ceil(TG.turnNo/2)} turns</div><div class="note">Preview format: no rewards yet. Tell us what you think with Suggest an idea.</div><div class="btns" style="display:flex;gap:6px;justify-content:center;margin-top:6px"><button class="buy" type="button" data-tcgagain="1">Play again</button><button class="info" type="button" data-tcgclose="1">Close</button></div>`);sfx(won?'level':'buy')},700)}
+function tcgFinish(){if(!TG||TG.done)return;TG.done=true;const won=TG.winner===0;if(TCG_HOST.finish)TCG_HOST.finish(won,TG);else{S.tcgStats=S.tcgStats||{w:0,l:0};if(won)S.tcgStats.w++;else S.tcgStats.l++;save()}
+  setTimeout(()=>{if(!TG)return;showModal(`<h2>${won?'Victory!':'Defeat'}</h2><div class="note">${TG.reason==='deck-out'?(won?'They ran out of cards':'You ran out of cards'):won?'You broke through their last Ring':'They broke through your last Ring'} · ${Math.ceil(TG.turnNo/2)} turns</div>${TCG_HOST.finishNote?TCG_HOST.finishNote(won):'<div class="note">Preview format: no rewards yet. Tell us what you think with Suggest an idea.</div>'}<div class="btns" style="display:flex;gap:6px;justify-content:center;margin-top:6px"><button class="buy" type="button" data-tcgagain="1">Play again</button><button class="info" type="button" data-tcgclose="1">Close</button></div>`);sfx(won?'level':'buy')},700)}
 
 $('tcg').addEventListener('click',tcgClick);
 $('toast').addEventListener('click',e=>{if(e.target.closest('[data-peek]')){e.stopImmediatePropagation();peekBoard(true)}},true);
@@ -160,5 +167,5 @@ $('toast').addEventListener('click',e=>{if(tcgReactClick(e))return;
   const f=e.target.closest('[data-tcgf]');if(f){tcgPickKeeper(f.dataset.tcgf);return}
   const k=e.target.closest('[data-tcgk]');if(k){tcgBegin(k.dataset.tcgk);return}
   const a=e.target.closest('[data-tab2]');if(a){tUseAbility(+a.dataset.tab2);return}
-  if(e.target.closest('[data-tcgagain]')){nextToast();TG=null;$('tcg').hidden=true;tcgStart();return}
-  if(e.target.closest('[data-tcgclose]')){nextToast();TG=null;$('tcg').hidden=true;buildList(true);return}});
+  if(e.target.closest('[data-tcgagain]')){nextToast();TG=null;$('tcg').hidden=true;if(TCG_HOST.again)TCG_HOST.again();else tcgStart();return}
+  if(e.target.closest('[data-tcgclose]')){nextToast();TG=null;$('tcg').hidden=true;if(TCG_HOST.close)TCG_HOST.close();else buildList(true);return}});

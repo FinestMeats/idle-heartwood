@@ -74,6 +74,11 @@ function pick(G,i,ms){if(ms.length===1)return ms[0];
   let cand=ms;if(ms.length>OPT.maxCand){cand=ms.map(m=>{const H=E.clone(G);H.log=[];E.apply(H,m);return [score(H,i),m]}).sort((x,y)=>y[0]-x[0]).slice(0,OPT.maxCand).map(x=>x[1]);
     for(const t of ['tofell','end']){const e=ms.find(m=>m.t===t);if(e&&!cand.includes(e))cand.push(e)}}
   let best=cand[0],bs=-1e9;for(const m of cand){const v=lookahead(G,i,m);if(v>bs){bs=v;best=m}}return best}
+/* one decision for whoever's turn it is (the phone board asks for moves one at a time) */
+function smartNext(G){const i=G.turn;let ms=E.moves(G);
+    if(G.phase==='fell'){const P=G.p[i],O=G.p[1-i];ms=ms.filter(m=>m.t!=='attack'||(m.a==='K'?E.kPower(G,P):E.power(G,P,E.findU(P,m.a)))>=(m.d==='K'?E.kPower(G,O):E.power(G,O,E.findU(O,m.d))))}
+    if(G.phase==='work'){const P=G.p[i];ms=ms.filter(m=>m.t!=='coin'||P.hand.some(id=>C(id).cost>P.sap&&C(id).cost<=P.sap+2))}
+    return pick(G,i,ms)}
 function smartTurn(G){const i=G.turn;let n=0;
   while(!G.over&&G.turn===i&&n++<40){let ms=E.moves(G);
     /* the coin only when it unlocks a play this turn, same as the quick AI */
@@ -94,4 +99,4 @@ function playMatch(a,b,seed,kinds,maxTurns){rs=(seed*2654435761)>>>0||7;
   maxTurns=maxTurns||80;
   while(!G.over&&G.turnNo<maxTurns){const k=kinds[G.turn];if(k==='smart')smartTurn(G);else{E.aiWork(G);if(!G.over&&G.phase==='fell')E.aiFell(G)}}
   if(!G.over){G.over=true;G.winner=-1;G.reason='timeout'}return G}
-module.exports={smartDefend,smartTurn,playMatch,score,OPT};
+module.exports={smartDefend,smartTurn,smartNext,playMatch,score,OPT};
