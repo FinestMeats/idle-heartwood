@@ -9,3 +9,10 @@
 - Targets for a healthy build: factions 45–55%, Keepers 40–60%, first player under 55%,
   out-of-cards under 5%, median 16–24 total turns.
 - `QUICK=1 node sim.js` only for speed checks, never for balance decisions.
+
+# Heartwood TCG app (standalone)
+- Source: /home/claude/tcgapp (app.js, build.js, extract.js); copies in repo tcg-app/src.
+- Build: `cd /home/claude/tcgapp && node build.js ../playtest/config.json` → preview.html (no cloud) and repo tcg-app/index.html (website).
+  It pulls helpers (pop-ups, icons, card art, sounds, CSS) straight out of heartwood.html and bundles tcg/cards.js, engine.js, smart.js, tcg_ui.js,
+  so rebuild the app after changing any of those.
+- Cloud records per account: users/{uid}/data/cards (shared collection, +N increments), data/tcg (decks, stats), data/link (chk check-ins, idle status).
