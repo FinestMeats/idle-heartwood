@@ -1,0 +1,25 @@
+name: Daily health check
+# Counts a few things from the last 24 hours (feedback, Card Club claims and scans, ladder updates) and opens
+# a GitHub issue labelled `alert` only when one is far above a normal day. Quiet days produce nothing.
+on:
+  schedule:
+    - cron: '50 20 * * *'   # 7:50am Sydney in summer (6:50am in winter)
+  workflow_dispatch:
+permissions:
+  issues: write
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock --ignore-scripts firebase-admin@12.7.0
+      - run: node scripts/health-check.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
