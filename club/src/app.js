@@ -92,16 +92,17 @@ function homeHtml(){const d=today(),done=ST.packs.last===d,tot=CARDS.length,have
   <div class="box"><h2>${have} of ${tot} cards</h2><div class="bar"><i style="width:${Math.round(100*have/tot)}%"></i></div>
   <div class="sets">${SETS.filter(s=>s.reward).map(s=>{const ids=CARDS.filter(c=>c.set===s.id).map(c=>c.id),h=owned(ids);return `<div class="srow"><span class="dot" style="background:${s.col}"></span><span>${esc(s.n)}</span><b>${h}/${ids.length}</b></div>`}).join('')}</div>
   <button type="button" class="btn ghost" data-nav="binder">Open your binder</button></div>
-  ${accountHtml()}`}
+  ${accountHtml()}${LEGAL}`}
 function accountHtml(){if(!FB)return CFG.demo?'<div class="box"><p class="note">Preview: cards are kept on this device only.</p></div>':'';
   if(EMAIL)return `<div class="box"><p class="note">Signed in as ${esc(EMAIL)}. Your cards follow you to any phone.</p></div>`;
   return `<div class="box"><h2>Keep your cards safe</h2><p>Sign in with Google so your binder isn't lost if you change phones.</p><button type="button" class="btn" data-signin="1">Sign in with Google</button></div>`}
 function binderHtml(){return SETS.map(s=>{const ids=CARDS.filter(c=>c.set===s.id).map(c=>c.id);
   return `<section class="set"><h2><span class="dot" style="background:${s.col}"></span>${esc(s.n)} <small>${owned(ids)}/${ids.length}</small></h2>${s.reward?`<p class="note">Finish it for: <b>${esc(s.reward)}</b></p>`:'<p class="note">The rarest card. No prize, just bragging rights.</p>'}<div class="grid">${ids.map(tile).join('')}</div></section>`}).join('')+
   `<section class="set"><h2>Trade-ins</h2><p class="note">Every ${PACK.trade} duplicates of one rarity swap for a missing card of that rarity (up to Epic). Tap a missing card to trade.</p><div class="sets">${[0,1,2,3].map(r=>`<div class="srow"><span class="dot" style="background:${RAR[r].c}"></span><span>${RAR[r].n} duplicates</span><b>${dupes(r)}</b></div>`).join('')}</div></section>`}
+const LEGAL=`<p class="note legal"><a href="../terms.html#card-club" target="_blank" rel="noopener">Card Club rules and pack odds</a> · <a href="../privacy.html" target="_blank" rel="noopener">Privacy</a></p>`;
 function rewardsHtml(){return `<p class="note top">Finish a set, tap Claim, then show the code to staff at the counter.</p>`+MILESTONES.map(m=>{const h=owned(m.cards),n=m.cards.length,done=h===n,cl=ST.claims[m.id];
   return `<div class="box"><h2>${esc(m.n)}</h2><p><b>${esc(m.reward)}</b></p><div class="bar"><i style="width:${Math.round(100*h/n)}%"></i></div><p class="note">${h} of ${n} cards</p>
-  ${cl?`<p class="ok">Claimed on ${new Date(cl).toLocaleDateString('en-AU')}</p>`:done?`<button type="button" class="btn" data-claim="${m.id}">Claim at the counter</button>`:''}</div>`}).join('')}
+  ${cl?`<p class="ok">Claimed on ${new Date(cl).toLocaleDateString('en-AU')}</p>`:done?`<button type="button" class="btn" data-claim="${m.id}">Claim at the counter</button>`:''}</div>`}).join('')+LEGAL}
 function render(){const m=$('main');
   if(!READY){m.innerHTML='<p class="note top">Loading your binder…</p>';return}
   m.innerHTML=VIEW==='binder'?binderHtml():VIEW==='rewards'?rewardsHtml():homeHtml();
