@@ -134,7 +134,7 @@ service cloud.firestore {
         && code.matches('^[A-HJ-NP-Z2-9]{6}$')
         && request.resource.data.keys().hasOnly(['uid','mid','t'])
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.mid is string && request.resource.data.mid.size() <= 16
+        && request.resource.data.mid is string && request.resource.data.mid.matches('^[a-z]{1,16}$')  // a reward id, never a path or markup
         && request.resource.data.t == request.time
         && throttled('rq', 'rqid', code);
       allow list, update, delete: if false;
