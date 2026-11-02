@@ -1,10 +1,10 @@
-/* Builds the UrgerBae Card Club page.
-   node build.js           -> preview.html (no cloud, with a "Preview: open a pack" button)
-   node build.js web       -> also ../idle-heartwood/club/index.html (website: Firebase sign-in, real counter QR)
-   club.json holds the counter secret and the staff PIN; the website build reads Firebase settings from ../playtest/config.json. */
+/* Builds the UrgerBae Card Club page. Run from club/src after `npm i --no-save qrcode-generator@1`:
+   node build.js           -> preview.html and test.html here (no cloud, with a "Preview: open a pack" button; not committed)
+   node build.js web       -> also ../index.html (the website: Firebase sign-in, staff counter screen)
+   Nothing secret goes into the page: firebase.json is the public web config, and staff, today's counter code and
+   reward claims are all checked by the Firestore rules (../../firestore.rules). Never add a PIN or secret to CFG. */
 const fs=require('fs'),path=require('path');
-const club=JSON.parse(fs.readFileSync(path.join(__dirname,'club.json'),'utf8'));
-const src=f=>fs.readFileSync(path.join(__dirname,'src',f),'utf8').replace(/\nif\(typeof module!=='undefined'\)module\.exports=[^\n]*\n?/,'\n');
+const src=f=>fs.readFileSync(path.join(__dirname,f),'utf8').replace(/\nif\(typeof module!=='undefined'\)module\.exports=[^\n]*\n?/,'\n');
 const css=`
 :root{--ink:#241a14;--bg:#fff6ec;--orange:#ff7a1a;--blue:#2f6bff;--muted:#6b5a50}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Fredoka',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
@@ -56,6 +56,10 @@ nav button[aria-pressed="true"]{background:var(--blue);color:#fff}
 .pslot.down span{font-size:28px;font-weight:700;color:#fff;text-shadow:0 2px 0 var(--ink)}
 .pslot.up{animation:flip .35s ease-out}@keyframes flip{from{transform:rotateY(90deg)}to{transform:none}}
 .claimr{font-size:22px;font-weight:700;color:var(--blue)}
+.ccode{font-size:44px;font-weight:700;letter-spacing:8px;margin:10px 0;font-family:ui-monospace,Menlo,monospace}
+.uid{font-family:ui-monospace,Menlo,monospace;font-size:14px;word-break:break-all;background:#fff;border:2px solid var(--ink);border-radius:10px;padding:8px}
+.bad{color:#c62a1d;font-weight:700}.warn{background:#fff1d6;border:3px solid #e09200;border-radius:14px;padding:8px 12px;margin:10px 0;text-align:left}.warn p{margin:4px 0}
+.facts{text-align:left;font-size:17px;line-height:1.5;padding-left:20px;margin:8px 0}.btn.small{min-height:40px;font-size:16px;max-width:200px;margin:14px auto 0}
 .pin{display:flex;flex-direction:column;gap:6px;text-align:left;font-weight:700;margin:12px 0}.pin input{font:inherit;font-size:24px;padding:10px;border:3px solid var(--ink);border-radius:12px;letter-spacing:6px}
 #toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);width:min(92%,420px);background:var(--ink);color:#fff;border-radius:16px;padding:12px 16px;z-index:30;display:flex;flex-direction:column;gap:2px}
 #toast[hidden],#modal[hidden]{display:none}
@@ -74,12 +78,12 @@ ${fs.readFileSync(path.join(__dirname,'node_modules','qrcode-generator','qrcode.
 ${src('cards.js')}
 ${src('art.js')}
 ${src('app.js')}
-${cfg.hooks?'window.__club={get ST(){return ST},openPack,trade,dupes,dayCode,today,render,CARDS,MILESTONES,cardHtml,CFG};':''}
+${cfg.hooks?'window.__club={get ST(){return ST},openPack,trade,dupes,today,render,CARDS,MILESTONES,cardHtml,CFG};':''}
 })();</script></body></html>`}
-const base={secret:club.secret,pin:club.pin};
+const base={};
 fs.writeFileSync(path.join(__dirname,'preview.html'),page({...base,firebase:null,demo:true}));
 fs.writeFileSync(path.join(__dirname,'test.html'),page({...base,firebase:null,demo:true,hooks:true}));
 console.log('preview.html',fs.statSync(path.join(__dirname,'preview.html')).size,'bytes');
-if(process.argv[2]==='web'){const fb=JSON.parse(fs.readFileSync(path.join(__dirname,'..','playtest','config.json'),'utf8'));
-  const out=path.join(__dirname,'..','idle-heartwood','club','index.html');fs.mkdirSync(path.dirname(out),{recursive:true});
+if(process.argv[2]==='web'){const fb=JSON.parse(fs.readFileSync(path.join(__dirname,'firebase.json'),'utf8'));
+  const out=path.join(__dirname,'..','index.html');
   fs.writeFileSync(out,page({...base,firebase:fb,demo:false}));console.log('website build',out)}
