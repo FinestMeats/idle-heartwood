@@ -64,6 +64,7 @@ test('customers read their own scans; only staff count them', async () => {
 test('claim requests: own uid only, readable by owner and staff', async () => {
   await assertFails(req(as('alice'), 'bob', 'ABC234'));
   await assertFails(req(as('alice'), 'alice', 'abc'));
+  await assertFails(req(as('alice'), 'alice', 'ABC235', 'menu/../x')); // reward id must be a plain id
   await assertFails(setDoc(doc(as('alice'), 'clubReq/ABC234'), { uid: 'alice', mid: 'menu', t: serverTimestamp() })); // no rate-limit entry
   await assertSucceeds(req(as('alice'), 'alice', 'ABC234'));
   await assertFails(req(as('bob'), 'bob', 'ABC234')); // taken
