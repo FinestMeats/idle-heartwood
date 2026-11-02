@@ -4,6 +4,8 @@ rules_version = '2';
 // - The ladder is readable by anyone; a player can only write their own row, with sane values.
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isStaff() { return signedIn() && exists(/databases/$(database)/documents/clubStaff/$(request.auth.uid)); }
     match /users/{uid}/{doc=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
@@ -34,6 +36,67 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['o','t'])
         && request.resource.data.o is int && request.resource.data.o >= 0 && request.resource.data.o < 10;
       allow update, delete: if false;
+    }
+    // ---------- UrgerBae Card Club ----------
+    // Nothing secret lives in the page: staff are Google accounts listed in clubStaff (added by hand in the
+    // Firebase console), today's counter code is stored here where only staff can read it, and rewards are
+    // recorded by a staff device after it checks the customer's verified visits.
+    // Staff can read a customer's club binder to check a reward.
+    match /users/{uid}/data/club {
+      allow read: if isStaff();
+    }
+    // clubStaff/{uid}: one empty doc per staff Google account. Console only.
+    match /clubStaff/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+    // clubDaily/{YYYY-MM-DD}: today's random counter code and when it stops working.
+    match /clubDaily/{day} {
+      allow get: if isStaff();
+      allow create, update: if isStaff()
+        && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.keys().hasOnly(['k','exp','by'])
+        && request.resource.data.k is string && request.resource.data.k.size() >= 8 && request.resource.data.k.size() <= 32
+        && request.resource.data.exp is timestamp
+        && request.resource.data.by == request.auth.uid;
+      allow list, delete: if false;
+    }
+    // clubScans/{uid}_{day}: one verified counter visit per account per day. Only creatable with the live code.
+    match /clubScans/{id} {
+      allow get: if signedIn() && (id.split('_')[0] == request.auth.uid || isStaff());
+      allow list: if isStaff();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid','day','k','t'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.day is string
+        && request.resource.data.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && id == request.auth.uid + '_' + request.resource.data.day
+        && request.resource.data.t == request.time
+        && exists(/databases/$(database)/documents/clubDaily/$(request.resource.data.day))
+        && get(/databases/$(database)/documents/clubDaily/$(request.resource.data.day)).data.k == request.resource.data.k
+        && request.time < get(/databases/$(database)/documents/clubDaily/$(request.resource.data.day)).data.exp;
+      allow update, delete: if false;
+    }
+    // clubReq/{CODE}: a customer asks to claim a reward; staff type the 6-character code at the counter.
+    match /clubReq/{code} {
+      allow get: if signedIn() && (isStaff() || resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && code.matches('^[A-HJ-NP-Z2-9]{6}$')
+        && request.resource.data.keys().hasOnly(['uid','mid','t'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.mid is string && request.resource.data.mid.size() <= 16
+        && request.resource.data.t == request.time;
+      allow list, update, delete: if false;
+    }
+    // clubClaims/{uid}_{milestone}: written once by a staff device when a reward is handed over. Never removable.
+    match /clubClaims/{id} {
+      allow get: if signedIn() && (id.split('_')[0] == request.auth.uid || isStaff());
+      allow create: if isStaff()
+        && request.resource.data.keys().hasOnly(['uid','mid','by','t','note'])
+        && id == request.resource.data.uid + '_' + request.resource.data.mid
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.t == request.time;
+      allow list, update, delete: if false;
     }
     match /{other=**} {
       allow read, write: if false;

@@ -43,7 +43,10 @@ const CARD=Object.fromEntries(CARDS.map(c=>[c.id,c]));
 /* pack rules, tested over 2,000 simulated players: 6 cards, the last one Rare or better,
    a Legendary within 10 packs, the Mythic within 25; 4 duplicates of a rarity (up to Epic) trade for a missing card of it */
 const PACK={size:6,odds:[.58,.26,.11,.04,.008,.0015,.0005],pityL:10,pityM:25,trade:4};
+/* verified counter visits a real collector needs before staff hand over each reward: about the luckiest 1 in 100
+   players (simulated with the pack odds, pity and trade-ins above). Change the odds -> re-run the simulation. */
+const MIN_VISITS={menu:4,crew:3,block:5,icons:12,all:15};
 /* milestones: finish a set; "all" = every card except the Secret */
-const MILESTONES=[...SETS.filter(s=>s.reward).map(s=>({id:s.id,n:'Finish '+s.n,reward:s.reward,cards:CARDS.filter(c=>c.set===s.id).map(c=>c.id)})),
-  {id:'all',n:'Finish all four sets',reward:'Free Double XL, plus a shout-out in a video',cards:CARDS.filter(c=>c.set!=='secret').map(c=>c.id)}];
+const MILESTONES=[...SETS.filter(s=>s.reward).map(s=>({id:s.id,n:'Finish '+s.n,reward:s.reward,cards:CARDS.filter(c=>c.set===s.id).map(c=>c.id),minVisits:MIN_VISITS[s.id]||1})),
+  {id:'all',n:'Finish all four sets',reward:'Free Double XL, plus a shout-out in a video',cards:CARDS.filter(c=>c.set!=='secret').map(c=>c.id),minVisits:MIN_VISITS.all}];
 if(typeof module!=='undefined')module.exports={RAR,SETS,CARDS,CARD,PACK,MILESTONES};
