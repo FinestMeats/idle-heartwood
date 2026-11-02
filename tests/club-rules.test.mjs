@@ -1,9 +1,9 @@
-// Firestore rules tests for the UrgerBae Card Club. Run in CI by .github/workflows/rules-test.yml:
+// Firestore rules tests: the UrgerBae Card Club and the per-player rate limits. Run in CI by .github/workflows/rules-test.yml:
 //   npx firebase emulators:exec --only firestore --project demo-heartwood "node --test tests/club-rules.test.mjs"
 import { test, before, after, beforeEach } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getCountFromServer, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getCountFromServer, serverTimestamp, Timestamp, writeBatch } from 'firebase/firestore';
 
 let env;
 const DAY = '2026-11-03', CODE = 'K7Q2M9XPRT4W';
@@ -25,6 +25,10 @@ beforeEach(async () => {
 });
 const as = uid => env.authenticatedContext(uid).firestore();
 const anon = () => env.unauthenticatedContext().firestore();
+// A reward-claim request, written the way the page does it: with this player's rate-limit entry in one batch.
+const req = (db, uid, code, mid = 'menu') => { const b = writeBatch(db);
+  b.set(doc(db, `clubReq/${code}`), { uid, mid, t: serverTimestamp() });
+  b.set(doc(db, `limits/${uid}`), { rq: serverTimestamp(), rqid: code }, { merge: true }); return b.commit(); };
 const scan = (uid, day, k) => setDoc(doc(as(uid), `clubScans/${uid}_${day}`), { uid, day, k, t: serverTimestamp() });
 
 test('nobody but staff can read the daily code', async () => {
@@ -58,10 +62,11 @@ test('customers read their own scans; only staff count them', async () => {
   await assertSucceeds(getCountFromServer(query(collection(as('staff1'), 'clubScans'), where('uid', '==', 'alice'))));
 });
 test('claim requests: own uid only, readable by owner and staff', async () => {
-  await assertFails(setDoc(doc(as('alice'), 'clubReq/ABC234'), { uid: 'bob', mid: 'menu', t: serverTimestamp() }));
-  await assertFails(setDoc(doc(as('alice'), 'clubReq/abc'), { uid: 'alice', mid: 'menu', t: serverTimestamp() }));
-  await assertSucceeds(setDoc(doc(as('alice'), 'clubReq/ABC234'), { uid: 'alice', mid: 'menu', t: serverTimestamp() }));
-  await assertFails(setDoc(doc(as('bob'), 'clubReq/ABC234'), { uid: 'bob', mid: 'menu', t: serverTimestamp() })); // taken
+  await assertFails(req(as('alice'), 'bob', 'ABC234'));
+  await assertFails(req(as('alice'), 'alice', 'abc'));
+  await assertFails(setDoc(doc(as('alice'), 'clubReq/ABC234'), { uid: 'alice', mid: 'menu', t: serverTimestamp() })); // no rate-limit entry
+  await assertSucceeds(req(as('alice'), 'alice', 'ABC234'));
+  await assertFails(req(as('bob'), 'bob', 'ABC234')); // taken
   await assertFails(getDoc(doc(as('bob'), 'clubReq/ABC234')));
   await assertSucceeds(getDoc(doc(as('staff1'), 'clubReq/ABC234')));
 });
@@ -82,4 +87,48 @@ test('staff can read a club binder but not other saves; customers keep their own
   await assertFails(setDoc(doc(as('staff1'), 'users/alice/data/club'), { cards: {} }));
   await assertFails(getDoc(doc(as('bob'), 'users/alice/data/club')));
   await assertSucceeds(updateDoc(doc(as('alice'), 'users/alice/data/club'), { cards: { m_og: 2 } }));
+});
+
+/* ---------- rate limits (firestore.rules "rate limits") ---------- */
+const sendFeedback = (db, uid, n = 1) => { const b = writeBatch(db); let last;
+  for (let i = 0; i < n; i++) { last = doc(collection(db, 'feedback'));
+    b.set(last, { type: 'bug', text: 'it broke', ctx: {}, t: Date.now(), uid, status: 'new' }); }
+  b.set(doc(db, `limits/${uid}`), { fb: serverTimestamp(), fbid: last.id }, { merge: true }); return b.commit(); };
+const ago = s => Timestamp.fromMillis(Date.now() - s * 1000);
+
+test('feedback: one a minute per player, and only with the rate-limit entry', async () => {
+  await assertFails(setDoc(doc(as('alice'), 'feedback/x1'), { type: 'bug', text: 'hi', ctx: {}, t: 1, uid: 'alice', status: 'new' }));
+  await assertSucceeds(sendFeedback(as('alice'), 'alice'));
+  await assertFails(sendFeedback(as('alice'), 'alice')); // straight away again
+  await assertSucceeds(sendFeedback(as('bob'), 'bob')); // other players aren't affected
+  await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'limits/alice'), { fb: ago(61), fbid: 'old' }));
+  await assertSucceeds(sendFeedback(as('alice'), 'alice')); // a minute later
+});
+test('feedback: a batch cannot carry more than one report', async () => {
+  await assertFails(sendFeedback(as('alice'), 'alice', 5));
+});
+test('rate-limit entries cannot be faked or reset', async () => {
+  await assertFails(setDoc(doc(as('alice'), 'limits/alice'), { fb: ago(3600), fbid: 'x' })); // backdated
+  await assertFails(setDoc(doc(as('alice'), 'limits/bob'), { fb: serverTimestamp(), fbid: 'x' }));
+  await assertFails(setDoc(doc(as('alice'), 'limits/alice'), { fb: serverTimestamp(), fbid: 'x', extra: 1 }));
+  await assertSucceeds(sendFeedback(as('alice'), 'alice'));
+  await assertFails(deleteDoc(doc(as('alice'), 'limits/alice')));
+  await assertSucceeds(getDoc(doc(as('alice'), 'limits/alice')));
+  await assertFails(getDoc(doc(as('bob'), 'limits/alice')));
+});
+test('claim requests: one code every 20 seconds per player', async () => {
+  await assertSucceeds(req(as('alice'), 'alice', 'ABC234'));
+  await assertFails(req(as('alice'), 'alice', 'XYZ234'));
+  await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'limits/alice'), { rq: ago(21), rqid: 'ABC234' }));
+  await assertSucceeds(req(as('alice'), 'alice', 'XYZ234'));
+});
+test('ladder: signed-in reads, one write every 5 seconds per player', async () => {
+  const row = (extra = {}) => ({ r: 1000, best: 1000, w: 1, l: 0, d: 0, n: 1, f: 'x', t: Date.now(), name: 'Alice', st: serverTimestamp(), ...extra });
+  await assertFails(setDoc(doc(as('alice'), 'ladder/alice'), (({ st, ...r }) => r)(row()))); // no server time
+  await assertSucceeds(setDoc(doc(as('alice'), 'ladder/alice'), row()));
+  await assertFails(setDoc(doc(as('alice'), 'ladder/alice'), row({ r: 1010 }))); // straight away again
+  await env.withSecurityRulesDisabled(c => updateDoc(doc(c.firestore(), 'ladder/alice'), { st: ago(6) }));
+  await assertSucceeds(setDoc(doc(as('alice'), 'ladder/alice'), row({ r: 1010 })));
+  await assertFails(getDoc(doc(anon(), 'ladder/alice')));
+  await assertSucceeds(getDoc(doc(as('bob'), 'ladder/alice')));
 });

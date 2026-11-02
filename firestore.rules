@@ -1,18 +1,50 @@
 rules_version = '2';
 // Idle Heartwood playtest rules.
 // - Each player's save lives at users/{uid}/... and only that signed-in player can read or write it.
-// - The ladder is readable by anyone; a player can only write their own row, with sane values.
+// - The ladder is readable by signed-in players; a player can only write their own row, with sane values.
+// - Rate limits: anything a player can create (feedback, reward requests, ladder rows) is throttled per account
+//   by the server clock, so a script can't loop requests to flood the game, the GitHub issues or the Firebase bill.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function isStaff() { return signedIn() && exists(/databases/$(database)/documents/clubStaff/$(request.auth.uid)); }
+    // ---------- rate limits ----------
+    // limits/{uid} holds, per throttled action, the server time of the player's last one (t) and that
+    // action's document id (idf). A throttled create must update its pair in the same batch: the time must be
+    // now and the previous one at least `secs` ago, and the id must match the new document, so a batch can't
+    // sneak in more than one.
+    function lim(uid) { return /databases/$(database)/documents/limits/$(uid); }
+    function stepped(t, idf, secs) {
+      let o = resource == null ? {} : resource.data;
+      let x = request.resource.data;
+      return (x.get(t, null) == o.get(t, null) && x.get(idf, null) == o.get(idf, null))
+        || (x.get(t, null) == request.time
+            && x.get(idf, null) is string && x.get(idf, '').size() <= 40
+            && (o.get(t, null) == null || o.get(t, null) < request.time - duration.value(secs, 's')));
+    }
+    function throttled(t, idf, id) {
+      let after = getAfter(lim(request.auth.uid)).data;
+      return after.get(t, null) == request.time && after.get(idf, null) == id;
+    }
+    match /limits/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['fb','fbid','rq','rqid'])
+        && stepped('fb', 'fbid', 60)     // one bug report or idea a minute
+        && stepped('rq', 'rqid', 20);    // one reward-claim code every 20 seconds
+      allow list, delete: if false;
+    }
     match /users/{uid}/{doc=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
     match /ladder/{uid} {
-      allow read: if true;
+      allow read: if signedIn();
+      // st is the server time of the write: one ladder update per player every 5 seconds.
       allow write: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['r','best','w','l','d','n','f','t','name'])
+        && request.resource.data.keys().hasOnly(['r','best','w','l','d','n','f','t','name','st'])
+        && request.resource.data.st == request.time
+        && (resource == null || resource.data.get('st', null) == null
+            || resource.data.st < request.time - duration.value(5, 's'))
         && request.resource.data.r is int && request.resource.data.r >= 100 && request.resource.data.r <= 4000
         && request.resource.data.best is int && request.resource.data.best <= 4000
         && request.resource.data.name is string && request.resource.data.name.size() <= 16;
@@ -26,12 +58,13 @@ service cloud.firestore {
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1500
         && request.resource.data.ctx is map
-        && request.resource.data.status == 'new';
+        && request.resource.data.status == 'new'
+        && throttled('fb', 'fbid', id);
       allow read, update, delete: if false;
     }
     // Community polls: one vote per signed-in player, final once cast; votes are countable by everyone.
     match /polls/{poll}/votes/{uid} {
-      allow read: if true;
+      allow read: if signedIn();
       allow create: if request.auth != null && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['o','t'])
         && request.resource.data.o is int && request.resource.data.o >= 0 && request.resource.data.o < 10;
@@ -85,7 +118,8 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid','mid','t'])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.mid is string && request.resource.data.mid.size() <= 16
-        && request.resource.data.t == request.time;
+        && request.resource.data.t == request.time
+        && throttled('rq', 'rqid', code);
       allow list, update, delete: if false;
     }
     // clubClaims/{uid}_{milestone}: written once by a staff device when a reward is handed over. Never removable.

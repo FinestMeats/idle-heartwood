@@ -57,6 +57,7 @@ export const where=(field,op,value)=>({field,value});export const query=(c,w)=>(
 export const getDoc=async r=>snap(await call('get',{path:r.path}));
 export const setDoc=async(r,d)=>{await call('set',{path:r.path,data:pack(d)})};
 export const serverTimestamp=()=>({__server:1});
+export const writeBatch=()=>{const ops=[];return {set:(r,d)=>{ops.push([r,d])},commit:async()=>{for(const [r,d] of ops)await setDoc(r,d)}}};
 export const Timestamp={fromMillis:ms=>({toMillis:()=>ms})};
 export const getCountFromServer=async q=>{const r=await call('count',q);return {data:()=>({count:r.count})}};
 export const runTransaction=async(fs,fn)=>fn({get:r=>getDoc(r),set:(r,d)=>{tx.push([r,d])}}).then(async v=>{for(const [r,d] of tx.splice(0))await setDoc(r,d);return v});
