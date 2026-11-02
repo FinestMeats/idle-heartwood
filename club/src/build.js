@@ -18,7 +18,7 @@ nav button[aria-pressed="true"]{background:var(--blue);color:#fff}
 .hero{text-align:center;padding:8px 0 4px}.hero h1{margin:0;font-size:40px;line-height:1;color:var(--ink)}.hero p{margin:8px 0 0;font-size:18px;color:var(--muted)}
 .box{background:#fff;border:4px solid var(--ink);border-radius:20px;padding:14px 16px;margin:14px 0;box-shadow:0 5px 0 var(--ink)}
 .box.big{background:#ffe2c7}.box h2{margin:0 0 6px;font-size:22px}.box p{margin:4px 0;font-size:17px;line-height:1.35}
-.note{color:var(--muted);font-size:15px}.note.top{margin:4px 0 10px}.ok{color:#1d8a46;font-weight:700}
+.note{color:var(--muted);font-size:15px}.note.top{margin:4px 0 10px}.note.legal{text-align:center;margin:18px 0 8px;font-size:14px}.note.legal a{color:var(--muted)}.ok{color:#1d8a46;font-weight:700}
 .btn{display:block;width:100%;min-height:50px;margin-top:10px;font:inherit;font-size:19px;font-weight:700;border:3px solid var(--ink);border-radius:14px;background:var(--blue);color:#fff;box-shadow:0 4px 0 var(--ink)}
 .btn.ghost{background:#fff;color:var(--ink)}.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
 .row{display:flex;gap:10px}.row .btn{flex:1}
