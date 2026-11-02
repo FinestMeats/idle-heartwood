@@ -1,6 +1,6 @@
 rules_version = '2';
 // Idle Heartwood playtest rules.
-// - Each player's save lives at users/{uid}/... and only that signed-in player can read or write it.
+// - Each player's save lives at users/{uid}/data/... and only that signed-in player can read or write it.
 // - The ladder is readable by signed-in players; a player can only write their own row, with sane values.
 // - Rate limits: anything a player can create (feedback, reward requests, ladder rows) is throttled per account
 //   by the server clock, so a script can't loop requests to flood the game, the GitHub issues or the Firebase bill.
@@ -34,8 +34,18 @@ service cloud.firestore {
         && stepped('rq', 'rqid', 20);    // one reward-claim code every 20 seconds
       allow list, delete: if false;
     }
-    match /users/{uid}/{doc=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /users/{uid}/data/{name} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if signedIn() && request.auth.uid == uid && name != 'save3';
+    }
+    // The idle save only moves forward one step at a time: every write must set rev to exactly the stored rev + 1.
+    // Two devices that both read rev N can't both write N+1 (race condition): the second is refused, and its next
+    // sync re-reads the newer save instead of overwriting it.
+    match /users/{uid}/data/save3 {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.rev is int;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.rev == resource.data.get('rev', 0) + 1;
     }
     match /ladder/{uid} {
       allow read: if signedIn();

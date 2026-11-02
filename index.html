@@ -2664,8 +2664,12 @@ async function cardsInit(){const b=BE;if(!b||b.kind!=='firebase'||!b.cards)retur
   try{if(!cardsMig()){const m=await b.cards.migrate(S.cards||{});cardsMem.mig[b.id]=1;lsSet('hwCardMig:'+b.id,'1');S.cards=Object.assign({},m)}
     await cardsSync()}catch(e){console.warn('Card sync unavailable',e)}}
 /* send this device's waiting cards, then read the shared record back (plus anything still waiting) */
+/* The queue is claimed (emptied) before it's sent, inside a lock shared by every tab on this device, so two open
+   tabs can't both send the same waiting cards and double them. If the send is refused, the cards go back in the queue. */
 async function cardsSync(){if(cardsBusy||!cardsLive())return;cardsBusy=true;const b=BE;
-  try{const q=cq();if(Object.keys(q).length){await b.cards.inc(q);const now=cq();for(const k in q){now[k]=(now[k]||0)-q[k];if(now[k]<=0)delete now[k]}cqSet(now)}
+  const send=async()=>{const q=cq();if(!Object.keys(q).length)return;cqSet({});
+    try{await b.cards.inc(q)}catch(e){const now=cq();for(const k in q)now[k]=(now[k]||0)+q[k];cqSet(now);throw e}};
+  try{if(navigator.locks&&navigator.locks.request)await navigator.locks.request('hwCardQ:'+b.id,send);else await send();
     const d=await b.cards.get();if(d.exists){const c=Object.assign({},d.data().c||{}),p=cq();for(const k in p)c[k]=(c[k]||0)+p[k];
       const before=JSON.stringify(S.cards);S.cards=c;if(JSON.stringify(c)!==before){cloudDirty=true;if(tab==='cards')buildList(true)}}}
   catch(e){}cardsBusy=false}

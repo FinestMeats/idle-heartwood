@@ -135,3 +135,16 @@ test('ladder: signed-in reads, one write every 5 seconds per player', async () =
   await assertFails(getDoc(doc(anon(), 'ladder/alice')));
   await assertSucceeds(getDoc(doc(as('bob'), 'ladder/alice')));
 });
+
+/* ---------- race conditions ---------- */
+test('idle save: each write must be exactly one step newer, so two devices cannot both write over the same save', async () => {
+  const save = (rev) => setDoc(doc(as('alice'), 'users/alice/data/save3'), { state: '{}', savedAt: Date.now(), dev: 'phone', rev });
+  await assertSucceeds(save(1));
+  await assertSucceeds(save(2));
+  await assertFails(save(2)); // a second device that also read rev 1
+  await assertFails(save(9)); // skipping ahead
+  await assertSucceeds(save(3));
+  await assertFails(setDoc(doc(as('bob'), 'users/alice/data/save3'), { state: '{}', rev: 4 }));
+  await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'users/bob/data/save3'), { state: '{}' })); // an old save with no rev
+  await assertSucceeds(setDoc(doc(as('bob'), 'users/bob/data/save3'), { state: '{}', rev: 1 }));
+});
