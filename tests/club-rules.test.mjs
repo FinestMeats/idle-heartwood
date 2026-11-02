@@ -129,6 +129,9 @@ test('ladder: signed-in reads, one write every 5 seconds per player', async () =
   await assertFails(setDoc(doc(as('alice'), 'ladder/alice'), row({ r: 1010 }))); // straight away again
   await env.withSecurityRulesDisabled(c => updateDoc(doc(c.firestore(), 'ladder/alice'), { st: ago(6) }));
   await assertSucceeds(setDoc(doc(as('alice'), 'ladder/alice'), row({ r: 1010 })));
+  await env.withSecurityRulesDisabled(c => updateDoc(doc(c.firestore(), 'ladder/alice'), { st: ago(6) }));
+  await assertFails(setDoc(doc(as('alice'), 'ladder/alice'), row({ w: '<img src=x onerror=alert(1)>' }))); // markup in a number field
+  await assertFails(setDoc(doc(as('alice'), 'ladder/alice'), row({ f: 'x'.repeat(50) })));
   await assertFails(getDoc(doc(anon(), 'ladder/alice')));
   await assertSucceeds(getDoc(doc(as('bob'), 'ladder/alice')));
 });

@@ -47,7 +47,14 @@ service cloud.firestore {
             || resource.data.st < request.time - duration.value(5, 's'))
         && request.resource.data.r is int && request.resource.data.r >= 100 && request.resource.data.r <= 4000
         && request.resource.data.best is int && request.resource.data.best <= 4000
-        && request.resource.data.name is string && request.resource.data.name.size() <= 16;
+        && request.resource.data.name is string && request.resource.data.name.size() <= 16
+        // every field other players see gets a type and a range, so a row can't carry markup or junk
+        && request.resource.data.w is int && request.resource.data.w >= 0 && request.resource.data.w <= 1000000
+        && request.resource.data.l is int && request.resource.data.l >= 0 && request.resource.data.l <= 1000000
+        && request.resource.data.d is int && request.resource.data.d >= 0 && request.resource.data.d <= 1000000
+        && request.resource.data.n is int && request.resource.data.n >= 0 && request.resource.data.n <= 3000000
+        && request.resource.data.f is string && request.resource.data.f.size() <= 8
+        && request.resource.data.t is number;
     }
     // Bug reports and ideas: players can send, nobody can read back from the game.
     match /feedback/{id} {
