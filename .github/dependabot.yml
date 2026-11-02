@@ -1,0 +1,8 @@
+# Dependency scanning: Dependabot opens a PR when a pinned GitHub Action has an update or a security fix.
+# (npm packages are installed at fixed versions inside the workflows; check those by hand when Dependabot bumps an Action.)
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

@@ -9,6 +9,27 @@ Playtest build: https://finestmeats.github.io/idle-heartwood/
 - `scripts/` and `.github/workflows/feedback-to-issues.yml`: every 6 hours, new in-game bug reports and ideas are
   filed here as issues labelled `bug` or `idea` and `from-game`. Needs the `FIREBASE_SERVICE_ACCOUNT` repository secret.
 
+## Rate limits and cost controls
+
+Anyone can read the page source, sign in anonymously and call Firestore directly, so every write a player can make is
+throttled per account in `firestore.rules`, using the server clock (a script can't fake it):
+- bug reports and ideas: one a minute (the report and the player's `limits/{uid}` entry are written in one batch);
+- Card Club reward-claim codes: one every 20 seconds;
+- ladder rows: one update every 5 seconds;
+- ladder and poll votes are only readable by signed-in players.
+
+What the rules can't do, set up once in the Firebase / Google Cloud console:
+1. **Budget alert:** Google Cloud console → Billing → Budgets & alerts → a small monthly budget (e.g. A$10) with email
+   alerts at 50/90/100%. On the free Spark plan there is no bill, but a flood uses up the day's free quota and the game
+   stops saving until midnight Pacific time; on Blaze it costs money.
+2. **App Check** (Firebase console → App Check → register the web app with reCAPTCHA Enterprise, then Enforce for
+   Firestore): blocks requests that don't come from the real game page. Needs the site key added to the page.
+3. **Anonymous sign-up limit:** Firebase console → Authentication → Settings → User actions / quotas: keep new anonymous
+   accounts per IP low (the default is 100 an hour), since each new account gets its own rate-limit budget.
+
+When `firestore.rules` changes, publish it in the console right after the matching page change goes live: a page and
+rules that don't match make feedback, ladder updates and reward claims fail.
+
 ## UrgerBae Card Club (`club/`)
 
 Customer page: https://finestmeats.github.io/idle-heartwood/club/ · counter screen: add `?counter` to that link.

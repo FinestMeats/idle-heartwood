@@ -2664,8 +2664,12 @@ async function cardsInit(){const b=BE;if(!b||b.kind!=='firebase'||!b.cards)retur
   try{if(!cardsMig()){const m=await b.cards.migrate(S.cards||{});cardsMem.mig[b.id]=1;lsSet('hwCardMig:'+b.id,'1');S.cards=Object.assign({},m)}
     await cardsSync()}catch(e){console.warn('Card sync unavailable',e)}}
 /* send this device's waiting cards, then read the shared record back (plus anything still waiting) */
+/* The queue is claimed (emptied) before it's sent, inside a lock shared by every tab on this device, so two open
+   tabs can't both send the same waiting cards and double them. If the send is refused, the cards go back in the queue. */
 async function cardsSync(){if(cardsBusy||!cardsLive())return;cardsBusy=true;const b=BE;
-  try{const q=cq();if(Object.keys(q).length){await b.cards.inc(q);const now=cq();for(const k in q){now[k]=(now[k]||0)-q[k];if(now[k]<=0)delete now[k]}cqSet(now)}
+  const send=async()=>{const q=cq();if(!Object.keys(q).length)return;cqSet({});
+    try{await b.cards.inc(q)}catch(e){const now=cq();for(const k in q)now[k]=(now[k]||0)+q[k];cqSet(now);throw e}};
+  try{if(navigator.locks&&navigator.locks.request)await navigator.locks.request('hwCardQ:'+b.id,send);else await send();
     const d=await b.cards.get();if(d.exists){const c=Object.assign({},d.data().c||{}),p=cq();for(const k in p)c[k]=(c[k]||0)+p[k];
       const before=JSON.stringify(S.cards);S.cards=c;if(JSON.stringify(c)!==before){cloudDirty=true;if(tab==='cards')buildList(true)}}}
   catch(e){}cardsBusy=false}
@@ -2709,7 +2713,10 @@ async function fbBackend(){const V='10.12.2',u=m=>`https://www.gstatic.com/fireb
   const link={get:async()=>wrap(await FS.getDoc(lref())),setIdle:o=>FS.setDoc(lref(),{idle:o},{merge:true}),
     prune:before=>FS.runTransaction(fs,async tx=>{const r=await tx.get(lref());if(!r.exists())return;const c=(r.data().chk||[]).filter(t=>t>=before);tx.set(lref(),{chk:c},{merge:true})})};
   const user={id:async()=>auth.currentUser?auth.currentUser.uid:null,profiles:async ids=>{const o={};[].concat(ids).forEach(i=>o[i]={name:''});return o}};
-  return {kind:'firebase',db,user,id:auth.currentUser.uid,auth,AU,cards,link,
+  /* rate-limited create: the new doc and this player's limits/{uid} entry go in one batch (see firestore.rules) */
+  const throttled=(path,data,t,idf)=>{const ref=FS.doc(FS.collection(fs,path)),b=FS.writeBatch(fs);b.set(ref,data);
+    b.set(FS.doc(fs,'limits/'+auth.currentUser.uid),{[t]:FS.serverTimestamp(),[idf]:ref.id},{merge:true});return b.commit()};
+  return {kind:'firebase',db,user,id:auth.currentUser.uid,auth,AU,cards,link,throttled,ts:()=>FS.serverTimestamp(),
     email:()=>{const p=auth.currentUser&&auth.currentUser.providerData.find(x=>x.providerId==='google.com');return p?p.email||'Google account':null}}}
 /* Sign in with Google: links this device's progress to a Google account, or switches to that account on a new device. */
 async function fbGoogle(){const b=BE;if(!b||b.kind!=='firebase')return;const {AU,auth}=b,prov=new AU.GoogleAuthProvider();
@@ -2752,8 +2759,8 @@ async function feedbackSend(){const t=$('fbText'),text=(t&&t.value||'').trim().s
   const b=await getBackend();const ctx={v:GAME_VER,lvl:lvl(),grove:S.grove,felled:S.felled||0,replants:S.replants||0,ua:navigator.userAgent.slice(0,160),scr:innerWidth+'x'+innerHeight,errs:ERRLOG.slice(-5)};
   const doc={type:fbType,text,ctx,t:Date.now(),uid:b?b.id:null,status:'new'};
   if(!b){fbMsg('Not sent: you need an internet connection. Your text is kept.');return}
-  try{await b.db.collection('feedback').add(doc);fbLast=Date.now();fbDraft[fbType]='';feedbackClose();showToast('Thank you!',fbType==='bug'?'Your bug report has been sent':'Your idea has been sent','scroll')}
-  catch(e){fbMsg('Not sent, please try again in a moment. Your text is kept.')}}
+  try{await (b.kind==='firebase'?b.throttled('feedback',doc,'fb','fbid'):b.db.collection('feedback').add(doc));fbLast=Date.now();fbDraft[fbType]='';feedbackClose();showToast('Thank you!',fbType==='bug'?'Your bug report has been sent':'Your idea has been sent','scroll')}
+  catch(e){fbMsg(e&&e.code==='permission-denied'?'Give it a minute before sending another. Your text is kept.':'Not sent, please try again in a moment. Your text is kept.')}}
 let POLLS=null,pollRes={},pollMine={},pollBusy=false;
 async function pollsLoad(force){if(pollBusy||(!force&&POLLS))return;pollBusy=true;try{const b=await getBackend();if(!b||b.kind!=='firebase'){POLLS=[];return}
     const r=await fetch('polls.json',{cache:'no-store'});const all=r.ok?await r.json():[];const now=Date.now();POLLS=(Array.isArray(all)?all:[]).filter(p=>p&&p.id&&Array.isArray(p.opts)&&(!p.starts||Date.parse(p.starts)<=now)&&(!p.ends||Date.parse(p.ends)+864e5*7>now));
@@ -2776,7 +2783,7 @@ const oppRating=o=>800+150*o.t;
 async function ladderInit(){try{const b=await getBackend();if(!b)return;LDB=b;if(S.ladder&&S.ladder.n)ladderPush()}catch(_){}}
 function ladderResult(o,won,draw){const L=S.ladder=S.ladder||{r:1000,w:0,l:0,d:0,n:0,best:1000};const ex=1/(1+Math.pow(10,(oppRating(o)-L.r)/400)),sc=draw?0.5:won?1:0,k=L.n<10?40:24;
   const dr=Math.round(k*(sc-ex));L.r=Math.max(100,L.r+dr);L.n++;if(draw)L.d++;else if(won)L.w++;else L.l++;L.best=Math.max(L.best,L.r);ladderPush();return dr}
-function ladderPush(){if(!LDB||!S.ladder)return;const L=S.ladder;LDB.db.doc('ladder/'+LDB.id).set(Object.assign({r:L.r,best:L.best,w:L.w,l:L.l,d:L.d||0,n:L.n,f:S.deckF,t:Date.now()},LDB.kind==='firebase'?{name:cleanName(S.pname)||'Woodcutter'}:{})).catch(()=>{});ladderRows=null}
+function ladderPush(){if(!LDB||!S.ladder)return;const L=S.ladder;LDB.db.doc('ladder/'+LDB.id).set(Object.assign({r:L.r,best:L.best,w:L.w,l:L.l,d:L.d||0,n:L.n,f:S.deckF,t:Date.now()},LDB.kind==='firebase'?{name:cleanName(S.pname)||'Woodcutter',st:LDB.ts()}:{})).catch(()=>{});ladderRows=null}
 async function ladderLoad(){if(!LDB||ladderBusy)return;if(ladderRows&&Date.now()-ladderT<30000)return;ladderBusy=true;
   try{const q=await LDB.db.collection('ladder').orderBy('r','desc').limit(25).get();const rows=q.docs.filter(d=>d.exists).map(d=>({id:d.id,...d.data()}));
     const ps=LDB.kind==='claude'?await LDB.user.profiles(rows.map(r=>r.id)):{};rows.forEach(r=>{r.name=(LDB.kind==='claude'?ps[r.id]&&ps[r.id].name:cleanName(r.name))||'Someone';r.me=r.id===LDB.id});
@@ -2788,7 +2795,7 @@ function ladderHtml(){const L=S.ladder;let h=more(`Your rating: <b>${L?L.r:1000}
   if(LDB.kind==='firebase')h+=`<div class="row"><div class="t"><div class="n">${ico('crew')}Your ladder name</div><div class="d"><input id="pname" maxlength="16" value="${(cleanName(S.pname)||'').replace(/"/g,'')}" placeholder="Woodcutter" style="font:inherit;width:100%;max-width:220px;background:var(--panel);color:var(--fg);border:2px solid var(--line);border-radius:5px;padding:4px 6px"></div></div><button class="buy" type="button" data-pname="1">Save</button></div>`;
   if(!ladderRows){ladderLoad();return h+`<p class="note">Loading the ladder…</p>`}
   if(ladderMine)h+=`<p class="note">You are <b>#${ladderMine}</b> on the ladder.</p>`;else if(!(L&&L.n))h+=`<p class="note">Win or lose a duel to join the ladder.</p>`;
-  h+=`<p class="sec">Top players</p>`+(ladderRows.length?ladderRows.map((r,i)=>{const F=FACTIONS.find(f=>f.id===r.f)||FACTIONS[0];return `<div class="row${r.me?' best':''}"><div class="t"><div class="n"><b style="min-width:2.2em;display:inline-block">#${i+1}</b><span class="dot" style="background:${F.col}"></span><span class="lname"></span>${r.me?'<small>you</small>':''}</div><div class="d">${r.w||0} won · ${r.l||0} lost · best ${r.best||r.r}</div></div><div class="big">${r.r}</div></div>`}).join(''):`<p class="note">No one is on the ladder yet. Be the first.</p>`);
+  h+=`<p class="sec">Top players</p>`+(ladderRows.length?ladderRows.map((r,i)=>{const F=FACTIONS.find(f=>f.id===r.f)||FACTIONS[0];return `<div class="row${r.me?' best':''}"><div class="t"><div class="n"><b style="min-width:2.2em;display:inline-block">#${i+1}</b><span class="dot" style="background:${F.col}"></span><span class="lname"></span>${r.me?'<small>you</small>':''}</div><div class="d">${r.w|0} won · ${r.l|0} lost · best ${(r.best||r.r)|0}</div></div><div class="big">${r.r|0}</div></div>`}).join(''):`<p class="note">No one is on the ladder yet. Be the first.</p>`);
   return h}
 function ladderNames(){if(tab!=='cards'||cView!=='ladder'||!ladderRows)return;const els=listEl.querySelectorAll('.lname');ladderRows.forEach((r,i)=>{if(els[i])els[i].textContent=r.name})}
 function cardsHtml(){if(!S.decks||!Object.keys(S.decks).length)grantStarter('L');

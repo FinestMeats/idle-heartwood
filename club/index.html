@@ -2520,7 +2520,7 @@ async function fbInit(){if(!CFG.firebase)return null;const V='10.12.2',u=m=>`htt
     claims:async()=>{const o={};await Promise.all(MILESTONES.map(async m=>{try{const r=await FS.getDoc(d('clubClaims/'+uid()+'_'+m.id));
       if(r.exists()){const t=r.data().t;o[m.id]=t&&t.toMillis?t.toMillis():Date.now()}}catch(_){}}));return o},
     /* a claim request staff look up by its 6-character code */
-    request:async mid=>{for(let i=0;;i++){const code=randCode(6);try{await withTimeout(FS.setDoc(d('clubReq/'+code),{uid:uid(),mid,t:FS.serverTimestamp()}),15000);return code}catch(e){if(i>=3||e.code==='timeout')throw e}}},
+    request:async mid=>{for(let i=0;;i++){const code=randCode(6);try{const b=FS.writeBatch(fs);b.set(d('clubReq/'+code),{uid:uid(),mid,t:FS.serverTimestamp()});b.set(d('limits/'+uid()),{rq:FS.serverTimestamp(),rqid:code},{merge:true});await withTimeout(b.commit(),15000);return code}catch(e){if(i>=3||e.code==='timeout')throw e}}},
     watchClaim:(mid,cb)=>FS.onSnapshot(d('clubClaims/'+uid()+'_'+mid),s=>{if(s.exists())cb(s.data())},()=>{})}}
 function local(){try{return JSON.parse(localStorage.getItem('ubclub')||'null')}catch(_){return null}}
 function save(){ST.t=Date.now();try{localStorage.setItem('ubclub',JSON.stringify(ST))}catch(_){}if(FB)FB.save(JSON.parse(JSON.stringify(ST))).catch(()=>toast('Not saved yet','Check your connection, it will try again'))}
@@ -2611,7 +2611,7 @@ async function claimModal(mid){const m=MILESTONES.find(x=>x.id===mid),head=`<h2>
   if(!FB){if(CFG.demo)modal(`${head}<p class="note">Preview: on the website the customer gets a code here and staff check it on the counter screen.</p><div class="row"><button type="button" class="btn ghost" data-close="1">Cancel</button><button type="button" class="btn" data-democlaim="${mid}">Mark claimed</button></div>`);
     else toast('Can\'t reach the Card Club','Check your connection and try again');return}
   modal(`${head}<p class="note">Getting your claim code…</p>`);let code;
-  try{code=await FB.request(mid)}catch(e){closeModal();toast('Couldn\'t start the claim','Check your connection and try again');return}
+  try{code=await FB.request(mid)}catch(e){closeModal();toast('Couldn\'t start the claim',e&&e.code==='permission-denied'?'Wait a few seconds, then try again':'Check your connection and try again');return}
   modal(`${head}<p class="note">Show this code to staff at the counter</p><p class="ccode">${code}</p><p class="note">This screen updates by itself once staff approve it. The code works for 30 minutes.</p><button type="button" class="btn ghost" data-close="1">Close</button>`);
   UNW=FB.watchClaim(mid,()=>{ST.claims[mid]=Date.now();save();closeModal();render();toast('Enjoy!','Reward claimed')})}
 
